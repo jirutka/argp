@@ -107,7 +107,7 @@ Short description
 Options:
   --s               a switch with a description that is spread across a number
                     of lines of comments.
-  --help            display usage information
+  -h, --help        display usage information
 "###,
     );
 }
@@ -244,7 +244,7 @@ Woot
 
 Options:
   -n, --n           fooey
-  --help            display usage information
+  -h, --help        display usage information
 "###,
         );
     }
@@ -266,7 +266,7 @@ Woot
 
 Options:
   --option-name     fooey
-  --help            display usage information
+  -h, --help        display usage information
 "###,
         );
     }
@@ -300,7 +300,7 @@ mod positional {
 Woot
 
 Options:
-  --help            display usage information
+  -h, --help        display usage information
 "###,
         );
     }
@@ -689,7 +689,7 @@ mod fuchsia_commandline_tools_rubric {
 A type for testing `--help`/`help`
 
 Options:
-  --help            display usage information
+  -h, --help        display usage information
 
 Commands:
   first             First subcommmand for testing `help`.
@@ -700,7 +700,7 @@ Commands:
 First subcommmand for testing `help`.
 
 Options:
-  --help            display usage information
+  -h, --help        display usage information
 
 Commands:
   second            Second subcommand for testing `help`.
@@ -711,7 +711,7 @@ Commands:
 Second subcommand for testing `help`.
 
 Options:
-  --help            display usage information
+  -h, --help        display usage information
 "###;
 
     #[test]
@@ -856,7 +856,7 @@ Options:
                     documentation
   -s, --scribble    write <scribble> repeatedly
   -v, --verbose     say more. Defaults to $BLAST_VERBOSE.
-  --help            display usage information
+  -h, --help        display usage information
 
 Commands:
   blow-up           explosively separate
@@ -892,7 +892,7 @@ Error codes:
 Destroy the contents of <file>.
 
 Options:
-  --help            display usage information
+  -h, --help        display usage information
 "###,
         );
     }
@@ -1194,7 +1194,7 @@ Woot
 
 Options:
   -n, --n           fooey
-  --help            display usage information
+  -h, --help        display usage information
 "###
             .to_string(),
             status: Ok(()),

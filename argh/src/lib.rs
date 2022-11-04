@@ -31,9 +31,7 @@
 //!     pilot_nickname: Option<String>,
 //! }
 //!
-//! fn main() {
-//!     let up: GoUp = argh::from_env();
-//! }
+//! let up: GoUp = argh::from_env();
 //! ```
 //!
 //! `./some_bin --help` will then output the following:
@@ -129,6 +127,34 @@
 //! The last positional argument may include a default, or be wrapped in
 //! `Option` or `Vec` to indicate an optional or repeating positional argument.
 //!
+//! If your final positional argument has the `greedy` option on it, it will consume
+//! any arguments after it as if a `--` were placed before the first argument to
+//! match the greedy positional:
+//!
+//! ```rust
+//! use argh::FromArgs;
+//! #[derive(FromArgs, PartialEq, Debug)]
+//! /// A command with a greedy positional argument at the end.
+//! struct WithGreedyPositional {
+//!     /// some stuff
+//!     #[argh(option)]
+//!     stuff: Option<String>,
+//!     #[argh(positional, greedy)]
+//!     all_the_rest: Vec<String>,
+//! }
+//! ```
+//!
+//! Now if you pass `--stuff Something` after a positional argument, it will
+//! be consumed by `all_the_rest` instead of setting the `stuff` field.
+//!
+//! Note that `all_the_rest` won't be listed as a positional argument in the
+//! long text part of help output (and it will be listed at the end of the usage
+//! line as `[all_the_rest...]`), and it's up to the caller to append any
+//! extra help output for the meaning of the captured arguments. This is to
+//! enable situations where some amount of argument processing needs to happen
+//! before the rest of the arguments can be interpreted, and shouldn't be used
+//! for regular use as it might be confusing.
+//!
 //! Subcommands are also supported. To use a subcommand, declare a separate
 //! `FromArgs` type for each subcommand as well as an enum that cases
 //! over each command:
@@ -166,6 +192,125 @@
 //!     #[argh(switch)]
 //!     /// whether to fooey
 //!     fooey: bool,
+//! }
+//! ```
+//!
+//! You can also discover subcommands dynamically at runtime. To do this,
+//! declare subcommands as usual and add a variant to the enum with the
+//! `dynamic` attribute. Instead of deriving `FromArgs`, the value inside the
+//! dynamic variant should implement `DynamicSubCommand`.
+//!
+//! ```rust
+//! # use argh::CommandInfo;
+//! # use argh::DynamicSubCommand;
+//! # use argh::EarlyExit;
+//! # use argh::FromArgs;
+//! # use once_cell::sync::OnceCell;
+//!
+//! #[derive(FromArgs, PartialEq, Debug)]
+//! /// Top-level command.
+//! struct TopLevel {
+//!     #[argh(subcommand)]
+//!     nested: MySubCommandEnum,
+//! }
+//!
+//! #[derive(FromArgs, PartialEq, Debug)]
+//! #[argh(subcommand)]
+//! enum MySubCommandEnum {
+//!     Normal(NormalSubCommand),
+//!     #[argh(dynamic)]
+//!     Dynamic(Dynamic),
+//! }
+//!
+//! #[derive(FromArgs, PartialEq, Debug)]
+//! /// Normal subcommand.
+//! #[argh(subcommand, name = "normal")]
+//! struct NormalSubCommand {
+//!     #[argh(option)]
+//!     /// how many x
+//!     x: usize,
+//! }
+//!
+//! /// Dynamic subcommand.
+//! #[derive(PartialEq, Debug)]
+//! struct Dynamic {
+//!     name: String
+//! }
+//!
+//! impl DynamicSubCommand for Dynamic {
+//!     fn commands() -> &'static [&'static CommandInfo] {
+//!         static RET: OnceCell<Vec<&'static CommandInfo>> = OnceCell::new();
+//!         RET.get_or_init(|| {
+//!             let mut commands = Vec::new();
+//!
+//!             // argh needs the `CommandInfo` structs we generate to be valid
+//!             // for the static lifetime. We can allocate the structures on
+//!             // the heap with `Box::new` and use `Box::leak` to get a static
+//!             // reference to them. We could also just use a constant
+//!             // reference, but only because this is a synthetic example; the
+//!             // point of using dynamic commands is to have commands you
+//!             // don't know about until runtime!
+//!             commands.push(&*Box::leak(Box::new(CommandInfo {
+//!                 name: "dynamic_command",
+//!                 description: "A dynamic command",
+//!             })));
+//!
+//!             commands
+//!         })
+//!     }
+//!
+//!     fn try_redact_arg_values(
+//!         command_name: &[&str],
+//!         args: &[&str],
+//!     ) -> Option<Result<Vec<String>, EarlyExit>> {
+//!         for command in Self::commands() {
+//!             if command_name.last() == Some(&command.name) {
+//!                 // Process arguments and redact values here.
+//!                 if !args.is_empty() {
+//!                     return Some(Err("Our example dynamic command never takes arguments!"
+//!                                     .to_string().into()));
+//!                 }
+//!                 return Some(Ok(Vec::new()))
+//!             }
+//!         }
+//!         None
+//!     }
+//!
+//!     fn try_from_args(command_name: &[&str], args: &[&str]) -> Option<Result<Self, EarlyExit>> {
+//!         for command in Self::commands() {
+//!             if command_name.last() == Some(&command.name) {
+//!                 if !args.is_empty() {
+//!                     return Some(Err("Our example dynamic command never takes arguments!"
+//!                                     .to_string().into()));
+//!                 }
+//!                 return Some(Ok(Dynamic { name: command.name.to_string() }))
+//!             }
+//!         }
+//!         None
+//!     }
+//! }
+//! ```
+//!
+//! Programs that are run from an environment such as cargo may find it
+//! useful to have positional arguments present in the structure but
+//! omitted from the usage output. This can be accomplished by adding
+//! the `hidden_help` attribute to that argument:
+//!
+//! ```rust
+//! # use argh::FromArgs;
+//!
+//! #[derive(FromArgs)]
+//! /// Cargo arguments
+//! struct CargoArgs {
+//!     // Cargo puts the command name invoked into the first argument,
+//!     // so we don't want this argument to show up in the usage text.
+//!     #[argh(positional, hidden_help)]
+//!     command: String,
+//!     /// an option used for internal debugging
+//!     #[argh(option, hidden_help)]
+//!     internal_debugging: String,
+//!     #[argh(positional)]
+//!     real_first_arg: String,
 //! }
 //! ```
 
@@ -445,6 +590,11 @@ pub trait TopLevelCommand: FromArgs {}
 pub trait SubCommands: FromArgs {
     /// Info for the commands.
     const COMMANDS: &'static [&'static CommandInfo];
+
+    /// Get a list of commands that are discovered at runtime.
+    fn dynamic_commands() -> &'static [&'static CommandInfo] {
+        &[]
+    }
 }
 
 /// A `FromArgs` implementation that represents a single subcommand.
@@ -455,6 +605,34 @@ pub trait SubCommand: FromArgs {
 
 impl<T: SubCommand> SubCommands for T {
     const COMMANDS: &'static [&'static CommandInfo] = &[T::COMMAND];
+}
+
+/// Trait implemented by values returned from a dynamic subcommand handler.
+pub trait DynamicSubCommand: Sized {
+    /// Info about supported subcommands.
+    fn commands() -> &'static [&'static CommandInfo];
+
+    /// Perform the function of `FromArgs::redact_arg_values` for this dynamic
+    /// command.
+    ///
+    /// The full list of subcommands, ending with the subcommand that should be
+    /// dynamically recognized, is passed in `command_name`. If the command
+    /// passed is not recognized, this function should return `None`. Otherwise
+    /// it should return `Some`, and the value within the `Some` has the same
+    /// semantics as the return of `FromArgs::redact_arg_values`.
+    fn try_redact_arg_values(
+        command_name: &[&str],
+        args: &[&str],
+    ) -> Option<Result<Vec<String>, EarlyExit>>;
+
+    /// Perform the function of `FromArgs::from_args` for this dynamic command.
+    ///
+    /// The full list of subcommands, ending with the subcommand that should be
+    /// dynamically recognized, is passed in `command_name`. If the command
+    /// passed is not recognized, this function should return `None`. Otherwise
+    /// it should return `Some`, and the value within the `Some` has the same
+    /// semantics as the return of `FromArgs::from_args`.
+    fn try_from_args(command_name: &[&str], args: &[&str]) -> Option<Result<Self, EarlyExit>>;
 }
 
 /// Information to display to the user about why a `FromArgs` construction exited early.
@@ -481,8 +659,8 @@ impl From<String> for EarlyExit {
 }
 
 /// Extract the base cmd from a path
-fn cmd<'a>(default: &'a String, path: &'a String) -> &'a str {
-    std::path::Path::new(path).file_name().map(|s| s.to_str()).flatten().unwrap_or(default.as_str())
+fn cmd<'a>(default: &'a str, path: &'a str) -> &'a str {
+    std::path::Path::new(path).file_name().and_then(|s| s.to_str()).unwrap_or(default)
 }
 
 /// Create a `FromArgs` type from the current process's `env::args`.
@@ -501,7 +679,7 @@ pub fn from_env<T: TopLevelCommand>() -> T {
                 0
             }
             Err(()) => {
-                eprintln!("{}", early_exit.output);
+                eprintln!("{}\nRun {} --help for more information.", early_exit.output, cmd);
                 1
             }
         })
@@ -527,7 +705,7 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
                 0
             }
             Err(()) => {
-                eprintln!("{}", early_exit.output);
+                eprintln!("{}\nRun --help for more information.", early_exit.output);
                 1
             }
         })
@@ -683,14 +861,14 @@ pub fn parse_struct_args(
     let mut positional_index = 0;
     let mut options_ended = false;
 
-    'parse_args: while let Some(&next_arg) = remaining_args.get(0) {
+    'parse_args: while let Some(&next_arg) = remaining_args.first() {
         remaining_args = &remaining_args[1..];
         if (next_arg == "--help" || next_arg == "help" || next_arg == "-h") && !options_ended {
             help = true;
             continue;
         }
 
-        if next_arg.starts_with("-") && !options_ended {
+        if next_arg.starts_with('-') && !options_ended {
             if next_arg == "--" {
                 options_ended = true;
                 continue;
@@ -712,7 +890,7 @@ pub fn parse_struct_args(
             }
         }
 
-        parse_positionals.parse(&mut positional_index, next_arg)?;
+        options_ended |= parse_positionals.parse(&mut positional_index, next_arg)?;
     }
 
     if help {
@@ -751,7 +929,7 @@ impl<'a> ParseStructOptions<'a> {
             ParseStructOption::Flag(ref mut b) => b.set_flag(arg),
             ParseStructOption::Value(ref mut pvs) => {
                 let value = remaining_args
-                    .get(0)
+                    .first()
                     .ok_or_else(|| ["No value provided for option '", arg, "'.\n"].concat())?;
                 *remaining_args = &remaining_args[1..];
                 pvs.fill_slot(arg, value).map_err(|s| {
@@ -783,25 +961,31 @@ pub enum ParseStructOption<'a> {
 pub struct ParseStructPositionals<'a> {
     pub positionals: &'a mut [ParseStructPositional<'a>],
     pub last_is_repeating: bool,
+    pub last_is_greedy: bool,
 }
 
 impl<'a> ParseStructPositionals<'a> {
     /// Parse the next positional argument.
     ///
     /// `arg`: the argument supplied by the user.
-    fn parse(&mut self, index: &mut usize, arg: &str) -> Result<(), EarlyExit> {
+    ///
+    /// Returns true if non-positional argument parsing should stop
+    /// after this one.
+    fn parse(&mut self, index: &mut usize, arg: &str) -> Result<bool, EarlyExit> {
         if *index < self.positionals.len() {
             self.positionals[*index].parse(arg)?;
 
-            // Don't increment position if we're at the last arg
-            // *and* the last arg is repeating.
-            let skip_increment = self.last_is_repeating && *index == self.positionals.len() - 1;
-
-            if !skip_increment {
+            if self.last_is_repeating && *index == self.positionals.len() - 1 {
+                // Don't increment position if we're at the last arg
+                // *and* the last arg is repeating. If it's also remainder,
+                // halt non-option processing after this.
+                Ok(self.last_is_greedy)
+            } else {
+                // If it is repeating, though, increment the index and continue
+                // processing options.
                 *index += 1;
+                Ok(false)
             }
-
-            Ok(())
         } else {
             Err(EarlyExit { output: unrecognized_arg(arg), status: Err(()) })
         }
@@ -847,7 +1031,10 @@ pub struct ParseStructSubCommand<'a> {
     // The subcommand commands
     pub subcommands: &'static [&'static CommandInfo],
 
+    pub dynamic_subcommands: &'a [&'static CommandInfo],
+
     // The function to parse the subcommand arguments.
+    #[allow(clippy::type_complexity)]
     pub parse_func: &'a mut dyn FnMut(&[&str], &[&str]) -> Result<(), EarlyExit>,
 }
 
@@ -859,7 +1046,7 @@ impl<'a> ParseStructSubCommand<'a> {
         arg: &str,
         remaining_args: &[&str],
     ) -> Result<bool, EarlyExit> {
-        for subcommand in self.subcommands {
+        for subcommand in self.subcommands.iter().chain(self.dynamic_subcommands.iter()) {
             if subcommand.name == arg {
                 let mut command = cmd_name.to_owned();
                 command.push(subcommand.name);
@@ -877,7 +1064,7 @@ impl<'a> ParseStructSubCommand<'a> {
             }
         }
 
-        return Ok(false);
+        Ok(false)
     }
 }
 
@@ -888,7 +1075,7 @@ fn prepend_help<'a>(args: &[&'a str]) -> Vec<&'a str> {
 }
 
 #[doc(hidden)]
-pub fn print_subcommands(commands: &[&CommandInfo]) -> String {
+pub fn print_subcommands<'a>(commands: impl Iterator<Item = &'a CommandInfo>) -> String {
     let mut out = String::new();
     for cmd in commands {
         argh_shared::write_description(&mut out, cmd);
@@ -905,7 +1092,7 @@ fn unrecognized_arg(arg: &str) -> String {
 #[derive(Default)]
 pub struct MissingRequirements {
     options: Vec<&'static str>,
-    subcommands: Option<&'static [&'static CommandInfo]>,
+    subcommands: Option<Vec<&'static CommandInfo>>,
     positional_args: Vec<&'static str>,
 }
 
@@ -920,8 +1107,8 @@ impl MissingRequirements {
 
     // Add a missing required subcommand.
     #[doc(hidden)]
-    pub fn missing_subcommands(&mut self, commands: &'static [&'static CommandInfo]) {
-        self.subcommands = Some(commands);
+    pub fn missing_subcommands(&mut self, commands: impl Iterator<Item = &'static CommandInfo>) {
+        self.subcommands = Some(commands.collect());
     }
 
     // Add a missing positional argument.
@@ -951,7 +1138,7 @@ impl MissingRequirements {
 
         if !self.options.is_empty() {
             if !self.positional_args.is_empty() {
-                output.push_str("\n");
+                output.push('\n');
             }
             output.push_str("Required options not provided:");
             for option in &self.options {
@@ -960,9 +1147,9 @@ impl MissingRequirements {
             }
         }
 
-        if let Some(missing_subcommands) = self.subcommands {
+        if let Some(missing_subcommands) = &self.subcommands {
             if !self.options.is_empty() {
-                output.push_str("\n");
+                output.push('\n');
             }
             output.push_str("One of the following subcommands must be present:");
             output.push_str(NEWLINE_INDENT);

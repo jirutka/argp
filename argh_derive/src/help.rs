@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+use std::fmt::Write;
 use {
     crate::{
         errors::Errors,
@@ -11,7 +12,6 @@ use {
     argh_shared::INDENT,
     proc_macro2::{Span, TokenStream},
     quote::quote,
-    syn::LitStr,
 };
 
 const SECTION_SEPARATOR: &str = "\n\n";
@@ -27,18 +27,31 @@ pub(crate) fn help(
     fields: &[StructField<'_>],
     subcommand: Option<&StructField<'_>>,
 ) -> TokenStream {
+    #![allow(clippy::format_push_string)]
     let mut format_lit = "Usage: {command_name}".to_string();
 
-    let positional = fields.iter().filter(|f| f.kind == FieldKind::Positional);
-    for arg in positional {
+    let positional = fields.iter().filter(|f| {
+        f.kind == FieldKind::Positional && f.attrs.greedy.is_none() && !f.attrs.hidden_help
+    });
+    let mut has_positional = false;
+    for arg in positional.clone() {
+        has_positional = true;
         format_lit.push(' ');
         positional_usage(&mut format_lit, arg);
     }
 
-    let options = fields.iter().filter(|f| f.long_name.is_some());
+    let options = fields.iter().filter(|f| f.long_name.is_some() && !f.attrs.hidden_help);
     for option in options.clone() {
         format_lit.push(' ');
         option_usage(&mut format_lit, option);
+    }
+
+    let remain = fields.iter().filter(|f| {
+        f.kind == FieldKind::Positional && f.attrs.greedy.is_some() && !f.attrs.hidden_help
+    });
+    for arg in remain {
+        format_lit.push(' ');
+        positional_usage(&mut format_lit, arg);
     }
 
     if let Some(subcommand) = subcommand {
@@ -58,6 +71,14 @@ pub(crate) fn help(
     let description = require_description(errors, Span::call_site(), &ty_attrs.description, "type");
     format_lit.push_str(&description);
 
+    if has_positional {
+        format_lit.push_str(SECTION_SEPARATOR);
+        format_lit.push_str("Positional Arguments:");
+        for arg in positional {
+            positional_description(&mut format_lit, arg);
+        }
+    }
+
     format_lit.push_str(SECTION_SEPARATOR);
     format_lit.push_str("Options:");
     for option in options {
@@ -76,6 +97,12 @@ pub(crate) fn help(
         subcommand_calculation = quote! {
             let subcommands = argh::print_subcommands(
                 <#subcommand_ty as argh::SubCommands>::COMMANDS
+                    .iter()
+                    .copied()
+                    .chain(
+                        <#subcommand_ty as argh::SubCommands>::dynamic_commands()
+                            .iter()
+                            .copied())
             );
         };
     } else {
@@ -87,17 +114,17 @@ pub(crate) fn help(
 
     lits_section(&mut format_lit, "Notes:", &ty_attrs.notes);
 
-    if ty_attrs.error_codes.len() != 0 {
+    if !ty_attrs.error_codes.is_empty() {
         format_lit.push_str(SECTION_SEPARATOR);
         format_lit.push_str("Error codes:");
         for (code, text) in &ty_attrs.error_codes {
             format_lit.push('\n');
             format_lit.push_str(INDENT);
-            format_lit.push_str(&format!("{} {}", code, text.value()));
+            write!(format_lit, "{} {}", code, text.value()).unwrap();
         }
     }
 
-    format_lit.push_str("\n");
+    format_lit.push('\n');
 
     quote! { {
         #subcommand_calculation
@@ -107,7 +134,7 @@ pub(crate) fn help(
 
 /// A section composed of exactly just the literals provided to the program.
 fn lits_section(out: &mut String, heading: &str, lits: &[syn::LitStr]) {
-    if lits.len() != 0 {
+    if !lits.is_empty() {
         out.push_str(SECTION_SEPARATOR);
         out.push_str(heading);
         for lit in lits {
@@ -126,14 +153,17 @@ fn positional_usage(out: &mut String, field: &StructField<'_>) {
     if !field.optionality.is_required() {
         out.push('[');
     }
-    out.push('<');
-    let name =
-        field.attrs.arg_name.as_ref().map(LitStr::value).unwrap_or_else(|| field.name.to_string());
+    if field.attrs.greedy.is_none() {
+        out.push('<');
+    }
+    let name = field.arg_name();
     out.push_str(&name);
     if field.optionality == Optionality::Repeating {
         out.push_str("...");
     }
-    out.push('>');
+    if field.attrs.greedy.is_none() {
+        out.push('>');
+    }
     if !field.optionality.is_required() {
         out.push(']');
     }
@@ -198,6 +228,23 @@ Add a doc comment or an `#[argh(description = \"...\")]` attribute.",
     })
 }
 
+/// Describes a positional argument like this:
+///  hello       positional argument description
+fn positional_description(out: &mut String, field: &StructField<'_>) {
+    let field_name = field.arg_name();
+
+    let mut description = String::from("");
+    if let Some(desc) = &field.attrs.description {
+        description = desc.content.value().trim().to_owned();
+    }
+    positional_description_format(out, &field_name, &description)
+}
+
+fn positional_description_format(out: &mut String, name: &str, description: &str) {
+    let info = argh_shared::CommandInfo { name, description };
+    argh_shared::write_description(out, &info);
+}
+
 /// Describes an option like this:
 ///  -f, --force       force, ignore minor errors. This description
 ///                    is so long that it wraps to the next line.
@@ -224,6 +271,6 @@ fn option_description_format(
     }
     name.push_str(long_with_leading_dashes);
 
-    let info = argh_shared::CommandInfo { name: &*name, description };
+    let info = argh_shared::CommandInfo { name: &name, description };
     argh_shared::write_description(out, &info);
 }

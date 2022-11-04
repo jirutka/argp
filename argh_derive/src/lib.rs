@@ -13,10 +13,11 @@ use {
         errors::Errors,
         parse_attrs::{FieldAttrs, FieldKind, TypeAttrs},
     },
+    heck::ToKebabCase,
     proc_macro2::{Span, TokenStream},
     quote::{quote, quote_spanned, ToTokens},
-    std::str::FromStr,
-    syn::spanned::Spanned,
+    std::{collections::HashMap, str::FromStr},
+    syn::{spanned::Spanned, LitStr},
 };
 
 mod errors;
@@ -35,16 +36,14 @@ pub fn argh_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// as well as all errors that occurred.
 fn impl_from_args(input: &syn::DeriveInput) -> TokenStream {
     let errors = &Errors::default();
-    if input.generics.params.len() != 0 {
-        errors.err(
-            &input.generics,
-            "`#![derive(FromArgs)]` cannot be applied to types with generic parameters",
-        );
-    }
     let type_attrs = &TypeAttrs::parse(errors, input);
     let mut output_tokens = match &input.data {
-        syn::Data::Struct(ds) => impl_from_args_struct(errors, &input.ident, type_attrs, ds),
-        syn::Data::Enum(de) => impl_from_args_enum(errors, &input.ident, type_attrs, de),
+        syn::Data::Struct(ds) => {
+            impl_from_args_struct(errors, &input.ident, type_attrs, &input.generics, ds)
+        }
+        syn::Data::Enum(de) => {
+            impl_from_args_enum(errors, &input.ident, type_attrs, &input.generics, de)
+        }
         syn::Data::Union(_) => {
             errors.err(input, "`#[derive(FromArgs)]` cannot be applied to unions");
             TokenStream::new()
@@ -65,22 +64,15 @@ enum Optionality {
 impl PartialEq<Optionality> for Optionality {
     fn eq(&self, other: &Optionality) -> bool {
         use Optionality::*;
-        match (self, other) {
-            (None, None) | (Optional, Optional) | (Repeating, Repeating) => true,
-            // NB: (Defaulted, Defaulted) can't contain the same token streams
-            _ => false,
-        }
+        // NB: (Defaulted, Defaulted) can't contain the same token streams
+        matches!((self, other), (Optional, Optional) | (Repeating, Repeating))
     }
 }
 
 impl Optionality {
     /// Whether or not this is `Optionality::None`
     fn is_required(&self) -> bool {
-        if let Optionality::None = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Optionality::None)
     }
 }
 
@@ -125,7 +117,7 @@ impl<'a> StructField<'a> {
                 field,
                 concat!(
                     "Missing `argh` field kind attribute.\n",
-                    "Expected one of: `switch`, `option`, `subcommand`, `positional`",
+                    "Expected one of: `switch`, `option`, `remaining`, `subcommand`, `positional`",
                 ),
             );
             return None;
@@ -155,7 +147,7 @@ impl<'a> StructField<'a> {
                     let tokens: TokenStream = tokens
                         .into_iter()
                         .map(|mut tree| {
-                            tree.set_span(default.span().clone());
+                            tree.set_span(default.span());
                             tree
                         })
                         .collect();
@@ -191,7 +183,7 @@ impl<'a> StructField<'a> {
                     .long
                     .as_ref()
                     .map(syn::LitStr::value)
-                    .unwrap_or_else(|| heck::KebabCase::to_kebab_case(&*name.to_string()));
+                    .unwrap_or_else(|| name.to_string().to_kebab_case());
                 if long_name == "help" {
                     errors.err(field, "Custom `--help` flags are not supported.");
                 }
@@ -203,6 +195,10 @@ impl<'a> StructField<'a> {
 
         Some(StructField { field, attrs, kind, optionality, ty_without_wrapper, name, long_name })
     }
+
+    pub(crate) fn arg_name(&self) -> String {
+        self.attrs.arg_name.as_ref().map(LitStr::value).unwrap_or_else(|| self.name.to_string())
+    }
 }
 
 /// Implements `FromArgs` and `TopLevelCommand` or `SubCommand` for a `#[derive(FromArgs)]` struct.
@@ -210,6 +206,7 @@ fn impl_from_args_struct(
     errors: &Errors,
     name: &syn::Ident,
     type_attrs: &TypeAttrs,
+    generic_args: &syn::Generics,
     ds: &syn::DataStruct,
 ) -> TokenStream {
     let fields = match &ds.fields {
@@ -236,6 +233,7 @@ fn impl_from_args_struct(
         })
         .collect();
 
+    ensure_unique_names(errors, &fields);
     ensure_only_last_positional_is_optional(errors, &fields);
 
     let impl_span = Span::call_site();
@@ -245,10 +243,12 @@ fn impl_from_args_struct(
     let redact_arg_values_method =
         impl_from_args_struct_redact_arg_values(errors, type_attrs, &fields);
 
-    let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs);
+    let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs, generic_args);
 
+    let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     let trait_impl = quote_spanned! { impl_span =>
-        impl argh::FromArgs for #name {
+        #[automatically_derived]
+        impl #impl_generics argh::FromArgs for #name #ty_generics #where_clause {
             #from_args_method
 
             #redact_arg_values_method
@@ -257,7 +257,7 @@ fn impl_from_args_struct(
         #top_or_sub_cmd_impl
     };
 
-    trait_impl.into()
+    trait_impl
 }
 
 fn impl_from_args_struct_from_args<'a>(
@@ -265,8 +265,8 @@ fn impl_from_args_struct_from_args<'a>(
     type_attrs: &TypeAttrs,
     fields: &'a [StructField<'a>],
 ) -> TokenStream {
-    let init_fields = declare_local_storage_for_from_args_fields(&fields);
-    let unwrap_fields = unwrap_from_args_fields(&fields);
+    let init_fields = declare_local_storage_for_from_args_fields(fields);
+    let unwrap_fields = unwrap_from_args_fields(fields);
     let positional_fields: Vec<&StructField<'_>> =
         fields.iter().filter(|field| field.kind == FieldKind::Positional).collect();
     let positional_field_idents = positional_fields.iter().map(|field| &field.field.ident);
@@ -274,6 +274,10 @@ fn impl_from_args_struct_from_args<'a>(
     let last_positional_is_repeating = positional_fields
         .last()
         .map(|field| field.optionality == Optionality::Repeating)
+        .unwrap_or(false);
+    let last_positional_is_greedy = positional_fields
+        .last()
+        .map(|field| field.kind == FieldKind::Positional && field.attrs.greedy.is_some())
         .unwrap_or(false);
 
     let flag_output_table = fields.iter().filter_map(|field| {
@@ -285,22 +289,22 @@ fn impl_from_args_struct_from_args<'a>(
         }
     });
 
-    let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(&fields);
+    let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(fields);
 
     let mut subcommands_iter =
         fields.iter().filter(|field| field.kind == FieldKind::SubCommand).fuse();
 
     let subcommand: Option<&StructField<'_>> = subcommands_iter.next();
-    while let Some(dup_subcommand) = subcommands_iter.next() {
+    for dup_subcommand in subcommands_iter {
         errors.duplicate_attrs("subcommand", subcommand.unwrap().field, dup_subcommand.field);
     }
 
     let impl_span = Span::call_site();
 
-    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span.clone());
+    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span);
 
     let append_missing_requirements =
-        append_missing_requirements(&missing_requirements_ident, &fields);
+        append_missing_requirements(&missing_requirements_ident, fields);
 
     let parse_subcommands = if let Some(subcommand) = subcommand {
         let name = subcommand.name;
@@ -308,6 +312,7 @@ fn impl_from_args_struct_from_args<'a>(
         quote_spanned! { impl_span =>
             Some(argh::ParseStructSubCommand {
                 subcommands: <#ty as argh::SubCommands>::COMMANDS,
+                dynamic_subcommands: &<#ty as argh::SubCommands>::dynamic_commands(),
                 parse_func: &mut |__command, __remaining_args| {
                     #name = Some(<#ty as argh::FromArgs>::from_args(__command, __remaining_args)?);
                     Ok(())
@@ -319,13 +324,15 @@ fn impl_from_args_struct_from_args<'a>(
     };
 
     // Identifier referring to a value containing the name of the current command as an `&[&str]`.
-    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span.clone());
-    let help = help::help(errors, cmd_name_str_array_ident, type_attrs, &fields, subcommand);
+    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span);
+    let help = help::help(errors, cmd_name_str_array_ident, type_attrs, fields, subcommand);
 
     let method_impl = quote_spanned! { impl_span =>
         fn from_args(__cmd_name: &[&str], __args: &[&str])
             -> std::result::Result<Self, argh::EarlyExit>
         {
+            #![allow(clippy::unwrap_in_result)]
+
             #( #init_fields )*
 
             argh::parse_struct_args(
@@ -345,6 +352,7 @@ fn impl_from_args_struct_from_args<'a>(
                         )*
                     ],
                     last_is_repeating: #last_positional_is_repeating,
+                    last_is_greedy: #last_positional_is_greedy,
                 },
                 #parse_subcommands,
                 &|| #help,
@@ -362,7 +370,7 @@ fn impl_from_args_struct_from_args<'a>(
         }
     };
 
-    method_impl.into()
+    method_impl
 }
 
 fn impl_from_args_struct_redact_arg_values<'a>(
@@ -370,8 +378,8 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     type_attrs: &TypeAttrs,
     fields: &'a [StructField<'a>],
 ) -> TokenStream {
-    let init_fields = declare_local_storage_for_redacted_fields(&fields);
-    let unwrap_fields = unwrap_redacted_fields(&fields);
+    let init_fields = declare_local_storage_for_redacted_fields(fields);
+    let unwrap_fields = unwrap_redacted_fields(fields);
 
     let positional_fields: Vec<&StructField<'_>> =
         fields.iter().filter(|field| field.kind == FieldKind::Positional).collect();
@@ -380,6 +388,10 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     let last_positional_is_repeating = positional_fields
         .last()
         .map(|field| field.optionality == Optionality::Repeating)
+        .unwrap_or(false);
+    let last_positional_is_greedy = positional_fields
+        .last()
+        .map(|field| field.kind == FieldKind::Positional && field.attrs.greedy.is_some())
         .unwrap_or(false);
 
     let flag_output_table = fields.iter().filter_map(|field| {
@@ -391,22 +403,22 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         }
     });
 
-    let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(&fields);
+    let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(fields);
 
     let mut subcommands_iter =
         fields.iter().filter(|field| field.kind == FieldKind::SubCommand).fuse();
 
     let subcommand: Option<&StructField<'_>> = subcommands_iter.next();
-    while let Some(dup_subcommand) = subcommands_iter.next() {
+    for dup_subcommand in subcommands_iter {
         errors.duplicate_attrs("subcommand", subcommand.unwrap().field, dup_subcommand.field);
     }
 
     let impl_span = Span::call_site();
 
-    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span.clone());
+    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span);
 
     let append_missing_requirements =
-        append_missing_requirements(&missing_requirements_ident, &fields);
+        append_missing_requirements(&missing_requirements_ident, fields);
 
     let redact_subcommands = if let Some(subcommand) = subcommand {
         let name = subcommand.name;
@@ -414,6 +426,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         quote_spanned! { impl_span =>
             Some(argh::ParseStructSubCommand {
                 subcommands: <#ty as argh::SubCommands>::COMMANDS,
+                dynamic_subcommands: &<#ty as argh::SubCommands>::dynamic_commands(),
                 parse_func: &mut |__command, __remaining_args| {
                     #name = Some(<#ty as argh::FromArgs>::redact_arg_values(__command, __remaining_args)?);
                     Ok(())
@@ -424,15 +437,15 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         quote_spanned! { impl_span => None }
     };
 
-    let cmd_name = if type_attrs.is_subcommand.is_none() {
-        quote! { __cmd_name.last().expect("no command name").to_string() }
+    let unwrap_cmd_name_err_string = if type_attrs.is_subcommand.is_none() {
+        quote! { "no command name" }
     } else {
-        quote! { __cmd_name.last().expect("no subcommand name").to_string() }
+        quote! { "no subcommand name" }
     };
 
     // Identifier referring to a value containing the name of the current command as an `&[&str]`.
-    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span.clone());
-    let help = help::help(errors, cmd_name_str_array_ident, type_attrs, &fields, subcommand);
+    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span);
+    let help = help::help(errors, cmd_name_str_array_ident, type_attrs, fields, subcommand);
 
     let method_impl = quote_spanned! { impl_span =>
         fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> std::result::Result<Vec<String>, argh::EarlyExit> {
@@ -455,6 +468,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                         )*
                     ],
                     last_is_repeating: #last_positional_is_repeating,
+                    last_is_greedy: #last_positional_is_greedy,
                 },
                 #redact_subcommands,
                 &|| #help,
@@ -467,7 +481,11 @@ fn impl_from_args_struct_redact_arg_values<'a>(
             #missing_requirements_ident.err_on_any()?;
 
             let mut __redacted = vec![
-                #cmd_name,
+                if let Some(cmd_name) = __cmd_name.last() {
+                    (*cmd_name).to_owned()
+                } else {
+                    return Err(argh::EarlyExit::from(#unwrap_cmd_name_err_string.to_owned()));
+                }
             ];
 
             #( #unwrap_fields )*
@@ -476,7 +494,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         }
     };
 
-    method_impl.into()
+    method_impl
 }
 
 /// Ensures that only the last positional arg is non-required.
@@ -499,14 +517,54 @@ fn ensure_only_last_positional_is_optional(errors: &Errors, fields: &[StructFiel
     }
 }
 
+/// Ensures that only one short or long name is used.
+fn ensure_unique_names(errors: &Errors, fields: &[StructField<'_>]) {
+    let mut seen_short_names = HashMap::new();
+    let mut seen_long_names = HashMap::new();
+
+    for field in fields {
+        if let Some(short_name) = &field.attrs.short {
+            let short_name = short_name.value();
+            if let Some(first_use_field) = seen_short_names.get(&short_name) {
+                errors.err_span_tokens(
+                    first_use_field,
+                    &format!("The short name of \"-{}\" was already used here.", short_name),
+                );
+                errors.err_span_tokens(&field.field, "Later usage here.");
+            }
+
+            seen_short_names.insert(short_name, &field.field);
+        }
+
+        if let Some(long_name) = &field.long_name {
+            if let Some(first_use_field) = seen_long_names.get(&long_name) {
+                errors.err_span_tokens(
+                    *first_use_field,
+                    &format!("The long name of \"{}\" was already used here.", long_name),
+                );
+                errors.err_span_tokens(&field.field, "Later usage here.");
+            }
+
+            seen_long_names.insert(long_name, field.field);
+        }
+    }
+}
+
 /// Implement `argh::TopLevelCommand` or `argh::SubCommand` as appropriate.
-fn top_or_sub_cmd_impl(errors: &Errors, name: &syn::Ident, type_attrs: &TypeAttrs) -> TokenStream {
+fn top_or_sub_cmd_impl(
+    errors: &Errors,
+    name: &syn::Ident,
+    type_attrs: &TypeAttrs,
+    generic_args: &syn::Generics,
+) -> TokenStream {
     let description =
         help::require_description(errors, name.span(), &type_attrs.description, "type");
+    let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     if type_attrs.is_subcommand.is_none() {
         // Not a subcommand
         quote! {
-            impl argh::TopLevelCommand for #name {}
+            #[automatically_derived]
+            impl #impl_generics argh::TopLevelCommand for #name #ty_generics #where_clause {}
         }
     } else {
         let empty_str = syn::LitStr::new("", Span::call_site());
@@ -515,7 +573,8 @@ fn top_or_sub_cmd_impl(errors: &Errors, name: &syn::Ident, type_attrs: &TypeAttr
             &empty_str
         });
         quote! {
-            impl argh::SubCommand for #name {
+            #[automatically_derived]
+            impl #impl_generics argh::SubCommand for #name #ty_generics #where_clause {
                 const COMMAND: &'static argh::CommandInfo = &argh::CommandInfo {
                     name: #subcommand_name,
                     description: #description,
@@ -582,7 +641,9 @@ fn unwrap_from_args_fields<'a>(
         let field_name = field.name;
         match field.kind {
             FieldKind::Option | FieldKind::Positional => match &field.optionality {
-                Optionality::None => quote! { #field_name: #field_name.slot.unwrap() },
+                Optionality::None => quote! {
+                    #field_name: #field_name.slot.unwrap()
+                },
                 Optionality::Optional | Optionality::Repeating => {
                     quote! { #field_name: #field_name.slot }
                 }
@@ -622,11 +683,20 @@ fn declare_local_storage_for_redacted_fields<'a>(
                 }
             }
             FieldKind::Option => {
+                let field_slot_type = match field.optionality {
+                    Optionality::Repeating => {
+                        quote! { std::vec::Vec<String> }
+                    }
+                    Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
+                        quote! { std::option::Option<String> }
+                    }
+                };
+
                 quote! {
-                    let mut #field_name: argh::ParseValueSlotTy::<Option<String>, String> =
+                    let mut #field_name: argh::ParseValueSlotTy::<#field_slot_type, String> =
                         argh::ParseValueSlotTy {
                         slot: std::default::Default::default(),
-                        parse_func: |arg, _| { Ok(arg.to_string()) },
+                        parse_func: |arg, _| { Ok(arg.to_owned()) },
                     };
                 }
             }
@@ -640,12 +710,12 @@ fn declare_local_storage_for_redacted_fields<'a>(
                     }
                 };
 
-                let long_name = field.name.to_string();
+                let arg_name = field.arg_name();
                 quote! {
                     let mut #field_name: argh::ParseValueSlotTy::<#field_slot_type, String> =
                         argh::ParseValueSlotTy {
                         slot: std::default::Default::default(),
-                        parse_func: |_, _| { Ok(#long_name.to_string()) },
+                        parse_func: |_, _| { Ok(#arg_name.to_owned()) },
                     };
                 }
             }
@@ -664,13 +734,27 @@ fn unwrap_redacted_fields<'a>(
         let field_name = field.name;
 
         match field.kind {
-            FieldKind::Switch | FieldKind::Option => {
+            FieldKind::Switch => {
                 quote! {
                     if let Some(__field_name) = #field_name.slot {
                         __redacted.push(__field_name);
                     }
                 }
             }
+            FieldKind::Option => match field.optionality {
+                Optionality::Repeating => {
+                    quote! {
+                        __redacted.extend(#field_name.slot.into_iter());
+                    }
+                }
+                Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
+                    quote! {
+                        if let Some(__field_name) = #field_name.slot {
+                            __redacted.push(__field_name);
+                        }
+                    }
+                }
+            },
             FieldKind::Positional => {
                 quote! {
                     __redacted.extend(#field_name.slot.into_iter());
@@ -718,7 +802,7 @@ fn append_missing_requirements<'a>(
         match field.kind {
             FieldKind::Switch => unreachable!("switches are always optional"),
             FieldKind::Positional => {
-                let name = field.name.to_string();
+                let name = field.arg_name();
                 quote! {
                     if #field_name.slot.is_none() {
                         #mri.missing_positional_arg(#name)
@@ -738,7 +822,14 @@ fn append_missing_requirements<'a>(
                 quote! {
                     if #field_name.is_none() {
                         #mri.missing_subcommands(
-                            <#ty as argh::SubCommands>::COMMANDS,
+                            <#ty as argh::SubCommands>::COMMANDS
+                                .iter()
+                                .cloned()
+                                .chain(
+                                    <#ty as argh::SubCommands>::dynamic_commands()
+                                        .iter()
+                                        .copied()
+                                ),
                         )
                     }
                 }
@@ -804,6 +895,7 @@ fn impl_from_args_enum(
     errors: &Errors,
     name: &syn::Ident,
     type_attrs: &TypeAttrs,
+    generic_args: &syn::Generics,
     de: &syn::DataEnum,
 ) -> TokenStream {
     parse_attrs::check_enum_type_attrs(errors, type_attrs, &de.enum_token.span);
@@ -814,27 +906,66 @@ fn impl_from_args_enum(
         ty: &'a syn::Type,
     }
 
+    let mut dynamic_type_and_variant = None;
+
     let variants: Vec<SubCommandVariant<'_>> = de
         .variants
         .iter()
         .filter_map(|variant| {
-            parse_attrs::check_enum_variant_attrs(errors, variant);
             let name = &variant.ident;
             let ty = enum_only_single_field_unnamed_variants(errors, &variant.fields)?;
-            Some(SubCommandVariant { name, ty })
+            if parse_attrs::VariantAttrs::parse(errors, variant).is_dynamic.is_some() {
+                if dynamic_type_and_variant.is_some() {
+                    errors.err(variant, "Only one variant can have the `dynamic` attribute");
+                }
+                dynamic_type_and_variant = Some((ty, name));
+                None
+            } else {
+                Some(SubCommandVariant { name, ty })
+            }
         })
         .collect();
 
     let name_repeating = std::iter::repeat(name.clone());
     let variant_ty = variants.iter().map(|x| x.ty).collect::<Vec<_>>();
     let variant_names = variants.iter().map(|x| x.name).collect::<Vec<_>>();
+    let dynamic_from_args =
+        dynamic_type_and_variant.as_ref().map(|(dynamic_type, dynamic_variant)| {
+            quote! {
+                if let Some(result) = <#dynamic_type as argh::DynamicSubCommand>::try_from_args(
+                    command_name, args) {
+                    return result.map(#name::#dynamic_variant);
+                }
+            }
+        });
+    let dynamic_redact_arg_values = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
+        quote! {
+            if let Some(result) = <#dynamic_type as argh::DynamicSubCommand>::try_redact_arg_values(
+                command_name, args) {
+                return result;
+            }
+        }
+    });
+    let dynamic_commands = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
+        quote! {
+            fn dynamic_commands() -> &'static [&'static argh::CommandInfo] {
+                <#dynamic_type as argh::DynamicSubCommand>::commands()
+            }
+        }
+    });
 
+    let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     quote! {
-        impl argh::FromArgs for #name {
+        impl #impl_generics argh::FromArgs for #name #ty_generics #where_clause {
             fn from_args(command_name: &[&str], args: &[&str])
                 -> std::result::Result<Self, argh::EarlyExit>
             {
-                let subcommand_name = *command_name.last().expect("no subcommand name");
+                let subcommand_name = if let Some(subcommand_name) = command_name.last() {
+                    *subcommand_name
+                } else {
+                    return Err(argh::EarlyExit::from("no subcommand name".to_owned()));
+                };
+
                 #(
                     if subcommand_name == <#variant_ty as argh::SubCommand>::COMMAND.name {
                         return Ok(#name_repeating::#variant_names(
@@ -842,24 +973,37 @@ fn impl_from_args_enum(
                         ));
                     }
                 )*
-                unreachable!("no subcommand matched")
+
+                #dynamic_from_args
+
+                Err(argh::EarlyExit::from("no subcommand matched".to_owned()))
             }
 
             fn redact_arg_values(command_name: &[&str], args: &[&str]) -> std::result::Result<Vec<String>, argh::EarlyExit> {
-                let subcommand_name = *command_name.last().expect("no subcommand name");
+                let subcommand_name = if let Some(subcommand_name) = command_name.last() {
+                    *subcommand_name
+                } else {
+                    return Err(argh::EarlyExit::from("no subcommand name".to_owned()));
+                };
+
                 #(
                     if subcommand_name == <#variant_ty as argh::SubCommand>::COMMAND.name {
                         return <#variant_ty as argh::FromArgs>::redact_arg_values(command_name, args);
                     }
                 )*
-                unreachable!("no subcommand matched")
+
+                #dynamic_redact_arg_values
+
+                Err(argh::EarlyExit::from("no subcommand matched".to_owned()))
             }
         }
 
-        impl argh::SubCommands for #name {
+        impl #impl_generics argh::SubCommands for #name #ty_generics #where_clause {
             const COMMANDS: &'static [&'static argh::CommandInfo] = &[#(
                 <#variant_ty as argh::SubCommand>::COMMAND,
             )*];
+
+            #dynamic_commands
         }
     }
 }

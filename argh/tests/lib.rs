@@ -537,7 +537,7 @@ Positional Arguments:
 Options:
   --b               woo
   --c               stuff
-  --help            display usage information
+  -h, --help        display usage information
 "###,
         );
     }
@@ -1169,7 +1169,7 @@ Positional Arguments:
   name
 
 Options:
-  --help            display usage information
+  -h, --help        display usage information
 "###,
         );
     }

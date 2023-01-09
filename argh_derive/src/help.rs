@@ -84,7 +84,7 @@ pub(crate) fn help(
         option_description(errors, &mut format_lit, option);
     }
     // Also include "help"
-    option_description_format(&mut format_lit, None, "--help", "display usage information");
+    option_description_format(&mut format_lit, None, "-h, --help", "display usage information");
 
     let subcommand_calculation;
     let subcommand_format_arg;

@@ -402,7 +402,7 @@ pub trait FromArgs: Sized {
     /// Command to manage a classroom.
     ///
     /// Options:
-    ///   --help            display usage information
+    ///   -h, --help        display usage information
     ///
     /// Commands:
     ///   list              list all the classes.
@@ -426,7 +426,7 @@ pub trait FromArgs: Sized {
     ///
     /// Options:
     ///   --teacher-name    list classes for only this teacher.
-    ///   --help            display usage information
+    ///   -h, --help        display usage information
     /// "#.to_string(),
     ///        status: Ok(()),
     ///     },
@@ -568,7 +568,7 @@ pub trait FromArgs: Sized {
     /// Command to manage a classroom.
     ///
     /// Options:
-    ///   --help            display usage information
+    ///   -h, --help        display usage information
     ///
     /// Commands:
     ///   list              list all the classes.
@@ -885,7 +885,7 @@ pub fn parse_struct_args(
 
     'parse_args: while let Some(&next_arg) = remaining_args.first() {
         remaining_args = &remaining_args[1..];
-        if (next_arg == "--help" || next_arg == "help") && !options_ended {
+        if (next_arg == "--help" || next_arg == "help" || next_arg == "-h") && !options_ended {
             help = true;
             continue;
         }

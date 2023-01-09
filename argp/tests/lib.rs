@@ -517,7 +517,7 @@ Options:
             },
         );
         assert_help_string::<LastRepeatingGreedy>(
-            r###"Usage: test_arg_0 <a> [--b] [--c <c>] [d...]
+            r###"Usage: test_arg_0 [--b] [--c <c>] <a> [d...]
 
 Woot
 

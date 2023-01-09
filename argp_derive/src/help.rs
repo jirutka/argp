@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
 use std::fmt::Write;
@@ -31,17 +32,18 @@ pub(crate) fn help(
     let positional = fields.iter().filter(|f| {
         f.kind == FieldKind::Positional && f.attrs.greedy.is_none() && !f.attrs.hidden_help
     });
-    let mut has_positional = false;
-    for arg in positional.clone() {
-        has_positional = true;
-        format_lit.push(' ');
-        positional_usage(&mut format_lit, arg);
-    }
 
     let options = fields.iter().filter(|f| f.long_name.is_some() && !f.attrs.hidden_help);
     for option in options.clone() {
         format_lit.push(' ');
         option_usage(&mut format_lit, option);
+    }
+
+    let mut has_positional = false;
+    for arg in positional.clone() {
+        has_positional = true;
+        format_lit.push(' ');
+        positional_usage(&mut format_lit, arg);
     }
 
     let remain = fields.iter().filter(|f| {

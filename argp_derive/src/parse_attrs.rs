@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
 use {
@@ -157,10 +158,6 @@ impl FieldAttrs {
                     fields",
             ),
             _ => {}
-        }
-
-        if let Some(d) = &this.description {
-            check_option_description(errors, d.content.value().trim(), d.content.span());
         }
 
         this
@@ -490,19 +487,6 @@ impl VariantAttrs {
         }
 
         this
-    }
-}
-
-fn check_option_description(errors: &Errors, desc: &str, span: Span) {
-    let chars = &mut desc.trim().chars();
-    match (chars.next(), chars.next()) {
-        (Some(x), _) if x.is_lowercase() => {}
-        // If both the first and second letter are not lowercase,
-        // this is likely an initialism which should be allowed.
-        (Some(x), Some(y)) if !x.is_lowercase() && !y.is_lowercase() => {}
-        _ => {
-            errors.err_span(span, "Descriptions must begin with a lowercase letter");
-        }
     }
 }
 

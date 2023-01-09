@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
 // Deny a bunch of uncommon clippy lints to make sure the generated code won't trigger a warning.
@@ -272,16 +273,6 @@ fn explicit_long_value_for_option() {
 
     let cmd = Cmd::from_args(&["cmdname"], &["--foo", "5"]).unwrap();
     assert_eq!(cmd.x, 5);
-}
-
-/// Test that descriptions can start with an initialism despite
-/// usually being required to start with a lowercase letter.
-#[derive(FromArgs)]
-#[allow(unused)]
-struct DescriptionStartsWithInitialism {
-    /// URL fooey
-    #[argp(option)]
-    x: u8,
 }
 
 #[test]

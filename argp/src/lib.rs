@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
 //! Derive-based argument parsing optimized for code size and flexibility.
@@ -357,7 +358,7 @@ pub trait FromArgs: Sized {
     /// #[argp(subcommand, name = "list")]
     /// struct ListCmd {
     ///     /// list classes for only this teacher.
-    ///     #[argp(option)]
+    ///     #[argp(option, arg_name = "name")]
     ///     teacher_name: Option<String>,
     /// }
     ///
@@ -418,12 +419,13 @@ pub trait FromArgs: Sized {
     /// assert_eq!(
     ///     early_exit,
     ///     argp::EarlyExit {
-    ///        output: r#"Usage: classroom list [--teacher-name <teacher-name>]
+    ///        output: r#"Usage: classroom list [--teacher-name <name>]
     ///
     /// list all the classes.
     ///
     /// Options:
-    ///   --teacher-name    list classes for only this teacher.
+    ///   --teacher-name <name>
+    ///                     list classes for only this teacher.
     ///   -h, --help        display usage information
     /// "#.to_string(),
     ///        status: Ok(()),

@@ -28,11 +28,11 @@ struct GoUp {
     jump: bool,
 
     /// how high to go
-    #[argp(option)]
+    #[argp(option, arg_name = "meters")]
     height: usize,
 
     /// an optional nickname for the pilot
-    #[argp(option)]
+    #[argp(option, arg_name = "name")]
     pilot_nickname: Option<String>,
 }
 
@@ -44,14 +44,15 @@ fn main() {
 `./some_bin --help` will then output the following:
 
 ```
-Usage: cmdname [-j] --height <height> [--pilot-nickname <pilot-nickname>]
+Usage: cmdname [-j] --height <meters> [--pilot-nickname <name>]
 
 Reach new heights.
 
 Options:
   -j, --jump        whether or not to jump
-  --height          how high to go
-  --pilot-nickname  an optional nickname for the pilot
+  --height <meters> how high to go
+  --pilot-nickname <name>
+                    an optional nickname for the pilot
   -h, --help        display usage information
 ```
 

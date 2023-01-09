@@ -382,7 +382,7 @@ mod options {
 Woot
 
 Options:
-  -n, --n           fooey
+  -n, --n <n>       fooey
   -h, --help        display usage information
 "###,
         );
@@ -404,7 +404,8 @@ Options:
 Woot
 
 Options:
-  --option-name     fooey
+  --option-name <name>
+                    fooey
   -h, --help        display usage information
 "###,
         );
@@ -526,7 +527,7 @@ Positional Arguments:
 
 Options:
   --b               woo
-  --c               stuff
+  --c <c>           stuff
   -h, --help        display usage information
 "###,
         );
@@ -1137,7 +1138,8 @@ Options:
                     it wraps to the next line.
   --really-really-really-long-name-for-pat
                     documentation
-  -s, --scribble    write <scribble> repeatedly
+  -s, --scribble <scribble>
+                    write <scribble> repeatedly
   -v, --verbose     say more. Defaults to $BLAST_VERBOSE.
   -h, --help        display usage information
 
@@ -1571,7 +1573,7 @@ fn redact_arg_values_produces_help() {
 Woot
 
 Options:
-  -n, --n           fooey
+  -n, --n <n>       fooey
   -h, --help        display usage information
 "###
             .to_owned(),

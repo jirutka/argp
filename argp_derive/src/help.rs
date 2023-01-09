@@ -85,7 +85,13 @@ pub(crate) fn help(
         option_description(errors, &mut format_lit, option);
     }
     // Also include "help"
-    option_description_format(&mut format_lit, None, "-h, --help", "display usage information");
+    option_description_format(
+        &mut format_lit,
+        None,
+        "-h, --help",
+        None,
+        "display usage information",
+    );
 
     let subcommand_calculation;
     let subcommand_format_arg;
@@ -254,13 +260,17 @@ fn option_description(errors: &Errors, out: &mut String, field: &StructField<'_>
     let description =
         require_description(errors, field.name.span(), &field.attrs.description, "field");
 
-    option_description_format(out, short, long_with_leading_dashes, &description)
+    let arg_name =
+        if field.kind == FieldKind::Option { Some(field.positional_arg_name()) } else { None };
+
+    option_description_format(out, short, long_with_leading_dashes, arg_name, &description)
 }
 
 fn option_description_format(
     out: &mut String,
     short: Option<char>,
     long_with_leading_dashes: &str,
+    arg_name: Option<String>,
     description: &str,
 ) {
     let mut name = String::new();
@@ -270,6 +280,12 @@ fn option_description_format(
         name.push_str(", ");
     }
     name.push_str(long_with_leading_dashes);
+
+    if let Some(arg_name) = arg_name {
+        name.push_str(" <");
+        name.push_str(&arg_name);
+        name.push('>');
+    }
 
     let info = argp_shared::CommandInfo { name: &name, description };
     argp_shared::write_description(out, &info);

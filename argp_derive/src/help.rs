@@ -90,7 +90,7 @@ pub(crate) fn help(
         None,
         "-h, --help",
         None,
-        "display usage information",
+        "Show this help message and exit",
     );
 
     let subcommand_calculation;

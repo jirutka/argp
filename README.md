@@ -53,7 +53,7 @@ Options:
   --height <meters> how high to go
   --pilot-nickname <name>
                     an optional nickname for the pilot
-  -h, --help        display usage information
+  -h, --help        Show this help message and exit
 ```
 
 The resulting program can then be used in any of these ways:

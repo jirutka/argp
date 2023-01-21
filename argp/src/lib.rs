@@ -1096,15 +1096,6 @@ fn prepend_help<'a>(args: &[&'a str]) -> Vec<&'a str> {
     [&["help"], args].concat()
 }
 
-#[doc(hidden)]
-pub fn print_subcommands<'a>(commands: impl Iterator<Item = &'a CommandInfo>) -> String {
-    let mut out = String::new();
-    for cmd in commands {
-        argp_shared::write_description(&mut out, cmd);
-    }
-    out
-}
-
 fn unrecognized_arg(arg: &str) -> String {
     ["Unrecognized argument: ", arg, "\n"].concat()
 }

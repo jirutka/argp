@@ -14,16 +14,65 @@ pub struct CommandInfo<'a> {
     pub description: &'a str,
 }
 
+type StrPair<'a> = (&'a str, &'a str);
+
+pub struct Help<'a> {
+    pub usage: &'a str,
+    pub description: &'a str,
+    pub positionals: &'a [StrPair<'a>],
+    pub options: &'a [StrPair<'a>],
+    pub subcommands: &'a [StrPair<'a>],
+    pub footer: &'a str,
+}
+
 const INDENT: &str = "  ";
 const DESCRIPTION_INDENT: usize = 20;
+const SECTION_SEPARATOR: &str = "\n\n";
 const WRAP_WIDTH: usize = 80;
 
-/// Write command names and descriptions to an output string.
-pub fn write_description(out: &mut String, cmd: &CommandInfo<'_>) {
-    let mut current_line = INDENT.to_string();
-    current_line.push_str(cmd.name);
+impl<'a> Help<'a> {
+    pub fn generate(&self, command_name: String) -> String {
+        let mut out = String::from("Usage: ");
+        out.push_str(&command_name);
+        out.push_str(self.usage);
 
-    if cmd.description.is_empty() {
+        out.push_str(SECTION_SEPARATOR);
+        out.push_str(&self.description.replace("{command_name}", &command_name));
+
+        write_section(&mut out, "Positional Arguments:", self.positionals);
+
+        let mut options = self.options.to_vec();
+        options.push(("-h, --help", "Show this help message and exit"));
+        write_section(&mut out, "Options:", &options);
+
+        write_section(&mut out, "Commands:", self.subcommands);
+
+        if !self.footer.is_empty() {
+            out.push_str(SECTION_SEPARATOR);
+            out.push_str(&self.footer.replace("{command_name}", &command_name));
+        }
+
+        out.push('\n');
+
+        out
+    }
+}
+
+fn write_section(out: &mut String, title: &str, items: &[StrPair]) {
+    if !items.is_empty() {
+        out.push_str(SECTION_SEPARATOR);
+        out.push_str(title);
+        for item in items {
+            write_description(out, *item);
+        }
+    }
+}
+
+fn write_description(out: &mut String, item: StrPair) {
+    let mut current_line = INDENT.to_string();
+    current_line.push_str(item.0);
+
+    if item.1.is_empty() {
         new_line(&mut current_line, out);
         return;
     }
@@ -34,7 +83,7 @@ pub fn write_description(out: &mut String, cmd: &CommandInfo<'_>) {
         new_line(&mut current_line, out);
     }
 
-    let mut words = cmd.description.split(' ').peekable();
+    let mut words = item.1.split(' ').peekable();
     while let Some(first_word) = words.next() {
         indent_description(&mut current_line);
         current_line.push_str(first_word);

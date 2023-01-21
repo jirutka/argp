@@ -254,9 +254,9 @@ fn multiline_doc_comment_description() {
 Short description
 
 Options:
-  --s               a switch with a description that is spread across a number
-                    of lines of comments.
-  -h, --help        Show this help message and exit
+  --s         a switch with a description that is spread across a number of
+              lines of comments.
+  -h, --help  Show this help message and exit
 "###,
     );
 }
@@ -382,8 +382,8 @@ mod options {
 Woot
 
 Options:
-  -n, --n <n>       fooey
-  -h, --help        Show this help message and exit
+  -n, --n <n>  fooey
+  -h, --help   Show this help message and exit
 "###,
         );
     }
@@ -404,9 +404,8 @@ Options:
 Woot
 
 Options:
-  --option-name <name>
-                    fooey
-  -h, --help        Show this help message and exit
+  --option-name <name>  fooey
+  -h, --help            Show this help message and exit
 "###,
         );
     }
@@ -440,11 +439,11 @@ mod positional {
 Woot
 
 Positional Arguments:
-  a                 fooey
-  b                 fooey
+  a           fooey
+  b           fooey
 
 Options:
-  -h, --help        Show this help message and exit
+  -h, --help  Show this help message and exit
 "###,
         );
     }
@@ -523,12 +522,12 @@ Options:
 Woot
 
 Positional Arguments:
-  a                 fooey
+  a           fooey
 
 Options:
-  --b               woo
-  --c <c>           stuff
-  -h, --help        Show this help message and exit
+  --b         woo
+  --c <c>     stuff
+  -h, --help  Show this help message and exit
 "###,
         );
     }
@@ -937,10 +936,10 @@ mod fuchsia_commandline_tools_rubric {
 A type for testing `--help`/`help`
 
 Options:
-  -h, --help        Show this help message and exit
+  -h, --help  Show this help message and exit
 
 Commands:
-  first             First subcommmand for testing `help`.
+  first       First subcommmand for testing `help`.
 "###;
 
     const FIRST_HELP_STRING: &str = r###"Usage: cmdname first <command> [<args>]
@@ -948,10 +947,10 @@ Commands:
 First subcommmand for testing `help`.
 
 Options:
-  -h, --help        Show this help message and exit
+  -h, --help  Show this help message and exit
 
 Commands:
-  second            Second subcommand for testing `help`.
+  second      Second subcommand for testing `help`.
 "###;
 
     const SECOND_HELP_STRING: &str = r###"Usage: cmdname first second
@@ -959,7 +958,7 @@ Commands:
 Second subcommand for testing `help`.
 
 Options:
-  -h, --help        Show this help message and exit
+  -h, --help  Show this help message and exit
 "###;
 
     #[test]
@@ -1133,19 +1132,18 @@ Options:
 Destroy the contents of <file>.
 
 Options:
-  -f, --force       force, ignore minor errors. This description is so long that
-                    it wraps to the next line.
+  -f, --force                force, ignore minor errors. This description is so
+                             long that it wraps to the next line.
   --really-really-really-long-name-for-pat
-                    documentation
-  -s, --scribble <scribble>
-                    write <scribble> repeatedly
-  -v, --verbose     say more. Defaults to $BLAST_VERBOSE.
-  -h, --help        Show this help message and exit
+                             documentation
+  -s, --scribble <scribble>  write <scribble> repeatedly
+  -v, --verbose              say more. Defaults to $BLAST_VERBOSE.
+  -h, --help                 Show this help message and exit
 
 Commands:
-  blow-up           explosively separate
-  grind             make smaller by many small cuts
-  plugin            Example dynamic command
+  blow-up                    explosively separate
+  grind                      make smaller by many small cuts
+  plugin                     Example dynamic command
 
 Examples:
   Scribble 'abc' and then run |grind|.
@@ -1180,7 +1178,7 @@ Positional Arguments:
   name
 
 Options:
-  -h, --help        Show this help message and exit
+  -h, --help  Show this help message and exit
 "###,
         );
     }
@@ -1207,10 +1205,10 @@ Options:
 Short description
 
 Positional Arguments:
-  two               this one is real
+  two         this one is real
 
 Options:
-  -h, --help        Show this help message and exit
+  -h, --help  Show this help message and exit
 "###,
         );
     }
@@ -1572,8 +1570,8 @@ fn redact_arg_values_produces_help() {
 Woot
 
 Options:
-  -n, --n <n>       fooey
-  -h, --help        Show this help message and exit
+  -n, --n <n>  fooey
+  -h, --help   Show this help message and exit
 "###
             .to_owned(),
             status: Ok(()),

@@ -401,11 +401,11 @@ pub trait FromArgs: Sized {
     /// Command to manage a classroom.
     ///
     /// Options:
-    ///   -h, --help        Show this help message and exit
+    ///   -h, --help  Show this help message and exit
     ///
     /// Commands:
-    ///   list              list all the classes.
-    ///   add               add students to a class.
+    ///   list        list all the classes.
+    ///   add         add students to a class.
     /// "#.to_string(),
     ///        status: Ok(()),
     ///     },
@@ -424,9 +424,8 @@ pub trait FromArgs: Sized {
     /// list all the classes.
     ///
     /// Options:
-    ///   --teacher-name <name>
-    ///                     list classes for only this teacher.
-    ///   -h, --help        Show this help message and exit
+    ///   --teacher-name <name>  list classes for only this teacher.
+    ///   -h, --help             Show this help message and exit
     /// "#.to_string(),
     ///        status: Ok(()),
     ///     },
@@ -568,11 +567,11 @@ pub trait FromArgs: Sized {
     /// Command to manage a classroom.
     ///
     /// Options:
-    ///   -h, --help        Show this help message and exit
+    ///   -h, --help  Show this help message and exit
     ///
     /// Commands:
-    ///   list              list all the classes.
-    ///   add               add students to a class.
+    ///   list        list all the classes.
+    ///   add         add students to a class.
     /// "#.to_string(),
     ///         status: Ok(()),
     ///     }),

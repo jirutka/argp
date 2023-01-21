@@ -1003,10 +1003,9 @@ Options:
     #[derive(FromArgs, PartialEq, Debug)]
     #[argp(
         description = "Destroy the contents of <file>.",
-        example = "Scribble 'abc' and then run |grind|.\n$ {command_name} -s 'abc' grind old.txt taxes.cp",
-        note = "Use `{command_name} help <command>` for details on [<args>] for a subcommand.",
-        error_code(2, "The blade is too dull."),
-        error_code(3, "Out of fuel.")
+        footer = "Examples:\n  Scribble 'abc' and then run |grind|.\n  $ test_arg_0 -s 'abc' grind old.txt taxes.cp",
+        footer = "Notes:\n  Use `{command_name} help <command>` for details on [<args>] for a subcommand.",
+        footer = "Error codes:\n  2 The blade is too dull.\n  3 Out of fuel."
     )]
     struct HelpExample {
         /// force, ignore minor errors. This description is so long that it wraps to the next line.

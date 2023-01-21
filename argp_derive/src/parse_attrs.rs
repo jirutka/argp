@@ -5,7 +5,6 @@
 use {
     crate::errors::Errors,
     proc_macro2::Span,
-    std::collections::hash_map::{Entry, HashMap},
 };
 
 /// Attributes applied to a field of a `#![derive(FromArgs)]` struct.
@@ -291,9 +290,7 @@ pub struct TypeAttrs {
     pub is_subcommand: Option<syn::Ident>,
     pub name: Option<syn::LitStr>,
     pub description: Option<Description>,
-    pub examples: Vec<syn::LitStr>,
-    pub notes: Vec<syn::LitStr>,
-    pub error_codes: Vec<(syn::LitInt, syn::LitStr)>,
+    pub footer: Vec<syn::LitStr>,
 }
 
 impl TypeAttrs {
@@ -321,21 +318,13 @@ impl TypeAttrs {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
                         parse_attr_description(errors, m, &mut this.description);
                     }
-                } else if name.is_ident("error_code") {
-                    if let Some(m) = errors.expect_meta_list(meta) {
-                        this.parse_attr_error_code(errors, m);
-                    }
-                } else if name.is_ident("example") {
+                } else if name.is_ident("footer") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
-                        this.parse_attr_example(errors, m);
+                        this.parse_attr_footer(errors, m);
                     }
                 } else if name.is_ident("name") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
                         this.parse_attr_name(errors, m);
-                    }
-                } else if name.is_ident("note") {
-                    if let Some(m) = errors.expect_meta_name_value(meta) {
-                        this.parse_attr_note(errors, m);
                     }
                 } else if name.is_ident("subcommand") {
                     if let Some(ident) = errors.expect_meta_word(meta).and_then(|p| p.get_ident()) {
@@ -346,70 +335,18 @@ impl TypeAttrs {
                         &meta,
                         concat!(
                             "Invalid type-level `argp` attribute\n",
-                            "Expected one of: `description`, `error_code`, `example`, `name`, ",
-                            "`note`, `subcommand`",
+                            "Expected one of: `description`, `footer`, `name`, `note`, `subcommand`",
                         ),
                     );
                 }
             }
         }
 
-        this.check_error_codes(errors);
         this
     }
 
-    /// Checks that error codes are within range for `i32` and that they are
-    /// never duplicated.
-    fn check_error_codes(&self, errors: &Errors) {
-        // map from error code to index
-        let mut map: HashMap<u64, usize> = HashMap::new();
-        for (index, (lit_int, _lit_str)) in self.error_codes.iter().enumerate() {
-            let value = match lit_int.base10_parse::<u64>() {
-                Ok(v) => v,
-                Err(e) => {
-                    errors.push(e);
-                    continue;
-                }
-            };
-            if value > (std::i32::MAX as u64) {
-                errors.err(lit_int, "Error code out of range for `i32`");
-            }
-            match map.entry(value) {
-                Entry::Occupied(previous) => {
-                    let previous_index = *previous.get();
-                    let (previous_lit_int, _previous_lit_str) = &self.error_codes[previous_index];
-                    errors.err(lit_int, &format!("Duplicate error code {}", value));
-                    errors.err(
-                        previous_lit_int,
-                        &format!("Error code {} previously defined here", value),
-                    );
-                }
-                Entry::Vacant(slot) => {
-                    slot.insert(index);
-                }
-            }
-        }
-    }
-
-    fn parse_attr_error_code(&mut self, errors: &Errors, ml: &syn::MetaList) {
-        if ml.nested.len() != 2 {
-            errors.err(&ml, "Expected two arguments, an error number and a string description");
-            return;
-        }
-
-        let err_code = &ml.nested[0];
-        let err_msg = &ml.nested[1];
-
-        let err_code = errors.expect_nested_lit(err_code).and_then(|l| errors.expect_lit_int(l));
-        let err_msg = errors.expect_nested_lit(err_msg).and_then(|l| errors.expect_lit_str(l));
-
-        if let (Some(err_code), Some(err_msg)) = (err_code, err_msg) {
-            self.error_codes.push((err_code.clone(), err_msg.clone()));
-        }
-    }
-
-    fn parse_attr_example(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
-        parse_attr_multi_string(errors, m, &mut self.examples)
+    fn parse_attr_footer(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
+        parse_attr_multi_string(errors, m, &mut self.footer)
     }
 
     fn parse_attr_name(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
@@ -419,10 +356,6 @@ impl TypeAttrs {
                 errors.err(name, "Custom `help` commands are not supported.");
             }
         }
-    }
-
-    fn parse_attr_note(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
-        parse_attr_multi_string(errors, m, &mut self.notes)
     }
 
     fn parse_attr_subcommand(&mut self, errors: &Errors, ident: &syn::Ident) {
@@ -549,7 +482,7 @@ fn parse_attr_description(errors: &Errors, m: &syn::MetaNameValue, slot: &mut Op
 /// Checks that a `#![derive(FromArgs)]` enum has an `#[argp(subcommand)]`
 /// attribute and that it does not have any other type-level `#[argp(...)]` attributes.
 pub fn check_enum_type_attrs(errors: &Errors, type_attrs: &TypeAttrs, type_span: &Span) {
-    let TypeAttrs { is_subcommand, name, description, examples, notes, error_codes } = type_attrs;
+    let TypeAttrs { is_subcommand, name, description, footer } = type_attrs;
 
     // Ensure that `#[argp(subcommand)]` is present.
     if is_subcommand.is_none() {
@@ -571,14 +504,8 @@ pub fn check_enum_type_attrs(errors: &Errors, type_attrs: &TypeAttrs, type_span:
             err_unused_enum_attr(errors, &description.content);
         }
     }
-    if let Some(example) = examples.first() {
-        err_unused_enum_attr(errors, example);
-    }
-    if let Some(note) = notes.first() {
-        err_unused_enum_attr(errors, note);
-    }
-    if let Some(err_code) = error_codes.first() {
-        err_unused_enum_attr(errors, &err_code.0);
+    if let Some(footer) = footer.first() {
+        err_unused_enum_attr(errors, footer);
     }
 }
 

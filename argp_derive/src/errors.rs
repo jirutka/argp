@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
 use {
@@ -75,21 +76,9 @@ impl Errors {
         }
     }
 
-    /// Error on attribute syntax, expecting literals
-    pub fn expect_nested_lit<'a>(&self, nm: &'a syn::NestedMeta) -> Option<&'a syn::Lit> {
-        match nm {
-            syn::NestedMeta::Meta(m) => {
-                self.err(m, "Expected literal");
-                None
-            }
-            syn::NestedMeta::Lit(l) => Some(l),
-        }
-    }
-
     expect_lit_fn![
         (expect_lit_str, LitStr, Str, "string"),
         (expect_lit_char, LitChar, Char, "character"),
-        (expect_lit_int, LitInt, Int, "integer"),
     ];
 
     expect_meta_fn![

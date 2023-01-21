@@ -2,14 +2,12 @@
 // SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
-use std::fmt::Write;
 use {
     crate::{
         errors::Errors,
         parse_attrs::{Description, FieldKind, TypeAttrs},
         Optionality, StructField,
     },
-    argp_shared::INDENT,
     proc_macro2::{Span, TokenStream},
     quote::quote,
 };
@@ -116,18 +114,9 @@ pub(crate) fn help(
         subcommand_format_arg = TokenStream::new()
     }
 
-    lits_section(&mut format_lit, "Examples:", &ty_attrs.examples);
-
-    lits_section(&mut format_lit, "Notes:", &ty_attrs.notes);
-
-    if !ty_attrs.error_codes.is_empty() {
+    for lit in &ty_attrs.footer {
         format_lit.push_str(SECTION_SEPARATOR);
-        format_lit.push_str("Error codes:");
-        for (code, text) in &ty_attrs.error_codes {
-            format_lit.push('\n');
-            format_lit.push_str(INDENT);
-            write!(format_lit, "{} {}", code, text.value()).unwrap();
-        }
+        format_lit.push_str(&lit.value());
     }
 
     format_lit.push('\n');
@@ -136,22 +125,6 @@ pub(crate) fn help(
         #subcommand_calculation
         format!(#format_lit, command_name = #cmd_name_str_array_ident.join(" "), #subcommand_format_arg)
     } }
-}
-
-/// A section composed of exactly just the literals provided to the program.
-fn lits_section(out: &mut String, heading: &str, lits: &[syn::LitStr]) {
-    if !lits.is_empty() {
-        out.push_str(SECTION_SEPARATOR);
-        out.push_str(heading);
-        for lit in lits {
-            let value = lit.value();
-            for line in value.split('\n') {
-                out.push('\n');
-                out.push_str(INDENT);
-                out.push_str(line);
-            }
-        }
-    }
 }
 
 /// Add positional arguments like `[<foo>...]` to a help format string.

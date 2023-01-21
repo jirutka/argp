@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
 //! Shared functionality between argp_derive and the argp runtime.
@@ -13,7 +14,7 @@ pub struct CommandInfo<'a> {
     pub description: &'a str,
 }
 
-pub const INDENT: &str = "  ";
+const INDENT: &str = "  ";
 const DESCRIPTION_INDENT: usize = 20;
 const WRAP_WIDTH: usize = 80;
 

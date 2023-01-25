@@ -18,6 +18,7 @@ pub struct FieldAttrs {
     pub arg_name: Option<syn::LitStr>,
     pub greedy: Option<syn::Path>,
     pub hidden_help: bool,
+    pub global: bool,
 }
 
 /// The purpose of a particular field on a `#![derive(FromArgs)]` struct.
@@ -124,13 +125,15 @@ impl FieldAttrs {
                     this.greedy = Some(name.clone());
                 } else if name.is_ident("hidden_help") {
                     this.hidden_help = true;
+                } else if name.is_ident("global") {
+                    this.global = true;
                 } else {
                     errors.err(
                         &meta,
                         concat!(
                             "Invalid field-level `argp` attribute\n",
-                            "Expected one of: `arg_name`, `default`, `description`, `from_str_fn`, `greedy`, ",
-                            "`long`, `option`, `short`, `subcommand`, `switch`, `hidden_help`",
+                            "Expected one of: `arg_name`, `default`, `description`, `from_str_fn`, `global`, ",
+                            "`greedy`, `long`, `option`, `short`, `subcommand`, `switch`, `hidden_help`",
                         ),
                     );
                 }
@@ -156,6 +159,17 @@ impl FieldAttrs {
                     fields",
             ),
             _ => {}
+        }
+
+        if let (Some(field_type), true) = (&this.field_type, this.global) {
+            match field_type.kind {
+                FieldKind::Option | FieldKind::Switch => {}
+                FieldKind::Positional | FieldKind::SubCommand => errors.err(
+                    &field,
+                    "`global` may only be specified on `#[argp(option)]` \
+                     or `#[argp(switch)]` fields",
+                ),
+            }
         }
 
         this

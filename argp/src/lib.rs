@@ -164,6 +164,14 @@
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Top-level command.
 //! struct TopLevel {
+//!     #[argp(switch, short = 'v', global)]
+//!     /// be verbose
+//!     verbose: bool,
+//!
+//!     #[argp(switch)]
+//!     /// run locally
+//!     quiet: bool,
+//!
 //!     #[argp(subcommand)]
 //!     nested: MySubCommandEnum,
 //! }
@@ -193,6 +201,17 @@
 //!     fooey: bool,
 //! }
 //! ```
+//!
+//! Normally the options specified in `TopLevel` must be placed before the
+//! subcommand name, e.g. `./some_bin --quiet one --x 42` will work, but
+//! `./some_bin one --quiet --x 42` won't. To allow an option from a higher
+//! level to be used at a lower level (in subcommands), you can specify the
+//! `global` attribute to the option (`--verbose` in the example above).
+//!
+//! Global options only propagate down, not up (to parent commands), but their
+//! values are propagated back up to the parent once a user has used them. In
+//! effect, this means that you should define all global arguments at the top
+//! level, but it doesn't matter where the user uses the global argument.
 //!
 //! You can also discover subcommands dynamically at runtime. To do this,
 //! declare subcommands as usual and add a variant to the enum with the
@@ -445,7 +464,9 @@ pub trait FromArgs: Sized {
     ///     },
     /// );
     /// ```
-    fn from_args(command_name: &[&str], args: &[&str]) -> Result<Self, EarlyExit>;
+    fn from_args(command_name: &[&str], args: &[&str]) -> Result<Self, EarlyExit> {
+        Self::_from_args(command_name, args, None)
+    }
 
     /// Get a String with just the argument names, e.g., options, flags, subcommands, etc, but
     /// without the values of the options and arguments. This can be useful as a means to capture
@@ -582,6 +603,13 @@ pub trait FromArgs: Sized {
     fn redact_arg_values(_command_name: &[&str], _args: &[&str]) -> Result<Vec<String>, EarlyExit> {
         Ok(vec!["<<REDACTED>>".into()])
     }
+
+    #[doc(hidden)]
+    fn _from_args(
+        command_name: &[&str],
+        args: &[&str],
+        parent: Option<&mut dyn ParseGlobalOptions>,
+    ) -> Result<Self, EarlyExit>;
 }
 
 /// A top-level `FromArgs` implementation that is not a subcommand.
@@ -884,7 +912,7 @@ impl_flag_for_integers![u8, u16, u32, u64, u128, i8, i16, i32, i64, i128,];
 pub fn parse_struct_args(
     cmd_name: &[&str],
     args: &[&str],
-    mut parse_options: ParseStructOptions<'_>,
+    mut parse_options: ParseStructOptions<'_, '_>,
     mut parse_positionals: ParseStructPositionals<'_>,
     mut parse_subcommand: Option<ParseStructSubCommand<'_>>,
     help: &Help,
@@ -912,11 +940,18 @@ pub fn parse_struct_args(
             }
 
             parse_options.parse(next_arg, &mut remaining_args)?;
+
             continue;
         }
 
         if let Some(ref mut parse_subcommand) = parse_subcommand {
-            if parse_subcommand.parse(help_requested, cmd_name, next_arg, remaining_args)? {
+            if parse_subcommand.parse(
+                help_requested,
+                cmd_name,
+                next_arg,
+                remaining_args,
+                &mut parse_options,
+            )? {
                 // Unset `help`, since we handled it in the subcommand
                 help_requested = false;
                 break 'parse_args;
@@ -927,14 +962,16 @@ pub fn parse_struct_args(
     }
 
     if help_requested {
-        Err(EarlyExit { output: help.generate(cmd_name), status: Ok(()) })
+        let global_options = parse_options.parent.map_or_else(Vec::new, |p| p.global_options());
+
+        Err(EarlyExit { output: help.generate(cmd_name, &global_options), status: Ok(()) })
     } else {
         Ok(())
     }
 }
 
 #[doc(hidden)]
-pub struct ParseStructOptions<'a> {
+pub struct ParseStructOptions<'a, 'p> {
     /// A mapping from option string literals to the entry
     /// in the output table. This may contain multiple entries mapping to
     /// the same location in the table if both a short and long version
@@ -943,22 +980,66 @@ pub struct ParseStructOptions<'a> {
 
     /// The storage for argument output data.
     pub slots: &'a mut [ParseStructOption<'a>],
+
+    /// A boolean flag for each element of the `slots` slice that specifies
+    /// whether the option(s) associated with the slot is a global option.
+    pub slots_global: &'static [bool],
+
+    /// A reference to the [Help] struct in the associated [FromArgs].
+    /// This is used to collect global options for generating a help message.
+    pub help: &'static Help,
+
+    /// If this struct represents options of a subcommand, then `parent` is an
+    /// indirect reference to the previous [ParseStructOptions] in the chain,
+    /// used for parsing global options.
+    pub parent: Option<&'p mut dyn ParseGlobalOptions>,
 }
 
-impl<'a> ParseStructOptions<'a> {
-    /// Parse a command-line option.
+#[doc(hidden)]
+pub trait ParseGlobalOptions {
+    /// Parse a global command-line option. If the option is not found in _self_,
+    /// it recursively calls this function on the parent. If the option is
+    /// still not found, it returns `None`.
     ///
-    /// `arg`: the current option argument being parsed (e.g. `--foo`).
-    /// `remaining_args`: the remaining command line arguments. This slice
-    /// will be advanced forwards if the option takes a value argument.
-    fn parse(&mut self, arg: &str, remaining_args: &mut &[&str]) -> Result<(), String> {
-        let pos = self
-            .arg_to_slot
-            .iter()
-            .find_map(|&(name, pos)| if name == arg { Some(pos) } else { None })
-            .ok_or_else(|| unrecognized_argument(arg))?;
+    /// - `arg`: the current option argument being parsed (e.g. `--foo`).
+    /// - `remaining_args`: the remaining command line arguments. This slice
+    ///    will be advanced forwards if the option takes a value argument.
+    fn try_parse_global(
+        &mut self,
+        arg: &str,
+        remaining_args: &mut &[&str],
+    ) -> Option<Result<(), String>>;
 
-        match self.slots[pos] {
+    /// Returns a vector representing global options specified on this instance
+    /// and recursively on the parent. This is used for generating a help
+    /// message.
+    fn global_options<'a>(&self) -> Vec<&'a OptionArgInfo>;
+}
+
+impl<'a, 'p> ParseStructOptions<'a, 'p> {
+    /// Parses a command-line option. If the option is not found in this
+    /// instance, it tries to parse it as a global option in the parent
+    /// instance, recursively. If it's not found even there, returns
+    /// `Err("Unrecognized argument: {arg}")`.
+    ///
+    /// - `arg`: The current option argument being parsed (e.g. `--foo`).
+    /// - `remaining_args`: The remaining command line arguments. This slice
+    ///    will be advanced forwards if the option takes a value argument.
+    fn parse(&mut self, arg: &str, remaining_args: &mut &[&str]) -> Result<(), String> {
+        match self.arg_to_slot.iter().find(|(name, _)| *name == arg) {
+            Some((_, pos)) => Self::fill_slot(&mut self.slots[*pos], arg, remaining_args),
+            None => self
+                .try_parse_global(arg, remaining_args)
+                .unwrap_or_else(|| Err(unrecognized_argument(arg))),
+        }
+    }
+
+    fn fill_slot(
+        slot: &mut ParseStructOption<'a>,
+        arg: &str,
+        remaining_args: &mut &[&str],
+    ) -> Result<(), String> {
+        match slot {
             ParseStructOption::Flag(ref mut b) => b.set_flag(arg),
             ParseStructOption::Value(ref mut pvs) => {
                 let value = remaining_args
@@ -971,8 +1052,27 @@ impl<'a> ParseStructOptions<'a> {
                 })?;
             }
         }
-
         Ok(())
+    }
+}
+
+impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
+    fn try_parse_global(
+        &mut self,
+        arg: &str,
+        remaining_args: &mut &[&str],
+    ) -> Option<Result<(), String>> {
+        self.arg_to_slot
+            .iter()
+            .find(|(name, pos)| *name == arg && self.slots_global[*pos])
+            .map(|(_, pos)| Self::fill_slot(&mut self.slots[*pos], arg, remaining_args))
+            .or_else(|| self.parent.as_mut().and_then(|p| p.try_parse_global(arg, remaining_args)))
+    }
+
+    fn global_options<'b>(&self) -> Vec<&'b OptionArgInfo> {
+        let mut opts = self.parent.as_ref().map_or_else(Vec::new, |p| p.global_options());
+        opts.extend(self.help.options.iter().filter(|o| o.global));
+        opts
     }
 }
 
@@ -1068,7 +1168,11 @@ pub struct ParseStructSubCommand<'a> {
 
     // The function to parse the subcommand arguments.
     #[allow(clippy::type_complexity)]
-    pub parse_func: &'a mut dyn FnMut(&[&str], &[&str]) -> Result<(), EarlyExit>,
+    pub parse_func: &'a mut dyn FnMut(
+        &[&str],
+        &[&str],
+        Option<&mut dyn ParseGlobalOptions>,
+    ) -> Result<(), EarlyExit>,
 }
 
 impl<'a> ParseStructSubCommand<'a> {
@@ -1078,6 +1182,7 @@ impl<'a> ParseStructSubCommand<'a> {
         cmd_name: &[&str],
         arg: &str,
         remaining_args: &[&str],
+        parse_global_opts: &mut dyn ParseGlobalOptions,
     ) -> Result<bool, EarlyExit> {
         for subcommand in self.subcommands.iter().chain(self.dynamic_subcommands.iter()) {
             if subcommand.name == arg {
@@ -1091,7 +1196,7 @@ impl<'a> ParseStructSubCommand<'a> {
                     remaining_args
                 };
 
-                (self.parse_func)(&command, remaining_args)?;
+                (self.parse_func)(&command, remaining_args, Some(parse_global_opts))?;
 
                 return Ok(true);
             }

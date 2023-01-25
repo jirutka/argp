@@ -21,6 +21,9 @@ pub struct OptionArgInfo {
     pub usage: &'static str,
     pub names: &'static str,
     pub description: &'static str,
+    /// Whether to propagate this option down to subcommands. This is valid only
+    /// for options and flags, not for positional arguments.
+    pub global: bool,
 }
 
 /// Information about a specific (sub)command used for generating a help message.
@@ -50,17 +53,29 @@ const HELP_OPT: OptionArgInfo = OptionArgInfo {
     usage: "",
     names: "-h, --help",
     description: "Show this help message and exit",
+    global: true,
 };
 
 impl Help {
-    pub fn generate(&self, command_name: &[&str]) -> String {
+    /// Generates a help message.
+    ///
+    /// - `command_name`: The identifier for the current command.
+    /// - `global_options`: Information about additional global options (from
+    ///   ancestors) to add to the generated help message.
+    pub fn generate(&self, command_name: &[&str], global_options: &[&OptionArgInfo]) -> String {
         let command_name = command_name.join(" ");
+
+        let options = global_options
+            .iter()
+            .map(Deref::deref)
+            .chain(self.options)
+            .chain(iter::once(&HELP_OPT));
+        let options_and_args = options.clone().chain(self.positionals);
 
         let mut out = String::from("Usage: ");
         out.push_str(&command_name);
 
-        let usages = self.options.iter().chain(self.positionals).map(|r| r.usage);
-        for usage in usages.filter(|s| !s.is_empty()) {
+        for usage in options_and_args.clone().map(|r| r.usage).filter(|s| !s.is_empty()) {
             out.push(' ');
             out.push_str(usage);
         }
@@ -73,7 +88,6 @@ impl Help {
         out.push_str(SECTION_SEPARATOR);
         out.push_str(&self.description.replace("{command_name}", &command_name));
 
-        let options = self.options.iter().chain(iter::once(&HELP_OPT));
         let subcommands = if let Some(cmds) = &self.commands {
             cmds.subcommands
                 .iter()
@@ -87,11 +101,7 @@ impl Help {
         // Computes the indentation width of the description (right) column based
         // on width of the names/flags in the left column.
         let desc_indent = compute_desc_indent(
-            self.positionals
-                .iter()
-                .chain(options.clone())
-                .map(|r| r.names)
-                .chain(subcommands.iter().map(|r| r.name)),
+            options_and_args.map(|r| r.names).chain(subcommands.iter().map(|r| r.name)),
         );
 
         write_opts_section(&mut out, "Positional Arguments:", self.positionals.iter(), desc_indent);

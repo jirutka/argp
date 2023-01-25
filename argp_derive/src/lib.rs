@@ -249,6 +249,7 @@ fn impl_from_args_struct(
     ensure_unique_names(errors, &fields);
     ensure_only_last_positional_is_optional(errors, &fields);
     ensure_only_one_subcommand(errors, &fields);
+    ensure_global_only_when_subcommand(errors, &fields);
 
     let subcommand = fields.iter().find(|field| field.kind == FieldKind::SubCommand);
 
@@ -316,6 +317,11 @@ fn impl_from_args_struct_from_args<'a>(
         }
     });
 
+    let flag_global_table = fields.iter().filter_map(|field| match field.kind {
+        FieldKind::Option | FieldKind::Switch => Some(field.attrs.global),
+        FieldKind::SubCommand | FieldKind::Positional => None,
+    });
+
     let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(fields);
 
     let impl_span = Span::call_site();
@@ -332,8 +338,8 @@ fn impl_from_args_struct_from_args<'a>(
             Some(::argp::ParseStructSubCommand {
                 subcommands: <#ty as ::argp::SubCommands>::COMMANDS,
                 dynamic_subcommands: &<#ty as ::argp::SubCommands>::dynamic_commands(),
-                parse_func: &mut |__command, __remaining_args| {
-                    #name = ::std::option::Option::Some(<#ty as ::argp::FromArgs>::from_args(__command, __remaining_args)?);
+                parse_func: &mut |__command, __remaining_args, __parent| {
+                    #name = ::std::option::Option::Some(<#ty as ::argp::FromArgs>::_from_args(__command, __remaining_args, __parent)?);
                     ::std::result::Result::Ok(())
                 },
             })
@@ -343,7 +349,7 @@ fn impl_from_args_struct_from_args<'a>(
     };
 
     let method_impl = quote_spanned! { impl_span =>
-        fn from_args(__cmd_name: &[&str], __args: &[&str])
+        fn _from_args(__cmd_name: &[&str], __args: &[&str], __parent: ::std::option::Option<&mut dyn ::argp::ParseGlobalOptions>)
             -> ::std::result::Result<Self, ::argp::EarlyExit>
         {
             #![allow(clippy::unwrap_in_result)]
@@ -356,6 +362,9 @@ fn impl_from_args_struct_from_args<'a>(
                 ::argp::ParseStructOptions {
                     arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
                     slots: &mut [ #( #flag_output_table, )* ],
+                    slots_global: &[ #( #flag_global_table, )* ],
+                    help: &<Self as argp::CommandHelp>::HELP,
+                    parent: __parent,
                 },
                 ::argp::ParseStructPositionals {
                     positionals: &mut [
@@ -421,6 +430,11 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         }
     });
 
+    let flag_global_table = fields.iter().filter_map(|field| match field.kind {
+        FieldKind::Option | FieldKind::Switch => Some(field.attrs.global),
+        FieldKind::SubCommand | FieldKind::Positional => None,
+    });
+
     let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(fields);
 
     let impl_span = Span::call_site();
@@ -437,7 +451,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
             ::std::option::Option::Some(::argp::ParseStructSubCommand {
                 subcommands: <#ty as ::argp::SubCommands>::COMMANDS,
                 dynamic_subcommands: &<#ty as ::argp::SubCommands>::dynamic_commands(),
-                parse_func: &mut |__command, __remaining_args| {
+                parse_func: &mut |__command, __remaining_args, _| {
                     #name = ::std::option::Option::Some(<#ty as ::argp::FromArgs>::redact_arg_values(__command, __remaining_args)?);
                     ::std::result::Result::Ok(())
                 },
@@ -463,6 +477,9 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                 ::argp::ParseStructOptions {
                     arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
                     slots: &mut [ #( #flag_output_table, )* ],
+                    slots_global: &[ #( #flag_global_table, )* ],
+                    help: &<Self as argp::CommandHelp>::HELP,
+                    parent: std::option::Option::None,
                 },
                 ::argp::ParseStructPositionals {
                     positionals: &mut [
@@ -564,6 +581,17 @@ fn ensure_only_one_subcommand(errors: &Errors, fields: &[StructField<'_>]) {
     let subcommand = subcommands_iter.next();
     for dup_subcommand in subcommands_iter {
         errors.duplicate_attrs("subcommand", subcommand.unwrap().field, dup_subcommand.field);
+    }
+}
+
+fn ensure_global_only_when_subcommand(errors: &Errors, fields: &[StructField<'_>]) {
+    if !fields.iter().any(|field| field.kind == FieldKind::SubCommand) {
+        for field in fields.iter().filter(|field| field.attrs.global) {
+            errors.err(
+                field.field,
+                "`global` may only be used when the struct contains a `#[argp(subcommand)]` field.",
+            );
+        }
     }
 }
 
@@ -1012,9 +1040,11 @@ fn impl_from_args_enum_from_args(
         });
 
     quote! {
-        fn from_args(command_name: &[&str], args: &[&str])
-            -> ::std::result::Result<Self, ::argp::EarlyExit>
-        {
+        fn _from_args(
+            command_name: &[&str],
+            args: &[&str],
+            parent: ::std::option::Option<&mut dyn ::argp::ParseGlobalOptions>,
+        ) -> ::std::result::Result<Self, ::argp::EarlyExit> {
             let subcommand_name = if let ::std::option::Option::Some(subcommand_name) = command_name.last() {
                 *subcommand_name
             } else {
@@ -1024,7 +1054,7 @@ fn impl_from_args_enum_from_args(
             #(
                 if subcommand_name == <#variant_ty as ::argp::SubCommand>::COMMAND.name {
                     return ::std::result::Result::Ok(#name_repeating::#variant_names(
-                        <#variant_ty as ::argp::FromArgs>::from_args(command_name, args)?
+                        <#variant_ty as ::argp::FromArgs>::_from_args(command_name, args, parent)?
                     ));
                 }
             )*

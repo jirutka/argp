@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2022 Google LLC
 
 use std::fmt::Debug;
@@ -8,6 +9,10 @@ use argp::FromArgs;
 #[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
 struct TopLevel {
+    #[argp(switch, global)]
+    /// be verbose
+    verbose: bool,
+
     #[argp(subcommand)]
     nested: MySubCommandEnum,
 }

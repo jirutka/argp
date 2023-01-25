@@ -145,6 +145,10 @@ use argp::FromArgs;
 #[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
 struct TopLevel {
+    #[argp(switch, short = 'v', global)]
+    /// be verbose
+    verbose: bool,
+
     #[argp(subcommand)]
     nested: MySubCommandEnum,
 }

@@ -413,6 +413,157 @@ Options:
     }
 }
 
+mod global_options {
+    use super::*;
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Top level.
+    struct TopLevel {
+        #[argp(option, global, default = "0")]
+        /// A global option a.
+        a: usize,
+
+        #[argp(option, default = "0")]
+        /// A local option x.
+        x: usize,
+
+        #[argp(subcommand)]
+        nested: FirstSubCommandEnum,
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    #[argp(subcommand)]
+    enum FirstSubCommandEnum {
+        One(SubCommandOne),
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// First subcommand.
+    #[argp(subcommand, name = "one")]
+    struct SubCommandOne {
+        #[argp(switch, global)]
+        /// A global option b.
+        b: bool,
+
+        #[argp(subcommand)]
+        nested: Option<SecondSubCommandEnum>,
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    #[argp(subcommand)]
+    enum SecondSubCommandEnum {
+        Two(SubCommandTwo),
+    }
+
+    #[derive(FromArgs, PartialEq, Debug)]
+    /// Second subcommand.
+    #[argp(subcommand, name = "two")]
+    struct SubCommandTwo {
+        #[argp(switch)]
+        /// Whether to fooey.
+        fooey: bool,
+    }
+
+    fn expect_help(args: &[&str], expected_help_string: &str) {
+        let e = TopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
+        assert_eq!(expected_help_string, e.output);
+        e.status.expect("help returned an error");
+    }
+
+    #[test]
+    fn parse() {
+        for args in [&["--a", "1", "one", "--b"], &["one", "--a", "1", "--b"]] {
+            let actual = TopLevel::from_args(&["cmdname"], args).expect("sc 1");
+            assert_eq!(
+                actual,
+                TopLevel {
+                    a: 1,
+                    x: 0,
+                    nested: FirstSubCommandEnum::One(SubCommandOne { b: true, nested: None })
+                },
+            );
+        }
+
+        for args in [&["--a", "2", "one", "--b", "two"], &["one", "two", "--a", "2", "--b"]] {
+            let two = TopLevel::from_args(&["cmdname"], args).expect("sc 2");
+            assert_eq!(
+                two,
+                TopLevel {
+                    a: 2,
+                    x: 0,
+                    nested: FirstSubCommandEnum::One(SubCommandOne {
+                        b: true,
+                        nested: Some(SecondSubCommandEnum::Two(SubCommandTwo { fooey: false }))
+                    })
+                },
+            );
+        }
+    }
+
+    #[test]
+    fn help() {
+        expect_help(
+            &["--help"],
+            r###"Usage: cmdname [--a <a>] [--x <x>] <command> [<args>]
+
+Top level.
+
+Options:
+  --a <a>     A global option a.
+  --x <x>     A local option x.
+  -h, --help  Show this help message and exit
+
+Commands:
+  one         First subcommand.
+"###,
+        );
+
+        expect_help(
+            &["one", "--help"],
+            r###"Usage: cmdname one [--a <a>] [--b] [<command>] [<args>]
+
+First subcommand.
+
+Options:
+  --a <a>     A global option a.
+  --b         A global option b.
+  -h, --help  Show this help message and exit
+
+Commands:
+  two         Second subcommand.
+"###,
+        );
+
+        expect_help(
+            &["one", "two", "--help"],
+            r###"Usage: cmdname one two [--a <a>] [--b] [--fooey]
+
+Second subcommand.
+
+Options:
+  --a <a>     A global option a.
+  --b         A global option b.
+  --fooey     Whether to fooey.
+  -h, --help  Show this help message and exit
+"###,
+        );
+    }
+
+    #[test]
+    fn globals_are_not_propagated_up() {
+        let e = TopLevel::from_args(&["cmdname"], &["one", "two", "--x", "6"])
+            .expect_err("unexpectedly succeeded parsing sc 4");
+        assert_eq!(e.output, "Unrecognized argument: --x\n");
+    }
+
+    #[test]
+    fn local_option_is_not_global() {
+        let e = TopLevel::from_args(&["cmdname"], &["--b", "one"])
+            .expect_err("unexpectedly succeeded parsing");
+        assert_eq!(e.output, "Unrecognized argument: --b\n");
+    }
+}
+
 mod positional {
     use super::*;
 

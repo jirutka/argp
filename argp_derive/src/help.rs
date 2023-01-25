@@ -174,7 +174,12 @@ fn positional_info(field: &StructField<'_>) -> TokenStream {
     }
 
     quote! {
-        ::argp::OptionArgInfo { usage: #usage, names: #field_name, description: #description }
+        ::argp::OptionArgInfo {
+            usage: #usage,
+            names: #field_name,
+            description: #description,
+            global: false,
+        }
     }
 }
 
@@ -204,7 +209,14 @@ fn option_info(errors: &Errors, field: &StructField<'_>) -> TokenStream {
     let description =
         require_description(errors, field.name.span(), &field.attrs.description, "field");
 
+    let global = field.attrs.global;
+
     quote! {
-        ::argp::OptionArgInfo { usage: #usage, names: #names, description: #description }
+        ::argp::OptionArgInfo {
+            usage: #usage,
+            names: #names,
+            description: #description,
+            global: #global,
+        }
     }
 }

@@ -86,7 +86,7 @@ pub(crate) fn help(
     let footer = ty_attrs.footer.iter().map(LitStr::value).collect::<Vec<_>>().join("\n\n");
 
     quote! {
-        argp_shared::Help {
+        argp::Help {
             usage: #usage,
             description: #description,
             positionals: &[ #( #positionals_desc, )* ],

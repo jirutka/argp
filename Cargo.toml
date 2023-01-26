@@ -2,5 +2,4 @@
 members = [
     "argp",
     "argp_derive",
-    "argp_shared",
 ]

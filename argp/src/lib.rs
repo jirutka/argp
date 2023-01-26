@@ -315,12 +315,15 @@
 
 #![deny(missing_docs)]
 
+mod help;
+
 use std::str::FromStr;
 
 pub use argp_derive::FromArgs;
+pub use help::Help;
 
 /// Information about a particular command used for output.
-pub type CommandInfo = argp_shared::CommandInfo<'static>;
+pub type CommandInfo = help::CommandInfo<'static>;
 
 /// Types which can be constructed from a set of command-line arguments.
 pub trait FromArgs: Sized {

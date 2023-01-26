@@ -10,7 +10,6 @@ repository = "https://github.com/jirutka/argp"
 readme = "README.md"
 
 [dependencies]
-argp_shared = { version = "0.0.0", path = "../argp_shared" }
 argp_derive = { version = "0.0.0", path = "../argp_derive" }
 
 [dev-dependencies]

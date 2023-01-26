@@ -2,9 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
-//! Shared functionality between argp_derive and the argp runtime.
-//!
-//! This library is intended only for internal use by these two crates.
+#![allow(missing_docs)]
 
 /// Information about a particular command used for output.
 pub struct CommandInfo<'a> {
@@ -16,6 +14,7 @@ pub struct CommandInfo<'a> {
 
 type StrPair<'a> = (&'a str, &'a str);
 
+/// Information for generating a help message.
 pub struct Help<'a> {
     pub usage: &'a str,
     pub description: &'a str,

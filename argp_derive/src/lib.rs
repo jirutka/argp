@@ -973,18 +973,11 @@ fn impl_from_args_enum(
         })
         .collect();
 
-    let name_repeating = std::iter::repeat(name.clone());
     let variant_ty = variants.iter().map(|x| x.ty).collect::<Vec<_>>();
     let variant_names = variants.iter().map(|x| x.name).collect::<Vec<_>>();
-    let dynamic_from_args =
-        dynamic_type_and_variant.as_ref().map(|(dynamic_type, dynamic_variant)| {
-            quote! {
-                if let Some(result) = <#dynamic_type as argp::DynamicSubCommand>::try_from_args(
-                    command_name, args) {
-                    return result.map(#name::#dynamic_variant);
-                }
-            }
-        });
+
+    let from_args_method =
+        impl_from_args_enum_from_args(name, &variant_names, &variant_ty, dynamic_type_and_variant);
 
     #[cfg(feature = "redact_arg_values")]
     let redact_arg_values_method =
@@ -1003,27 +996,7 @@ fn impl_from_args_enum(
     let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     quote! {
         impl #impl_generics argp::FromArgs for #name #ty_generics #where_clause {
-            fn from_args(command_name: &[&str], args: &[&str])
-                -> std::result::Result<Self, argp::EarlyExit>
-            {
-                let subcommand_name = if let Some(subcommand_name) = command_name.last() {
-                    *subcommand_name
-                } else {
-                    return Err(argp::EarlyExit::from("no subcommand name".to_owned()));
-                };
-
-                #(
-                    if subcommand_name == <#variant_ty as argp::SubCommand>::COMMAND.name {
-                        return Ok(#name_repeating::#variant_names(
-                            <#variant_ty as argp::FromArgs>::from_args(command_name, args)?
-                        ));
-                    }
-                )*
-
-                #dynamic_from_args
-
-                Err(argp::EarlyExit::from("no subcommand matched".to_owned()))
-            }
+            #from_args_method
 
             #redact_arg_values_method
         }
@@ -1034,6 +1007,49 @@ fn impl_from_args_enum(
             )*];
 
             #dynamic_commands
+        }
+    }
+}
+
+fn impl_from_args_enum_from_args(
+    name: &syn::Ident,
+    variant_names: &[&syn::Ident],
+    variant_ty: &[&Type],
+    dynamic_type_and_variant: Option<(&Type, &syn::Ident)>,
+) -> TokenStream {
+    let name_repeating = std::iter::repeat(name.clone());
+
+    let dynamic_from_args =
+        dynamic_type_and_variant.as_ref().map(|(dynamic_type, dynamic_variant)| {
+            quote! {
+                if let Some(result) = <#dynamic_type as argp::DynamicSubCommand>::try_from_args(
+                    command_name, args) {
+                    return result.map(#name::#dynamic_variant);
+                }
+            }
+        });
+
+    quote! {
+        fn from_args(command_name: &[&str], args: &[&str])
+            -> std::result::Result<Self, argp::EarlyExit>
+        {
+            let subcommand_name = if let Some(subcommand_name) = command_name.last() {
+                *subcommand_name
+            } else {
+                return Err(argp::EarlyExit::from("no subcommand name".to_owned()));
+            };
+
+            #(
+                if subcommand_name == <#variant_ty as argp::SubCommand>::COMMAND.name {
+                    return Ok(#name_repeating::#variant_names(
+                        <#variant_ty as argp::FromArgs>::from_args(command_name, args)?
+                    ));
+                }
+            )*
+
+            #dynamic_from_args
+
+            Err(argp::EarlyExit::from("no subcommand matched".to_owned()))
         }
     }
 }

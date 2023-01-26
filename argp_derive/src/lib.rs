@@ -1,5 +1,6 @@
 #![recursion_limit = "256"]
 // SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
 /// Implementation of the `FromArgs` and `argp(...)` derive attributes.
@@ -270,8 +271,11 @@ fn impl_from_args_struct(
 
     let from_args_method = impl_from_args_struct_from_args(errors, type_attrs, &fields);
 
+    #[cfg(feature = "redact_arg_values")]
     let redact_arg_values_method =
         impl_from_args_struct_redact_arg_values(errors, type_attrs, &fields);
+    #[cfg(not(feature = "redact_arg_values"))]
+    let redact_arg_values_method = TokenStream::new();
 
     let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs, generic_args);
 
@@ -403,6 +407,7 @@ fn impl_from_args_struct_from_args<'a>(
     method_impl
 }
 
+#[cfg(feature = "redact_arg_values")]
 fn impl_from_args_struct_redact_arg_values<'a>(
     errors: &Errors,
     type_attrs: &TypeAttrs,
@@ -698,6 +703,7 @@ fn unwrap_from_args_fields<'a>(
 /// Most fields are stored in `Option<FieldType>` locals.
 /// `argp(option)` fields are stored in a `ParseValueSlotTy` along with a
 /// function that knows how to decode the appropriate value.
+#[cfg(feature = "redact_arg_values")]
 fn declare_local_storage_for_redacted_fields<'a>(
     fields: &'a [StructField<'a>],
 ) -> impl Iterator<Item = TokenStream> + 'a {
@@ -757,6 +763,7 @@ fn declare_local_storage_for_redacted_fields<'a>(
 }
 
 /// Unwrap non-optional fields and take options out of their tuple slots.
+#[cfg(feature = "redact_arg_values")]
 fn unwrap_redacted_fields<'a>(
     fields: &'a [StructField<'a>],
 ) -> impl Iterator<Item = TokenStream> + 'a {
@@ -978,14 +985,13 @@ fn impl_from_args_enum(
                 }
             }
         });
-    let dynamic_redact_arg_values = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
-        quote! {
-            if let Some(result) = <#dynamic_type as argp::DynamicSubCommand>::try_redact_arg_values(
-                command_name, args) {
-                return result;
-            }
-        }
-    });
+
+    #[cfg(feature = "redact_arg_values")]
+    let redact_arg_values_method =
+        impl_from_args_enum_redact_arg_values(&variant_ty, dynamic_type_and_variant);
+    #[cfg(not(feature = "redact_arg_values"))]
+    let redact_arg_values_method = TokenStream::new();
+
     let dynamic_commands = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
         quote! {
             fn dynamic_commands() -> &'static [&'static argp::CommandInfo] {
@@ -1019,23 +1025,7 @@ fn impl_from_args_enum(
                 Err(argp::EarlyExit::from("no subcommand matched".to_owned()))
             }
 
-            fn redact_arg_values(command_name: &[&str], args: &[&str]) -> std::result::Result<Vec<String>, argp::EarlyExit> {
-                let subcommand_name = if let Some(subcommand_name) = command_name.last() {
-                    *subcommand_name
-                } else {
-                    return Err(argp::EarlyExit::from("no subcommand name".to_owned()));
-                };
-
-                #(
-                    if subcommand_name == <#variant_ty as argp::SubCommand>::COMMAND.name {
-                        return <#variant_ty as argp::FromArgs>::redact_arg_values(command_name, args);
-                    }
-                )*
-
-                #dynamic_redact_arg_values
-
-                Err(argp::EarlyExit::from("no subcommand matched".to_owned()))
-            }
+            #redact_arg_values_method
         }
 
         impl #impl_generics argp::SubCommands for #name #ty_generics #where_clause {
@@ -1044,6 +1034,41 @@ fn impl_from_args_enum(
             )*];
 
             #dynamic_commands
+        }
+    }
+}
+
+#[cfg(feature = "redact_arg_values")]
+fn impl_from_args_enum_redact_arg_values(
+    variant_ty: &[&Type],
+    dynamic_type_and_variant: Option<(&Type, &syn::Ident)>,
+) -> TokenStream {
+    let dynamic_redact_arg_values = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
+        quote! {
+            if let Some(result) = <#dynamic_type as argp::DynamicSubCommand>::try_redact_arg_values(
+                command_name, args) {
+                return result;
+            }
+        }
+    });
+
+    quote! {
+        fn redact_arg_values(command_name: &[&str], args: &[&str]) -> std::result::Result<Vec<String>, argp::EarlyExit> {
+            let subcommand_name = if let Some(subcommand_name) = command_name.last() {
+                *subcommand_name
+            } else {
+                return Err(argp::EarlyExit::from("no subcommand name".to_owned()));
+            };
+
+            #(
+                if subcommand_name == <#variant_ty as argp::SubCommand>::COMMAND.name {
+                    return <#variant_ty as argp::FromArgs>::redact_arg_values(command_name, args);
+                }
+            )*
+
+            #dynamic_redact_arg_values
+
+            Err(argp::EarlyExit::from("no subcommand matched".to_owned()))
         }
     }
 }

@@ -258,6 +258,7 @@
 //!         })
 //!     }
 //!
+//!     #[cfg(feature = "redact_arg_values")]
 //!     fn try_redact_arg_values(
 //!         command_name: &[&str],
 //!         args: &[&str],
@@ -580,6 +581,7 @@ pub trait FromArgs: Sized {
     ///     }),
     /// );
     /// ```
+    #[cfg(feature = "redact_arg_values")]
     fn redact_arg_values(_command_name: &[&str], _args: &[&str]) -> Result<Vec<String>, EarlyExit> {
         Ok(vec!["<<REDACTED>>".into()])
     }
@@ -623,9 +625,11 @@ pub trait DynamicSubCommand: Sized {
     /// it should return `Some`, and the value within the `Some` has the same
     /// semantics as the return of `FromArgs::redact_arg_values`.
     fn try_redact_arg_values(
-        command_name: &[&str],
-        args: &[&str],
-    ) -> Option<Result<Vec<String>, EarlyExit>>;
+        _command_name: &[&str],
+        _args: &[&str],
+    ) -> Option<Result<Vec<String>, EarlyExit>> {
+        None
+    }
 
     /// Perform the function of `FromArgs::from_args` for this dynamic command.
     ///
@@ -763,10 +767,12 @@ impl<T: Flag> ParseFlag for T {
 }
 
 #[doc(hidden)]
+#[cfg(feature = "redact_arg_values")]
 pub struct RedactFlag {
     pub slot: Option<String>,
 }
 
+#[cfg(feature = "redact_arg_values")]
 impl ParseFlag for RedactFlag {
     fn set_flag(&mut self, arg: &str) {
         self.slot = Some(arg.to_string());

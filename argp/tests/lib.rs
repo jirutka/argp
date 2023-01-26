@@ -1214,6 +1214,7 @@ Options:
     }
 }
 
+#[cfg(feature = "redact_arg_values")]
 mod redact_arg_values {
     use super::*;
 
@@ -1659,6 +1660,7 @@ fn subcommand_does_not_panic() {
         argp::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
     );
 
+    #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommandEnum::redact_arg_values(&[], &["5"]).unwrap_err(),
         argp::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
@@ -1670,12 +1672,14 @@ fn subcommand_does_not_panic() {
         argp::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
     );
 
+    #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommandEnum::redact_arg_values(&["fooey"], &["5"]).unwrap_err(),
         argp::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
     );
 
     // Passing unknown subcommand name to a struct
+    #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommand::redact_arg_values(&[], &["5"]).unwrap_err(),
         argp::EarlyExit { output: "no subcommand name".into(), status: Err(()) },

@@ -11,7 +11,9 @@
     clippy::unwrap_in_result
 )]
 
-use {argp::FromArgs, std::fmt::Debug};
+use std::fmt::Debug;
+
+use argp::FromArgs;
 
 #[test]
 fn basic_example() {

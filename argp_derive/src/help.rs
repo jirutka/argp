@@ -2,16 +2,13 @@
 // SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
-use {
-    crate::{
-        errors::Errors,
-        parse_attrs::{Description, FieldKind, TypeAttrs},
-        Optionality, StructField,
-    },
-    proc_macro2::{Span, TokenStream},
-    quote::quote,
-    syn::LitStr,
-};
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
+use syn::LitStr;
+
+use crate::errors::Errors;
+use crate::parse_attrs::{Description, FieldKind, TypeAttrs};
+use crate::{Optionality, StructField};
 
 /// Returns a `TokenStream` generating a `String` help message.
 ///

@@ -2,11 +2,10 @@
 // SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
-use {
-    proc_macro2::{Span, TokenStream},
-    quote::ToTokens,
-    std::cell::RefCell,
-};
+use std::cell::RefCell;
+
+use proc_macro2::{Span, TokenStream};
+use quote::ToTokens;
 
 /// A type for collecting procedural macro errors.
 #[derive(Default)]

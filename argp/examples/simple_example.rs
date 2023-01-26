@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // SPDX-FileCopyrightText: 2022 Google LLC
 
-use {argp::FromArgs, std::fmt::Debug};
+use std::fmt::Debug;
+
+use argp::FromArgs;
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.

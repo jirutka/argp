@@ -6,22 +6,20 @@
 /// Implementation of the `FromArgs` and `argp(...)` derive attributes.
 ///
 /// For more thorough documentation, see the `argp` crate itself.
-extern crate proc_macro;
-
-use {
-    crate::{
-        errors::Errors,
-        parse_attrs::{check_long_name, FieldAttrs, FieldKind, TypeAttrs},
-    },
-    proc_macro2::{Span, TokenStream},
-    quote::{quote, quote_spanned, ToTokens},
-    std::{collections::HashMap, str::FromStr},
-    syn::{spanned::Spanned, GenericArgument, LitStr, PathArguments, Type},
-};
-
 mod errors;
 mod help;
 mod parse_attrs;
+
+use std::collections::HashMap;
+use std::str::FromStr;
+
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, quote_spanned, ToTokens};
+use syn::spanned::Spanned;
+use syn::{GenericArgument, LitStr, PathArguments, Type};
+
+use crate::errors::Errors;
+use crate::parse_attrs::{check_long_name, FieldAttrs, FieldKind, TypeAttrs};
 
 /// Entrypoint for `#[derive(FromArgs)]`.
 #[proc_macro_derive(FromArgs, attributes(argp))]

@@ -320,8 +320,8 @@ mod help;
 
 use std::str::FromStr;
 
+pub use crate::help::Help;
 pub use argp_derive::FromArgs;
-pub use help::Help;
 
 /// Information about a particular command used for output.
 pub type CommandInfo = help::CommandInfo<'static>;

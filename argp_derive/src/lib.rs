@@ -216,22 +216,6 @@ fn to_kebab_case(s: &str) -> String {
     res
 }
 
-#[test]
-fn test_kebabs() {
-    #[track_caller]
-    fn check(s: &str, want: &str) {
-        let got = to_kebab_case(s);
-        assert_eq!(got.as_str(), want)
-    }
-    check("", "");
-    check("_", "");
-    check("foo", "foo");
-    check("__foo_", "foo");
-    check("foo_bar", "foo-bar");
-    check("foo__Bar", "foo-Bar");
-    check("foo_bar__baz_", "foo-bar-baz");
-}
-
 /// Implements `FromArgs` and `TopLevelCommand` or `SubCommand` for a `#[derive(FromArgs)]` struct.
 fn impl_from_args_struct(
     errors: &Errors,
@@ -1141,6 +1125,26 @@ fn enum_only_single_field_unnamed_variants<'a>(
                 let first_field = fields.unnamed.first().unwrap();
                 Some(&first_field.ty)
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_to_kebab_case() {
+        for (input, expected) in [
+            ("", ""),
+            ("_", ""),
+            ("foo", "foo"),
+            ("__foo_", "foo"),
+            ("foo_bar", "foo-bar"),
+            ("foo__Bar", "foo-Bar"),
+            ("foo_bar__baz_", "foo-bar-baz"),
+        ] {
+            assert_eq!(to_kebab_case(input), expected);
         }
     }
 }

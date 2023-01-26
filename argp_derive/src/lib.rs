@@ -381,7 +381,7 @@ fn impl_from_args_struct_from_args<'a>(
                         #(
                             argp::ParseStructPositional {
                                 name: #positional_field_names,
-                                slot: &mut #positional_field_idents as &mut argp::ParseValueSlot,
+                                slot: &mut #positional_field_idents as &mut dyn argp::ParseValueSlot,
                             },
                         )*
                     ],
@@ -498,7 +498,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                         #(
                             argp::ParseStructPositional {
                                 name: #positional_field_names,
-                                slot: &mut #positional_field_idents as &mut argp::ParseValueSlot,
+                                slot: &mut #positional_field_idents as &mut dyn argp::ParseValueSlot,
                             },
                         )*
                     ],

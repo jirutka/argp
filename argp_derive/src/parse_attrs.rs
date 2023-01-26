@@ -2,10 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
-use {
-    crate::errors::Errors,
-    proc_macro2::Span,
-};
+use {crate::errors::Errors, proc_macro2::Span};
 
 /// Attributes applied to a field of a `#![derive(FromArgs)]` struct.
 #[derive(Default)]

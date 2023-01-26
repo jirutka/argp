@@ -2,7 +2,7 @@
 name = "argp"
 version = "0.0.0"
 authors = ["Jakub Jirutka <jakub@jirutka.cz>"]
-edition = "2018"
+edition = "2021"
 keywords = ["args", "arguments", "derive", "cli"]
 license = "BSD-3-Clause"
 description = "Derive-based argument parser optimized for code size"

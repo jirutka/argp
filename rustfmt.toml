@@ -1,5 +1,3 @@
-edition = "2018"
-
 # The "Default" setting has a heuristic which splits lines too aggresively.
 # We are willing to revisit this setting in future versions of rustfmt.
 # Bugs:

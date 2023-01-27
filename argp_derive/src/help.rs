@@ -10,13 +10,12 @@ use crate::errors::Errors;
 use crate::parse_attrs::{Description, FieldKind, TypeAttrs};
 use crate::{Optionality, StructField};
 
-/// Returns a `TokenStream` generating a `String` help message.
+/// Returns a `TokenStream` generating an `argp::Help` instance.
 ///
 /// Note: `fields` entries with `is_subcommand.is_some()` will be ignored
 /// in favor of the `subcommand` argument.
-pub(crate) fn help(
+pub(crate) fn inst_help(
     errors: &Errors,
-    cmd_name_str_array_ident: syn::Ident,
     ty_attrs: &TypeAttrs,
     fields: &[StructField<'_>],
     subcommand: Option<&StructField<'_>>,
@@ -58,23 +57,18 @@ pub(crate) fn help(
         usage.push_str(" [<args>]");
     }
 
-    let subcommand_calculation = if let Some(subcommand) = subcommand {
-        let subcommand_ty = subcommand.ty_without_wrapper;
-        quote! {
-            <#subcommand_ty as argp::SubCommands>::COMMANDS
-                .iter()
-                .copied()
-                .chain(
-                    <#subcommand_ty as argp::SubCommands>::dynamic_commands()
-                        .iter()
-                        .copied()
-                )
-                .map(|cmd| (cmd.name, cmd.description))
-                .collect::<Vec<_>>()
-                .as_slice()
-        }
+    let subcommand_ty = subcommand.map(|s| s.ty_without_wrapper);
+
+    let subcommands = if let Some(subcommand_ty) = subcommand_ty {
+        quote! { <#subcommand_ty as argp::SubCommands>::COMMANDS }
     } else {
         quote! { &[] }
+    };
+
+    let dynamic_subcommands = if let Some(subcommand_ty) = subcommand_ty {
+        quote! { <#subcommand_ty as argp::SubCommands>::dynamic_commands }
+    } else {
+        quote! { || &[] }
     };
 
     let description = require_description(errors, Span::call_site(), &ty_attrs.description, "type");
@@ -88,9 +82,10 @@ pub(crate) fn help(
             description: #description,
             positionals: &[ #( #positionals_desc, )* ],
             options: &[ #( #options_desc, )* ],
-            subcommands: #subcommand_calculation,
+            subcommands: #subcommands,
+            dynamic_subcommands: #dynamic_subcommands,
             footer: #footer,
-        }.generate(#cmd_name_str_array_ident.join(" "))
+        }
     }
 }
 

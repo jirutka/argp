@@ -641,6 +641,12 @@ pub trait DynamicSubCommand: Sized {
     fn try_from_args(command_name: &[&str], args: &[&str]) -> Option<Result<Self, EarlyExit>>;
 }
 
+/// A `FromArgs` implementation with attached [Help] struct.
+pub trait CommandHelp: FromArgs {
+    /// Information for generating the help message.
+    const HELP: Help<'static>;
+}
+
 /// Information to display to the user about why a `FromArgs` construction exited early.
 ///
 /// This can occur due to either failed parsing or a flag like `--help`.
@@ -876,7 +882,7 @@ impl_flag_for_integers![u8, u16, u32, u64, u128, i8, i16, i32, i64, i128,];
 /// `parse_options`: Helper to parse optional arguments.
 /// `parse_positionals`: Helper to parse positional arguments.
 /// `parse_subcommand`: Helper to parse a subcommand.
-/// `help_func`: Generate a help message.
+/// `help`: The [Help] instance for generating a help message.
 #[doc(hidden)]
 pub fn parse_struct_args(
     cmd_name: &[&str],
@@ -884,9 +890,9 @@ pub fn parse_struct_args(
     mut parse_options: ParseStructOptions<'_>,
     mut parse_positionals: ParseStructPositionals<'_>,
     mut parse_subcommand: Option<ParseStructSubCommand<'_>>,
-    help_func: &dyn Fn() -> String,
+    help: &Help,
 ) -> Result<(), EarlyExit> {
-    let mut help = false;
+    let mut help_requested = false;
     let mut remaining_args = args;
     let mut positional_index = 0;
     let mut options_ended = false;
@@ -894,7 +900,7 @@ pub fn parse_struct_args(
     'parse_args: while let Some(&next_arg) = remaining_args.first() {
         remaining_args = &remaining_args[1..];
         if (next_arg == "--help" || next_arg == "help" || next_arg == "-h") && !options_ended {
-            help = true;
+            help_requested = true;
             continue;
         }
 
@@ -904,7 +910,7 @@ pub fn parse_struct_args(
                 continue;
             }
 
-            if help {
+            if help_requested {
                 return Err("Trailing arguments are not allowed after `help`.".to_string().into());
             }
 
@@ -913,9 +919,9 @@ pub fn parse_struct_args(
         }
 
         if let Some(ref mut parse_subcommand) = parse_subcommand {
-            if parse_subcommand.parse(help, cmd_name, next_arg, remaining_args)? {
+            if parse_subcommand.parse(help_requested, cmd_name, next_arg, remaining_args)? {
                 // Unset `help`, since we handled it in the subcommand
-                help = false;
+                help_requested = false;
                 break 'parse_args;
             }
         }
@@ -923,8 +929,8 @@ pub fn parse_struct_args(
         options_ended |= parse_positionals.parse(&mut positional_index, next_arg)?;
     }
 
-    if help {
-        Err(EarlyExit { output: help_func(), status: Ok(()) })
+    if help_requested {
+        Err(EarlyExit { output: help.generate(cmd_name), status: Ok(()) })
     } else {
         Ok(())
     }

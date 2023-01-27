@@ -254,13 +254,15 @@ fn impl_from_args_struct(
 
     let impl_span = Span::call_site();
 
-    let from_args_method = impl_from_args_struct_from_args(errors, type_attrs, &fields, subcommand);
+    let from_args_method = impl_from_args_struct_from_args(&fields, subcommand);
 
     #[cfg(feature = "redact_arg_values")]
     let redact_arg_values_method =
-        impl_from_args_struct_redact_arg_values(errors, type_attrs, &fields, subcommand);
+        impl_from_args_struct_redact_arg_values(type_attrs, &fields, subcommand);
     #[cfg(not(feature = "redact_arg_values"))]
     let redact_arg_values_method = TokenStream::new();
+
+    let help_struct = help::inst_help(errors, type_attrs, &fields, subcommand);
 
     let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs, generic_args);
 
@@ -273,6 +275,11 @@ fn impl_from_args_struct(
             #redact_arg_values_method
         }
 
+        #[automatically_derived]
+        impl #impl_generics argp::CommandHelp for #name #ty_generics #where_clause {
+            const HELP: argp::Help<'static> = #help_struct;
+        }
+
         #top_or_sub_cmd_impl
     };
 
@@ -280,8 +287,6 @@ fn impl_from_args_struct(
 }
 
 fn impl_from_args_struct_from_args<'a>(
-    errors: &Errors,
-    type_attrs: &TypeAttrs,
     fields: &'a [StructField<'a>],
     subcommand: Option<&StructField<'_>>,
 ) -> TokenStream {
@@ -335,10 +340,6 @@ fn impl_from_args_struct_from_args<'a>(
         quote_spanned! { impl_span => None }
     };
 
-    // Identifier referring to a value containing the name of the current command as an `&[&str]`.
-    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span);
-    let help = help::help(errors, cmd_name_str_array_ident, type_attrs, fields, subcommand);
-
     let method_impl = quote_spanned! { impl_span =>
         fn from_args(__cmd_name: &[&str], __args: &[&str])
             -> std::result::Result<Self, argp::EarlyExit>
@@ -367,7 +368,7 @@ fn impl_from_args_struct_from_args<'a>(
                     last_is_greedy: #last_positional_is_greedy,
                 },
                 #parse_subcommands,
-                &|| #help,
+                &<Self as argp::CommandHelp>::HELP,
             )?;
 
             let mut #missing_requirements_ident = argp::MissingRequirements::default();
@@ -387,7 +388,6 @@ fn impl_from_args_struct_from_args<'a>(
 
 #[cfg(feature = "redact_arg_values")]
 fn impl_from_args_struct_redact_arg_values<'a>(
-    errors: &Errors,
     type_attrs: &TypeAttrs,
     fields: &'a [StructField<'a>],
     subcommand: Option<&StructField<'_>>,
@@ -449,10 +449,6 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         quote! { "no subcommand name" }
     };
 
-    // Identifier referring to a value containing the name of the current command as an `&[&str]`.
-    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span);
-    let help = help::help(errors, cmd_name_str_array_ident, type_attrs, fields, subcommand);
-
     let method_impl = quote_spanned! { impl_span =>
         fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> std::result::Result<Vec<String>, argp::EarlyExit> {
             #( #init_fields )*
@@ -477,7 +473,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                     last_is_greedy: #last_positional_is_greedy,
                 },
                 #redact_subcommands,
-                &|| #help,
+                &<Self as argp::CommandHelp>::HELP,
             )?;
 
             let mut #missing_requirements_ident = argp::MissingRequirements::default();

@@ -20,7 +20,8 @@ pub struct Help<'a> {
     pub description: &'a str,
     pub positionals: &'a [StrPair<'a>],
     pub options: &'a [StrPair<'a>],
-    pub subcommands: &'a [StrPair<'a>],
+    pub subcommands: &'a [&'a CommandInfo<'a>],
+    pub dynamic_subcommands: fn() -> &'a [&'a CommandInfo<'a>],
     pub footer: &'a str,
 }
 
@@ -31,7 +32,9 @@ const SECTION_SEPARATOR: &str = "\n\n";
 const WRAP_WIDTH: usize = 80;
 
 impl<'a> Help<'a> {
-    pub fn generate(&self, command_name: String) -> String {
+    pub fn generate(&self, command_name: &[&str]) -> String {
+        let command_name = command_name.join(" ");
+
         let mut out = String::from("Usage: ");
         out.push_str(&command_name);
         out.push_str(self.usage);
@@ -45,13 +48,13 @@ impl<'a> Help<'a> {
         // Computes the indentation width of the description (right) column based
         // on width of the names/flags in the left column.
         let desc_indent = compute_desc_indent(
-            self.positionals.iter().chain(&options).chain(self.subcommands).map(|t| t.0),
+            self.positionals.iter().chain(&options).chain(&self.subcommands()).map(|t| t.0),
         );
 
         write_section(&mut out, "Positional Arguments:", self.positionals, desc_indent);
         write_section(&mut out, "Options:", &options, desc_indent);
 
-        write_section(&mut out, "Commands:", self.subcommands, desc_indent);
+        write_section(&mut out, "Commands:", &self.subcommands(), desc_indent);
 
         if !self.footer.is_empty() {
             out.push_str(SECTION_SEPARATOR);
@@ -61,6 +64,14 @@ impl<'a> Help<'a> {
         out.push('\n');
 
         out
+    }
+
+    fn subcommands(&self) -> Vec<StrPair<'_>> {
+        self.subcommands
+            .iter()
+            .chain((self.dynamic_subcommands)().iter())
+            .map(|cmd| (cmd.name, cmd.description))
+            .collect()
     }
 }
 

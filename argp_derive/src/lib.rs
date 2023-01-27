@@ -248,14 +248,17 @@ fn impl_from_args_struct(
 
     ensure_unique_names(errors, &fields);
     ensure_only_last_positional_is_optional(errors, &fields);
+    ensure_only_one_subcommand(errors, &fields);
+
+    let subcommand = fields.iter().find(|field| field.kind == FieldKind::SubCommand);
 
     let impl_span = Span::call_site();
 
-    let from_args_method = impl_from_args_struct_from_args(errors, type_attrs, &fields);
+    let from_args_method = impl_from_args_struct_from_args(errors, type_attrs, &fields, subcommand);
 
     #[cfg(feature = "redact_arg_values")]
     let redact_arg_values_method =
-        impl_from_args_struct_redact_arg_values(errors, type_attrs, &fields);
+        impl_from_args_struct_redact_arg_values(errors, type_attrs, &fields, subcommand);
     #[cfg(not(feature = "redact_arg_values"))]
     let redact_arg_values_method = TokenStream::new();
 
@@ -280,6 +283,7 @@ fn impl_from_args_struct_from_args<'a>(
     errors: &Errors,
     type_attrs: &TypeAttrs,
     fields: &'a [StructField<'a>],
+    subcommand: Option<&StructField<'_>>,
 ) -> TokenStream {
     let init_fields = declare_local_storage_for_from_args_fields(fields);
     let unwrap_fields = unwrap_from_args_fields(fields);
@@ -306,14 +310,6 @@ fn impl_from_args_struct_from_args<'a>(
     });
 
     let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(fields);
-
-    let mut subcommands_iter =
-        fields.iter().filter(|field| field.kind == FieldKind::SubCommand).fuse();
-
-    let subcommand: Option<&StructField<'_>> = subcommands_iter.next();
-    for dup_subcommand in subcommands_iter {
-        errors.duplicate_attrs("subcommand", subcommand.unwrap().field, dup_subcommand.field);
-    }
 
     let impl_span = Span::call_site();
 
@@ -394,6 +390,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     errors: &Errors,
     type_attrs: &TypeAttrs,
     fields: &'a [StructField<'a>],
+    subcommand: Option<&StructField<'_>>,
 ) -> TokenStream {
     let init_fields = declare_local_storage_for_redacted_fields(fields);
     let unwrap_fields = unwrap_redacted_fields(fields);
@@ -421,14 +418,6 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     });
 
     let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(fields);
-
-    let mut subcommands_iter =
-        fields.iter().filter(|field| field.kind == FieldKind::SubCommand).fuse();
-
-    let subcommand: Option<&StructField<'_>> = subcommands_iter.next();
-    for dup_subcommand in subcommands_iter {
-        errors.duplicate_attrs("subcommand", subcommand.unwrap().field, dup_subcommand.field);
-    }
 
     let impl_span = Span::call_site();
 
@@ -564,6 +553,17 @@ fn ensure_unique_names(errors: &Errors, fields: &[StructField<'_>]) {
 
             seen_long_names.insert(long_name, field.field);
         }
+    }
+}
+
+/// Ensures that only one field is a `subcommand`.
+fn ensure_only_one_subcommand(errors: &Errors, fields: &[StructField<'_>]) {
+    let mut subcommands_iter =
+        fields.iter().filter(|field| field.kind == FieldKind::SubCommand).fuse();
+
+    let subcommand = subcommands_iter.next();
+    for dup_subcommand in subcommands_iter {
+        errors.duplicate_attrs("subcommand", subcommand.unwrap().field, dup_subcommand.field);
     }
 }
 

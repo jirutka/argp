@@ -320,11 +320,8 @@ mod help;
 
 use std::str::FromStr;
 
-pub use crate::help::{Help, HelpCommands, OptionArgInfo};
+pub use crate::help::{CommandInfo, Help, HelpCommands, OptionArgInfo};
 pub use argp_derive::FromArgs;
-
-/// Information about a particular command used for output.
-pub type CommandInfo = help::CommandInfo<'static>;
 
 /// Types which can be constructed from a set of command-line arguments.
 pub trait FromArgs: Sized {
@@ -644,7 +641,7 @@ pub trait DynamicSubCommand: Sized {
 /// A `FromArgs` implementation with attached [Help] struct.
 pub trait CommandHelp: FromArgs {
     /// Information for generating the help message.
-    const HELP: Help<'static>;
+    const HELP: Help;
 }
 
 /// Information to display to the user about why a `FromArgs` construction exited early.

@@ -8,36 +8,36 @@ use std::iter;
 use std::ops::Deref;
 
 /// Information about a particular command used for generating a help message.
-pub struct CommandInfo<'a> {
+pub struct CommandInfo {
     /// The name of the command.
-    pub name: &'a str,
+    pub name: &'static str,
     /// A short description of the command's functionality.
-    pub description: &'a str,
+    pub description: &'static str,
 }
 
 /// Information about a specific option or positional argument used for
 /// generating a help message.
-pub struct OptionArgInfo<'a> {
-    pub usage: &'a str,
-    pub names: &'a str,
-    pub description: &'a str,
+pub struct OptionArgInfo {
+    pub usage: &'static str,
+    pub names: &'static str,
+    pub description: &'static str,
 }
 
 /// Information about a specific (sub)command used for generating a help message.
-pub struct Help<'a> {
-    pub description: &'a str,
-    pub positionals: &'a [OptionArgInfo<'a>],
-    pub options: &'a [OptionArgInfo<'a>],
-    pub commands: Option<HelpCommands<'a>>,
-    pub footer: &'a str,
+pub struct Help {
+    pub description: &'static str,
+    pub positionals: &'static [OptionArgInfo],
+    pub options: &'static [OptionArgInfo],
+    pub commands: Option<HelpCommands>,
+    pub footer: &'static str,
 }
 
 /// A nested struct in [Help] used for generating the Commands section in
 /// a help message.
-pub struct HelpCommands<'a> {
-    pub usage: &'a str,
-    pub subcommands: &'a [&'a CommandInfo<'a>],
-    pub dynamic_subcommands: fn() -> &'a [&'a CommandInfo<'a>],
+pub struct HelpCommands {
+    pub usage: &'static str,
+    pub subcommands: &'static [&'static CommandInfo],
+    pub dynamic_subcommands: fn() -> &'static [&'static CommandInfo],
 }
 
 const INDENT: &str = "  ";
@@ -52,7 +52,7 @@ const HELP_OPT: OptionArgInfo = OptionArgInfo {
     description: "Show this help message and exit",
 };
 
-impl<'a> Help<'a> {
+impl Help {
     pub fn generate(&self, command_name: &[&str]) -> String {
         let command_name = command_name.join(" ");
 
@@ -121,7 +121,7 @@ fn compute_desc_indent<'a>(names: impl Iterator<Item = &'a str>) -> usize {
 fn write_opts_section<'a>(
     out: &mut String,
     title: &str,
-    opts: impl Iterator<Item = &'a OptionArgInfo<'a>>,
+    opts: impl Iterator<Item = &'a OptionArgInfo>,
     desc_indent: usize,
 ) {
     // NOTE: greedy positional has empty names and description, to be excluded

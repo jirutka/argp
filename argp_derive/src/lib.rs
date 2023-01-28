@@ -277,7 +277,7 @@ fn impl_from_args_struct(
 
         #[automatically_derived]
         impl #impl_generics argp::CommandHelp for #name #ty_generics #where_clause {
-            const HELP: argp::Help<'static> = #help_struct;
+            const HELP: argp::Help = #help_struct;
         }
 
         #top_or_sub_cmd_impl

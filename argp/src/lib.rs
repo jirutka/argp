@@ -320,7 +320,7 @@ mod help;
 
 use std::str::FromStr;
 
-pub use crate::help::Help;
+pub use crate::help::{Help, HelpCommands, OptionArgInfo};
 pub use argp_derive::FromArgs;
 
 /// Information about a particular command used for output.

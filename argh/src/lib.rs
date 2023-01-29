@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//! Derive-based argument parsing optimized for code size and conformance
-//! to the Fuchsia commandline tools specification
+//! Derive-based argument parsing optimized for code size and flexibility.
 //!
 //! The public API of this library consists primarily of the `FromArgs`
 //! derive and the `from_env` function, which can be used to produce

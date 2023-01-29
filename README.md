@@ -6,8 +6,7 @@
 [![docs.rs](https://docs.rs/argp/badge.svg)](https://docs.rs/crate/argp/)
 ![CI](https://github.com/jirutka/argp/workflows/CI/badge.svg)
 
-Derive-based argument parsing optimized for code size and conformance
-to the Fuchsia commandline tools specification
+Derive-based argument parsing optimized for code size and flexibility.
 
 The public API of this library consists primarily of the `FromArgs`
 derive and the `from_env` function, which can be used to produce

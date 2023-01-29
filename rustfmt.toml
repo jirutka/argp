@@ -1,7 +1,3 @@
-# Fuchsia Format Style
-# last reviewed: Jan 29, 2019
-
-# Fuchsia uses 2018 edition only
 edition = "2018"
 
 # The "Default" setting has a heuristic which splits lines too aggresively.

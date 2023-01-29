@@ -1,6 +1,5 @@
-// Copyright (c) 2022 Google LLC All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2022 Google LLC
 
 use {argp::FromArgs, std::fmt::Debug};
 

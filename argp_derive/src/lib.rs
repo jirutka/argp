@@ -1,7 +1,6 @@
 #![recursion_limit = "256"]
-// Copyright (c) 2020 Google LLC All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// SPDX-License-Identifier: BSD-3-Clause
+// SPDX-FileCopyrightText: 2020 Google LLC
 
 /// Implementation of the `FromArgs` and `argp(...)` derive attributes.
 ///

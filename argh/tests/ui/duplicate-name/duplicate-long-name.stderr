@@ -2,7 +2,7 @@ error: The long name of "--foo" was already used here.
  --> tests/ui/duplicate-name/duplicate-long-name.rs:4:5
   |
 4 | /     /// foo1
-5 | |     #[argh(option, long = "foo")]
+5 | |     #[argp(option, long = "foo")]
 6 | |     foo1: u32,
   | |_____________^
 
@@ -10,7 +10,7 @@ error: Later usage here.
   --> tests/ui/duplicate-name/duplicate-long-name.rs:8:5
    |
 8  | /     /// foo2
-9  | |     #[argh(option, long = "foo")]
+9  | |     #[argp(option, long = "foo")]
 10 | |     foo2: u32,
    | |_____________^
 
@@ -18,7 +18,7 @@ error: The long name of "--bar" was already used here.
   --> tests/ui/duplicate-name/duplicate-long-name.rs:12:5
    |
 12 | /     /// bar1
-13 | |     #[argh(option, long = "bar")]
+13 | |     #[argp(option, long = "bar")]
 14 | |     bar1: u32,
    | |_____________^
 
@@ -26,6 +26,6 @@ error: Later usage here.
   --> tests/ui/duplicate-name/duplicate-long-name.rs:16:5
    |
 16 | /     /// bar2
-17 | |     #[argh(option, long = "bar")]
+17 | |     #[argp(option, long = "bar")]
 18 | |     bar2: u32,
    | |_____________^

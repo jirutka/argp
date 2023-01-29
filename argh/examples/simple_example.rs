@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-use {argh::FromArgs, std::fmt::Debug};
+use {argp::FromArgs, std::fmt::Debug};
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
 struct TopLevel {
-    #[argh(subcommand)]
+    #[argp(subcommand)]
     nested: MySubCommandEnum,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand)]
+#[argp(subcommand)]
 enum MySubCommandEnum {
     One(SubCommandOne),
     Two(SubCommandTwo),
@@ -20,23 +20,23 @@ enum MySubCommandEnum {
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// First subcommand.
-#[argh(subcommand, name = "one")]
+#[argp(subcommand, name = "one")]
 struct SubCommandOne {
-    #[argh(option)]
+    #[argp(option)]
     /// how many x
     x: usize,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Second subcommand.
-#[argh(subcommand, name = "two")]
+#[argp(subcommand, name = "two")]
 struct SubCommandTwo {
-    #[argh(switch)]
+    #[argp(switch)]
     /// whether to fooey
     fooey: bool,
 }
 
 fn main() {
-    let toplevel: TopLevel = argh::from_env();
+    let toplevel: TopLevel = argp::from_env();
     println!("{:#?}", toplevel);
 }

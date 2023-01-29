@@ -52,7 +52,7 @@ pub struct FieldType {
 
 /// A description of a `#![derive(FromArgs)]` struct.
 ///
-/// Defaults to the docstring if one is present, or `#[argh(description = "...")]`
+/// Defaults to the docstring if one is present, or `#[argp(description = "...")]`
 /// if one is provided.
 pub struct Description {
     /// Whether the description was an explicit annotation or whether it was a doc string.
@@ -70,7 +70,7 @@ impl FieldAttrs {
                 continue;
             }
 
-            let ml = if let Some(ml) = argh_attr_to_meta_list(errors, attr) {
+            let ml = if let Some(ml) = argp_attr_to_meta_list(errors, attr) {
                 ml
             } else {
                 continue;
@@ -130,7 +130,7 @@ impl FieldAttrs {
                     errors.err(
                         &meta,
                         concat!(
-                            "Invalid field-level `argh` attribute\n",
+                            "Invalid field-level `argp` attribute\n",
                             "Expected one of: `arg_name`, `default`, `description`, `from_str_fn`, `greedy`, ",
                             "`long`, `option`, `short`, `subcommand`, `switch`, `hidden_help`",
                         ),
@@ -144,8 +144,8 @@ impl FieldAttrs {
                 FieldKind::Option | FieldKind::Positional => {}
                 FieldKind::SubCommand | FieldKind::Switch => errors.err(
                     default,
-                    "`default` may only be specified on `#[argh(option)]` \
-                     or `#[argh(positional)]` fields",
+                    "`default` may only be specified on `#[argp(option)]` \
+                     or `#[argp(positional)]` fields",
                 ),
             }
         }
@@ -154,7 +154,7 @@ impl FieldAttrs {
             (Some(_), Some(FieldKind::Positional)) => {}
             (Some(greedy), Some(_)) => errors.err(
                 &greedy,
-                "`greedy` may only be specified on `#[argh(positional)]` \
+                "`greedy` may only be specified on `#[argp(positional)]` \
                     fields",
             ),
             _ => {}
@@ -254,9 +254,9 @@ fn is_doc_attr(attr: &syn::Attribute) -> bool {
     is_matching_attr("doc", attr)
 }
 
-/// Checks for `#[argh ...]`
-fn is_argh_attr(attr: &syn::Attribute) -> bool {
-    is_matching_attr("argh", attr)
+/// Checks for `#[argp ...]`
+fn is_argp_attr(attr: &syn::Attribute) -> bool {
+    is_matching_attr("argp", attr)
 }
 
 fn attr_to_meta_subtype<R: Clone>(
@@ -281,9 +281,9 @@ fn attr_to_meta_name_value(errors: &Errors, attr: &syn::Attribute) -> Option<syn
     attr_to_meta_subtype(errors, attr, |m| errors.expect_meta_name_value(m))
 }
 
-/// Filters out non-`#[argh(...)]` attributes and converts to `syn::MetaList`.
-fn argh_attr_to_meta_list(errors: &Errors, attr: &syn::Attribute) -> Option<syn::MetaList> {
-    if !is_argh_attr(attr) {
+/// Filters out non-`#[argp(...)]` attributes and converts to `syn::MetaList`.
+fn argp_attr_to_meta_list(errors: &Errors, attr: &syn::Attribute) -> Option<syn::MetaList> {
+    if !is_argp_attr(attr) {
         return None;
     }
     attr_to_meta_list(errors, attr)
@@ -301,7 +301,7 @@ pub struct TypeAttrs {
 }
 
 impl TypeAttrs {
-    /// Parse top-level `#[argh(...)]` attributes
+    /// Parse top-level `#[argp(...)]` attributes
     pub fn parse(errors: &Errors, derive_input: &syn::DeriveInput) -> Self {
         let mut this = TypeAttrs::default();
 
@@ -311,7 +311,7 @@ impl TypeAttrs {
                 continue;
             }
 
-            let ml = if let Some(ml) = argh_attr_to_meta_list(errors, attr) {
+            let ml = if let Some(ml) = argp_attr_to_meta_list(errors, attr) {
                 ml
             } else {
                 continue;
@@ -349,7 +349,7 @@ impl TypeAttrs {
                     errors.err(
                         &meta,
                         concat!(
-                            "Invalid type-level `argh` attribute\n",
+                            "Invalid type-level `argp` attribute\n",
                             "Expected one of: `description`, `error_code`, `example`, `name`, ",
                             "`note`, `subcommand`",
                         ),
@@ -445,7 +445,7 @@ pub struct VariantAttrs {
 }
 
 impl VariantAttrs {
-    /// Parse enum variant `#[argh(...)]` attributes
+    /// Parse enum variant `#[argp(...)]` attributes
     pub fn parse(errors: &Errors, variant: &syn::Variant) -> Self {
         let mut this = VariantAttrs::default();
 
@@ -457,14 +457,14 @@ impl VariantAttrs {
 
         for field in fields.into_iter().flatten() {
             for attr in &field.attrs {
-                if is_argh_attr(attr) {
+                if is_argp_attr(attr) {
                     err_unused_enum_attr(errors, attr);
                 }
             }
         }
 
         for attr in &variant.attrs {
-            let ml = if let Some(ml) = argh_attr_to_meta_list(errors, attr) {
+            let ml = if let Some(ml) = argp_attr_to_meta_list(errors, attr) {
                 ml
             } else {
                 continue;
@@ -483,8 +483,8 @@ impl VariantAttrs {
                 } else {
                     errors.err(
                         &meta,
-                        "Invalid variant-level `argh` attribute\n\
-                         Variants can only have the #[argh(dynamic)] attribute.",
+                        "Invalid variant-level `argp` attribute\n\
+                         Variants can only have the #[argp(dynamic)] attribute.",
                     );
                 }
             }
@@ -563,18 +563,18 @@ fn parse_attr_description(errors: &Errors, m: &syn::MetaNameValue, slot: &mut Op
     *slot = Some(Description { explicit: true, content: lit_str.clone() });
 }
 
-/// Checks that a `#![derive(FromArgs)]` enum has an `#[argh(subcommand)]`
-/// attribute and that it does not have any other type-level `#[argh(...)]` attributes.
+/// Checks that a `#![derive(FromArgs)]` enum has an `#[argp(subcommand)]`
+/// attribute and that it does not have any other type-level `#[argp(...)]` attributes.
 pub fn check_enum_type_attrs(errors: &Errors, type_attrs: &TypeAttrs, type_span: &Span) {
     let TypeAttrs { is_subcommand, name, description, examples, notes, error_codes } = type_attrs;
 
-    // Ensure that `#[argh(subcommand)]` is present.
+    // Ensure that `#[argp(subcommand)]` is present.
     if is_subcommand.is_none() {
         errors.err_span(
             *type_span,
             concat!(
                 "`#![derive(FromArgs)]` on `enum`s can only be used to enumerate subcommands.\n",
-                "Consider adding `#[argh(subcommand)]` to the `enum` declaration.",
+                "Consider adding `#[argp(subcommand)]` to the `enum` declaration.",
             ),
         );
     }
@@ -603,9 +603,9 @@ fn err_unused_enum_attr(errors: &Errors, location: &impl syn::spanned::Spanned) 
     errors.err(
         location,
         concat!(
-            "Unused `argh` attribute on `#![derive(FromArgs)]` enum. ",
+            "Unused `argp` attribute on `#![derive(FromArgs)]` enum. ",
             "Such `enum`s can only be used to dispatch to subcommands, ",
-            "and should only contain the #[argh(subcommand)] attribute.",
+            "and should only contain the #[argp(subcommand)] attribute.",
         ),
     );
 }

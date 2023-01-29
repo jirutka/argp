@@ -12,25 +12,25 @@
 //! ## Basic Example
 //!
 //! ```rust,no_run
-//! use argh::FromArgs;
+//! use argp::FromArgs;
 //!
 //! #[derive(FromArgs)]
 //! /// Reach new heights.
 //! struct GoUp {
 //!     /// whether or not to jump
-//!     #[argh(switch, short = 'j')]
+//!     #[argp(switch, short = 'j')]
 //!     jump: bool,
 //!
 //!     /// how high to go
-//!     #[argh(option)]
+//!     #[argp(option)]
 //!     height: usize,
 //!
 //!     /// an optional nickname for the pilot
-//!     #[argh(option)]
+//!     #[argp(option)]
 //!     pilot_nickname: Option<String>,
 //! }
 //!
-//! let up: GoUp = argh::from_env();
+//! let up: GoUp = argp::from_env();
 //! ```
 //!
 //! `./some_bin --help` will then output the following:
@@ -57,11 +57,11 @@
 //! Options, like `height` and `pilot_nickname`, can be either required,
 //! optional, or repeating, depending on whether they are contained in an
 //! `Option` or a `Vec`. Default values can be provided using the
-//! `#[argh(default = "<your_code_here>")]` attribute, and in this case an
+//! `#[argp(default = "<your_code_here>")]` attribute, and in this case an
 //! option is treated as optional.
 //!
 //! ```rust
-//! use argh::FromArgs;
+//! use argp::FromArgs;
 //!
 //! fn default_height() -> usize {
 //!     5
@@ -71,20 +71,20 @@
 //! /// Reach new heights.
 //! struct GoUp {
 //!     /// an optional nickname for the pilot
-//!     #[argh(option)]
+//!     #[argp(option)]
 //!     pilot_nickname: Option<String>,
 //!
 //!     /// an optional height
-//!     #[argh(option, default = "default_height()")]
+//!     #[argp(option, default = "default_height()")]
 //!     height: usize,
 //!
 //!     /// an optional direction which is "up" by default
-//!     #[argh(option, default = "String::from(\"only up\")")]
+//!     #[argp(option, default = "String::from(\"only up\")")]
 //!     direction: String,
 //! }
 //!
 //! fn main() {
-//!     let up: GoUp = argh::from_env();
+//!     let up: GoUp = argp::from_env();
 //! }
 //! ```
 //!
@@ -94,13 +94,13 @@
 //! `fn(&str) -> Result<T, String>` using the `from_str_fn` attribute:
 //!
 //! ```
-//! # use argh::FromArgs;
+//! # use argp::FromArgs;
 //!
 //! #[derive(FromArgs)]
 //! /// Goofy thing.
 //! struct FiveStruct {
 //!     /// always five
-//!     #[argh(option, from_str_fn(always_five))]
+//!     #[argp(option, from_str_fn(always_five))]
 //!     five: usize,
 //! }
 //!
@@ -109,16 +109,16 @@
 //! }
 //! ```
 //!
-//! Positional arguments can be declared using `#[argh(positional)]`.
+//! Positional arguments can be declared using `#[argp(positional)]`.
 //! These arguments will be parsed in order of their declaration in
 //! the structure:
 //!
 //! ```rust
-//! use argh::FromArgs;
+//! use argp::FromArgs;
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! /// A command with positional arguments.
 //! struct WithPositional {
-//!     #[argh(positional)]
+//!     #[argp(positional)]
 //!     first: String,
 //! }
 //! ```
@@ -131,14 +131,14 @@
 //! match the greedy positional:
 //!
 //! ```rust
-//! use argh::FromArgs;
+//! use argp::FromArgs;
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! /// A command with a greedy positional argument at the end.
 //! struct WithGreedyPositional {
 //!     /// some stuff
-//!     #[argh(option)]
+//!     #[argp(option)]
 //!     stuff: Option<String>,
-//!     #[argh(positional, greedy)]
+//!     #[argp(positional, greedy)]
 //!     all_the_rest: Vec<String>,
 //! }
 //! ```
@@ -159,17 +159,17 @@
 //! over each command:
 //!
 //! ```rust
-//! # use argh::FromArgs;
+//! # use argp::FromArgs;
 //!
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Top-level command.
 //! struct TopLevel {
-//!     #[argh(subcommand)]
+//!     #[argp(subcommand)]
 //!     nested: MySubCommandEnum,
 //! }
 //!
 //! #[derive(FromArgs, PartialEq, Debug)]
-//! #[argh(subcommand)]
+//! #[argp(subcommand)]
 //! enum MySubCommandEnum {
 //!     One(SubCommandOne),
 //!     Two(SubCommandTwo),
@@ -177,18 +177,18 @@
 //!
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! /// First subcommand.
-//! #[argh(subcommand, name = "one")]
+//! #[argp(subcommand, name = "one")]
 //! struct SubCommandOne {
-//!     #[argh(option)]
+//!     #[argp(option)]
 //!     /// how many x
 //!     x: usize,
 //! }
 //!
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Second subcommand.
-//! #[argh(subcommand, name = "two")]
+//! #[argp(subcommand, name = "two")]
 //! struct SubCommandTwo {
-//!     #[argh(switch)]
+//!     #[argp(switch)]
 //!     /// whether to fooey
 //!     fooey: bool,
 //! }
@@ -200,32 +200,32 @@
 //! dynamic variant should implement `DynamicSubCommand`.
 //!
 //! ```rust
-//! # use argh::CommandInfo;
-//! # use argh::DynamicSubCommand;
-//! # use argh::EarlyExit;
-//! # use argh::FromArgs;
+//! # use argp::CommandInfo;
+//! # use argp::DynamicSubCommand;
+//! # use argp::EarlyExit;
+//! # use argp::FromArgs;
 //! # use once_cell::sync::OnceCell;
 //!
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Top-level command.
 //! struct TopLevel {
-//!     #[argh(subcommand)]
+//!     #[argp(subcommand)]
 //!     nested: MySubCommandEnum,
 //! }
 //!
 //! #[derive(FromArgs, PartialEq, Debug)]
-//! #[argh(subcommand)]
+//! #[argp(subcommand)]
 //! enum MySubCommandEnum {
 //!     Normal(NormalSubCommand),
-//!     #[argh(dynamic)]
+//!     #[argp(dynamic)]
 //!     Dynamic(Dynamic),
 //! }
 //!
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Normal subcommand.
-//! #[argh(subcommand, name = "normal")]
+//! #[argp(subcommand, name = "normal")]
 //! struct NormalSubCommand {
-//!     #[argh(option)]
+//!     #[argp(option)]
 //!     /// how many x
 //!     x: usize,
 //! }
@@ -242,7 +242,7 @@
 //!         RET.get_or_init(|| {
 //!             let mut commands = Vec::new();
 //!
-//!             // argh needs the `CommandInfo` structs we generate to be valid
+//!             // argp needs the `CommandInfo` structs we generate to be valid
 //!             // for the static lifetime. We can allocate the structures on
 //!             // the heap with `Box::new` and use `Box::leak` to get a static
 //!             // reference to them. We could also just use a constant
@@ -296,19 +296,19 @@
 //! the `hidden_help` attribute to that argument:
 //!
 //! ```rust
-//! # use argh::FromArgs;
+//! # use argp::FromArgs;
 //!
 //! #[derive(FromArgs)]
 //! /// Cargo arguments
 //! struct CargoArgs {
 //!     // Cargo puts the command name invoked into the first argument,
 //!     // so we don't want this argument to show up in the usage text.
-//!     #[argh(positional, hidden_help)]
+//!     #[argp(positional, hidden_help)]
 //!     command: String,
 //!     /// an option used for internal debugging
-//!     #[argh(option, hidden_help)]
+//!     #[argp(option, hidden_help)]
 //!     internal_debugging: String,
-//!     #[argh(positional)]
+//!     #[argp(positional)]
 //!     real_first_arg: String,
 //! }
 //! ```
@@ -317,10 +317,10 @@
 
 use std::str::FromStr;
 
-pub use argh_derive::FromArgs;
+pub use argp_derive::FromArgs;
 
 /// Information about a particular command used for output.
-pub type CommandInfo = argh_shared::CommandInfo<'static>;
+pub type CommandInfo = argp_shared::CommandInfo<'static>;
 
 /// Types which can be constructed from a set of commandline arguments.
 pub trait FromArgs: Sized {
@@ -330,24 +330,24 @@ pub trait FromArgs: Sized {
     /// users should only pass in a single item for the command name, which typically comes from
     /// the first item from `std::env::args()`. Implementations however should append the
     /// subcommand name in when recursively calling [FromArgs::from_args] for subcommands. This
-    /// allows `argh` to generate correct subcommand help strings.
+    /// allows `argp` to generate correct subcommand help strings.
     ///
     /// The second argument `args` is the rest of the command line arguments.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use argh::FromArgs;
+    /// # use argp::FromArgs;
     ///
     /// /// Command to manage a classroom.
     /// #[derive(Debug, PartialEq, FromArgs)]
     /// struct ClassroomCmd {
-    ///     #[argh(subcommand)]
+    ///     #[argp(subcommand)]
     ///     subcommands: Subcommands,
     /// }
     ///
     /// #[derive(Debug, PartialEq, FromArgs)]
-    /// #[argh(subcommand)]
+    /// #[argp(subcommand)]
     /// enum Subcommands {
     ///     List(ListCmd),
     ///     Add(AddCmd),
@@ -355,23 +355,23 @@ pub trait FromArgs: Sized {
     ///
     /// /// list all the classes.
     /// #[derive(Debug, PartialEq, FromArgs)]
-    /// #[argh(subcommand, name = "list")]
+    /// #[argp(subcommand, name = "list")]
     /// struct ListCmd {
     ///     /// list classes for only this teacher.
-    ///     #[argh(option)]
+    ///     #[argp(option)]
     ///     teacher_name: Option<String>,
     /// }
     ///
     /// /// add students to a class.
     /// #[derive(Debug, PartialEq, FromArgs)]
-    /// #[argh(subcommand, name = "add")]
+    /// #[argp(subcommand, name = "add")]
     /// struct AddCmd {
     ///     /// the name of the class's teacher.
-    ///     #[argh(option)]
+    ///     #[argp(option)]
     ///     teacher_name: String,
     ///
     ///     /// the name of the class.
-    ///     #[argh(positional)]
+    ///     #[argp(positional)]
     ///     class_name: String,
     /// }
     ///
@@ -395,7 +395,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///     early_exit,
-    ///     argh::EarlyExit {
+    ///     argp::EarlyExit {
     ///        output: r#"Usage: classroom <command> [<args>]
     ///
     /// Command to manage a classroom.
@@ -418,7 +418,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///     early_exit,
-    ///     argh::EarlyExit {
+    ///     argp::EarlyExit {
     ///        output: r#"Usage: classroom list [--teacher-name <teacher-name>]
     ///
     /// list all the classes.
@@ -438,7 +438,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///    err,
-    ///    argh::EarlyExit {
+    ///    argp::EarlyExit {
     ///        output: "Unrecognized argument: lisp\n".to_string(),
     ///        status: Err(()),
     ///     },
@@ -454,24 +454,24 @@ pub trait FromArgs: Sized {
     /// users should only pass in a single item for the command name, which typically comes from
     /// the first item from `std::env::args()`. Implementations however should append the
     /// subcommand name in when recursively calling [FromArgs::from_args] for subcommands. This
-    /// allows `argh` to generate correct subcommand help strings.
+    /// allows `argp` to generate correct subcommand help strings.
     ///
     /// The second argument `args` is the rest of the command line arguments.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use argh::FromArgs;
+    /// # use argp::FromArgs;
     ///
     /// /// Command to manage a classroom.
     /// #[derive(FromArgs)]
     /// struct ClassroomCmd {
-    ///     #[argh(subcommand)]
+    ///     #[argp(subcommand)]
     ///     subcommands: Subcommands,
     /// }
     ///
     /// #[derive(FromArgs)]
-    /// #[argh(subcommand)]
+    /// #[argp(subcommand)]
     /// enum Subcommands {
     ///     List(ListCmd),
     ///     Add(AddCmd),
@@ -479,31 +479,31 @@ pub trait FromArgs: Sized {
     ///
     /// /// list all the classes.
     /// #[derive(FromArgs)]
-    /// #[argh(subcommand, name = "list")]
+    /// #[argp(subcommand, name = "list")]
     /// struct ListCmd {
     ///     /// list classes for only this teacher.
-    ///     #[argh(option)]
+    ///     #[argp(option)]
     ///     teacher_name: Option<String>,
     /// }
     ///
     /// /// add students to a class.
     /// #[derive(FromArgs)]
-    /// #[argh(subcommand, name = "add")]
+    /// #[argp(subcommand, name = "add")]
     /// struct AddCmd {
     ///     /// the name of the class's teacher.
-    ///     #[argh(option)]
+    ///     #[argp(option)]
     ///     teacher_name: String,
     ///
     ///     /// has the class started yet?
-    ///     #[argh(switch)]
+    ///     #[argp(switch)]
     ///     started: bool,
     ///
     ///     /// the name of the class.
-    ///     #[argh(positional)]
+    ///     #[argp(positional)]
     ///     class_name: String,
     ///
     ///     /// the student names.
-    ///     #[argh(positional)]
+    ///     #[argp(positional)]
     ///     students: Vec<String>,
     /// }
     ///
@@ -552,7 +552,7 @@ pub trait FromArgs: Sized {
     /// // `ClassroomCmd::redact_arg_values` will error out if passed invalid arguments.
     /// assert_eq!(
     ///     ClassroomCmd::redact_arg_values(&["classroom"], &["add", "--teacher-name"]),
-    ///     Err(argh::EarlyExit {
+    ///     Err(argp::EarlyExit {
     ///         output: "No value provided for option '--teacher-name'.\n".into(),
     ///         status: Err(()),
     ///     }),
@@ -561,7 +561,7 @@ pub trait FromArgs: Sized {
     /// // `ClassroomCmd::redact_arg_values` will generate help messages.
     /// assert_eq!(
     ///     ClassroomCmd::redact_arg_values(&["classroom"], &["help"]),
-    ///     Err(argh::EarlyExit {
+    ///     Err(argp::EarlyExit {
     ///         output: r#"Usage: classroom <command> [<args>]
     ///
     /// Command to manage a classroom.
@@ -699,7 +699,7 @@ pub fn from_env<T: TopLevelCommand>() -> T {
 
 /// Create a `FromArgs` type from the current process's `env::args`.
 ///
-/// This special cases usages where argh is being used in an environment where cargo is
+/// This special cases usages where argp is being used in an environment where cargo is
 /// driving the build. We skip the second env variable.
 ///
 /// This function will exit early from the current process if argument parsing
@@ -1099,7 +1099,7 @@ fn prepend_help<'a>(args: &[&'a str]) -> Vec<&'a str> {
 pub fn print_subcommands<'a>(commands: impl Iterator<Item = &'a CommandInfo>) -> String {
     let mut out = String::new();
     for cmd in commands {
-        argh_shared::write_description(&mut out, cmd);
+        argp_shared::write_description(&mut out, cmd);
     }
     out
 }

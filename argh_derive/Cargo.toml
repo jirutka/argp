@@ -9,7 +9,6 @@ repository = "https://github.com/jirutka/argp"
 readme = "README.md"
 
 [lib]
-name = "argh_derive" # TODO: remove
 proc-macro = true
 
 [dependencies]

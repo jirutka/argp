@@ -9,7 +9,7 @@ use {
         parse_attrs::{Description, FieldKind, TypeAttrs},
         Optionality, StructField,
     },
-    argh_shared::INDENT,
+    argp_shared::INDENT,
     proc_macro2::{Span, TokenStream},
     quote::quote,
 };
@@ -94,12 +94,12 @@ pub(crate) fn help(
         let subcommand_ty = subcommand.ty_without_wrapper;
         subcommand_format_arg = quote! { subcommands = subcommands };
         subcommand_calculation = quote! {
-            let subcommands = argh::print_subcommands(
-                <#subcommand_ty as argh::SubCommands>::COMMANDS
+            let subcommands = argp::print_subcommands(
+                <#subcommand_ty as argp::SubCommands>::COMMANDS
                     .iter()
                     .copied()
                     .chain(
-                        <#subcommand_ty as argh::SubCommands>::dynamic_commands()
+                        <#subcommand_ty as argp::SubCommands>::dynamic_commands()
                             .iter()
                             .copied())
             );
@@ -219,7 +219,7 @@ pub fn require_description(
             err_span,
             &format!(
                 "#[derive(FromArgs)] {} with no description.
-Add a doc comment or an `#[argh(description = \"...\")]` attribute.",
+Add a doc comment or an `#[argp(description = \"...\")]` attribute.",
                 kind
             ),
         );
@@ -240,8 +240,8 @@ fn positional_description(out: &mut String, field: &StructField<'_>) {
 }
 
 fn positional_description_format(out: &mut String, name: &str, description: &str) {
-    let info = argh_shared::CommandInfo { name, description };
-    argh_shared::write_description(out, &info);
+    let info = argp_shared::CommandInfo { name, description };
+    argp_shared::write_description(out, &info);
 }
 
 /// Describes an option like this:
@@ -270,6 +270,6 @@ fn option_description_format(
     }
     name.push_str(long_with_leading_dashes);
 
-    let info = argh_shared::CommandInfo { name: &name, description };
-    argh_shared::write_description(out, &info);
+    let info = argp_shared::CommandInfo { name: &name, description };
+    argp_shared::write_description(out, &info);
 }

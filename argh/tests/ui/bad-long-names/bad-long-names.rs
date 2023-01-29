@@ -1,13 +1,13 @@
 /// Command
-#[derive(argh::FromArgs)]
+#[derive(argp::FromArgs)]
 struct Cmd {
-    #[argh(switch)]
+    #[argp(switch)]
     /// non-ascii
     привет: bool,
-    #[argh(switch)]
+    #[argp(switch)]
     /// uppercase
     XMLHTTPRequest: bool,
-    #[argh(switch, long = "not really")]
+    #[argp(switch, long = "not really")]
     /// bad attr
     ok: bool,
 }

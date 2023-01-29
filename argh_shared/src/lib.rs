@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//! Shared functionality between argh_derive and the argh runtime.
+//! Shared functionality between argp_derive and the argp runtime.
 //!
 //! This library is intended only for internal use by these two crates.
 

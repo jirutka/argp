@@ -3,9 +3,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/// Implementation of the `FromArgs` and `argh(...)` derive attributes.
+/// Implementation of the `FromArgs` and `argp(...)` derive attributes.
 ///
-/// For more thorough documentation, see the `argh` crate itself.
+/// For more thorough documentation, see the `argp` crate itself.
 extern crate proc_macro;
 
 use {
@@ -24,8 +24,8 @@ mod help;
 mod parse_attrs;
 
 /// Entrypoint for `#[derive(FromArgs)]`.
-#[proc_macro_derive(FromArgs, attributes(argh))]
-pub fn argh_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(FromArgs, attributes(argp))]
+pub fn argp_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
     let gen = impl_from_args(&ast);
     gen.into()
@@ -115,7 +115,7 @@ impl<'a> StructField<'a> {
             errors.err(
                 field,
                 concat!(
-                    "Missing `argh` field kind attribute.\n",
+                    "Missing `argp` field kind attribute.\n",
                     "Expected one of: `switch`, `option`, `remaining`, `subcommand`, `positional`",
                 ),
             );
@@ -175,7 +175,7 @@ impl<'a> StructField<'a> {
         }
 
         // Determine the "long" name of options and switches.
-        // Defaults to the kebab-case'd field name if `#[argh(long = "...")]` is omitted.
+        // Defaults to the kebab-case'd field name if `#[argp(long = "...")]` is omitted.
         let long_name = match kind {
             FieldKind::Switch | FieldKind::Option => {
                 let long_name = attrs.long.as_ref().map(syn::LitStr::value).unwrap_or_else(|| {
@@ -279,7 +279,7 @@ fn impl_from_args_struct(
     let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     let trait_impl = quote_spanned! { impl_span =>
         #[automatically_derived]
-        impl #impl_generics argh::FromArgs for #name #ty_generics #where_clause {
+        impl #impl_generics argp::FromArgs for #name #ty_generics #where_clause {
             #from_args_method
 
             #redact_arg_values_method
@@ -314,8 +314,8 @@ fn impl_from_args_struct_from_args<'a>(
     let flag_output_table = fields.iter().filter_map(|field| {
         let field_name = &field.field.ident;
         match field.kind {
-            FieldKind::Option => Some(quote! { argh::ParseStructOption::Value(&mut #field_name) }),
-            FieldKind::Switch => Some(quote! { argh::ParseStructOption::Flag(&mut #field_name) }),
+            FieldKind::Option => Some(quote! { argp::ParseStructOption::Value(&mut #field_name) }),
+            FieldKind::Switch => Some(quote! { argp::ParseStructOption::Flag(&mut #field_name) }),
             FieldKind::SubCommand | FieldKind::Positional => None,
         }
     });
@@ -341,11 +341,11 @@ fn impl_from_args_struct_from_args<'a>(
         let name = subcommand.name;
         let ty = subcommand.ty_without_wrapper;
         quote_spanned! { impl_span =>
-            Some(argh::ParseStructSubCommand {
-                subcommands: <#ty as argh::SubCommands>::COMMANDS,
-                dynamic_subcommands: &<#ty as argh::SubCommands>::dynamic_commands(),
+            Some(argp::ParseStructSubCommand {
+                subcommands: <#ty as argp::SubCommands>::COMMANDS,
+                dynamic_subcommands: &<#ty as argp::SubCommands>::dynamic_commands(),
                 parse_func: &mut |__command, __remaining_args| {
-                    #name = Some(<#ty as argh::FromArgs>::from_args(__command, __remaining_args)?);
+                    #name = Some(<#ty as argp::FromArgs>::from_args(__command, __remaining_args)?);
                     Ok(())
                 },
             })
@@ -360,25 +360,25 @@ fn impl_from_args_struct_from_args<'a>(
 
     let method_impl = quote_spanned! { impl_span =>
         fn from_args(__cmd_name: &[&str], __args: &[&str])
-            -> std::result::Result<Self, argh::EarlyExit>
+            -> std::result::Result<Self, argp::EarlyExit>
         {
             #![allow(clippy::unwrap_in_result)]
 
             #( #init_fields )*
 
-            argh::parse_struct_args(
+            argp::parse_struct_args(
                 __cmd_name,
                 __args,
-                argh::ParseStructOptions {
+                argp::ParseStructOptions {
                     arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
                     slots: &mut [ #( #flag_output_table, )* ],
                 },
-                argh::ParseStructPositionals {
+                argp::ParseStructPositionals {
                     positionals: &mut [
                         #(
-                            argh::ParseStructPositional {
+                            argp::ParseStructPositional {
                                 name: #positional_field_names,
-                                slot: &mut #positional_field_idents as &mut argh::ParseValueSlot,
+                                slot: &mut #positional_field_idents as &mut argp::ParseValueSlot,
                             },
                         )*
                     ],
@@ -389,7 +389,7 @@ fn impl_from_args_struct_from_args<'a>(
                 &|| #help,
             )?;
 
-            let mut #missing_requirements_ident = argh::MissingRequirements::default();
+            let mut #missing_requirements_ident = argp::MissingRequirements::default();
             #(
                 #append_missing_requirements
             )*
@@ -428,8 +428,8 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     let flag_output_table = fields.iter().filter_map(|field| {
         let field_name = &field.field.ident;
         match field.kind {
-            FieldKind::Option => Some(quote! { argh::ParseStructOption::Value(&mut #field_name) }),
-            FieldKind::Switch => Some(quote! { argh::ParseStructOption::Flag(&mut #field_name) }),
+            FieldKind::Option => Some(quote! { argp::ParseStructOption::Value(&mut #field_name) }),
+            FieldKind::Switch => Some(quote! { argp::ParseStructOption::Flag(&mut #field_name) }),
             FieldKind::SubCommand | FieldKind::Positional => None,
         }
     });
@@ -455,11 +455,11 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         let name = subcommand.name;
         let ty = subcommand.ty_without_wrapper;
         quote_spanned! { impl_span =>
-            Some(argh::ParseStructSubCommand {
-                subcommands: <#ty as argh::SubCommands>::COMMANDS,
-                dynamic_subcommands: &<#ty as argh::SubCommands>::dynamic_commands(),
+            Some(argp::ParseStructSubCommand {
+                subcommands: <#ty as argp::SubCommands>::COMMANDS,
+                dynamic_subcommands: &<#ty as argp::SubCommands>::dynamic_commands(),
                 parse_func: &mut |__command, __remaining_args| {
-                    #name = Some(<#ty as argh::FromArgs>::redact_arg_values(__command, __remaining_args)?);
+                    #name = Some(<#ty as argp::FromArgs>::redact_arg_values(__command, __remaining_args)?);
                     Ok(())
                 },
             })
@@ -479,22 +479,22 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     let help = help::help(errors, cmd_name_str_array_ident, type_attrs, fields, subcommand);
 
     let method_impl = quote_spanned! { impl_span =>
-        fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> std::result::Result<Vec<String>, argh::EarlyExit> {
+        fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> std::result::Result<Vec<String>, argp::EarlyExit> {
             #( #init_fields )*
 
-            argh::parse_struct_args(
+            argp::parse_struct_args(
                 __cmd_name,
                 __args,
-                argh::ParseStructOptions {
+                argp::ParseStructOptions {
                     arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
                     slots: &mut [ #( #flag_output_table, )* ],
                 },
-                argh::ParseStructPositionals {
+                argp::ParseStructPositionals {
                     positionals: &mut [
                         #(
-                            argh::ParseStructPositional {
+                            argp::ParseStructPositional {
                                 name: #positional_field_names,
-                                slot: &mut #positional_field_idents as &mut argh::ParseValueSlot,
+                                slot: &mut #positional_field_idents as &mut argp::ParseValueSlot,
                             },
                         )*
                     ],
@@ -505,7 +505,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                 &|| #help,
             )?;
 
-            let mut #missing_requirements_ident = argh::MissingRequirements::default();
+            let mut #missing_requirements_ident = argp::MissingRequirements::default();
             #(
                 #append_missing_requirements
             )*
@@ -515,7 +515,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                 if let Some(cmd_name) = __cmd_name.last() {
                     (*cmd_name).to_owned()
                 } else {
-                    return Err(argh::EarlyExit::from(#unwrap_cmd_name_err_string.to_owned()));
+                    return Err(argp::EarlyExit::from(#unwrap_cmd_name_err_string.to_owned()));
                 }
             ];
 
@@ -581,7 +581,7 @@ fn ensure_unique_names(errors: &Errors, fields: &[StructField<'_>]) {
     }
 }
 
-/// Implement `argh::TopLevelCommand` or `argh::SubCommand` as appropriate.
+/// Implement `argp::TopLevelCommand` or `argp::SubCommand` as appropriate.
 fn top_or_sub_cmd_impl(
     errors: &Errors,
     name: &syn::Ident,
@@ -595,18 +595,18 @@ fn top_or_sub_cmd_impl(
         // Not a subcommand
         quote! {
             #[automatically_derived]
-            impl #impl_generics argh::TopLevelCommand for #name #ty_generics #where_clause {}
+            impl #impl_generics argp::TopLevelCommand for #name #ty_generics #where_clause {}
         }
     } else {
         let empty_str = syn::LitStr::new("", Span::call_site());
         let subcommand_name = type_attrs.name.as_ref().unwrap_or_else(|| {
-            errors.err(name, "`#[argh(name = \"...\")]` attribute is required for subcommands");
+            errors.err(name, "`#[argp(name = \"...\")]` attribute is required for subcommands");
             &empty_str
         });
         quote! {
             #[automatically_derived]
-            impl #impl_generics argh::SubCommand for #name #ty_generics #where_clause {
-                const COMMAND: &'static argh::CommandInfo = &argh::CommandInfo {
+            impl #impl_generics argp::SubCommand for #name #ty_generics #where_clause {
+                const COMMAND: &'static argp::CommandInfo = &argp::CommandInfo {
                     name: #subcommand_name,
                     description: #description,
                 };
@@ -618,7 +618,7 @@ fn top_or_sub_cmd_impl(
 /// Declare a local slots to store each field in during parsing.
 ///
 /// Most fields are stored in `Option<FieldType>` locals.
-/// `argh(option)` fields are stored in a `ParseValueSlotTy` along with a
+/// `argp(option)` fields are stored in a `ParseValueSlotTy` along with a
 /// function that knows how to decode the appropriate value.
 fn declare_local_storage_for_from_args_fields<'a>(
     fields: &'a [StructField<'a>],
@@ -641,14 +641,14 @@ fn declare_local_storage_for_from_args_fields<'a>(
                     Some(from_str_fn) => from_str_fn.into_token_stream(),
                     None => {
                         quote! {
-                            <#field_type as argh::FromArgValue>::from_arg_value
+                            <#field_type as argp::FromArgValue>::from_arg_value
                         }
                     }
                 };
 
                 quote! {
-                    let mut #field_name: argh::ParseValueSlotTy<#field_slot_type, #field_type>
-                        = argh::ParseValueSlotTy {
+                    let mut #field_name: argp::ParseValueSlotTy<#field_slot_type, #field_type>
+                        = argp::ParseValueSlotTy {
                             slot: std::default::Default::default(),
                             parse_func: |_, value| { #from_str_fn(value) },
                         };
@@ -658,7 +658,7 @@ fn declare_local_storage_for_from_args_fields<'a>(
                 quote! { let mut #field_name: #field_slot_type = None; }
             }
             FieldKind::Switch => {
-                quote! { let mut #field_name: #field_slot_type = argh::Flag::default(); }
+                quote! { let mut #field_name: #field_slot_type = argp::Flag::default(); }
             }
         }
     })
@@ -697,7 +697,7 @@ fn unwrap_from_args_fields<'a>(
 /// Declare a local slots to store each field in during parsing.
 ///
 /// Most fields are stored in `Option<FieldType>` locals.
-/// `argh(option)` fields are stored in a `ParseValueSlotTy` along with a
+/// `argp(option)` fields are stored in a `ParseValueSlotTy` along with a
 /// function that knows how to decode the appropriate value.
 fn declare_local_storage_for_redacted_fields<'a>(
     fields: &'a [StructField<'a>],
@@ -708,7 +708,7 @@ fn declare_local_storage_for_redacted_fields<'a>(
         match field.kind {
             FieldKind::Switch => {
                 quote! {
-                    let mut #field_name = argh::RedactFlag {
+                    let mut #field_name = argp::RedactFlag {
                         slot: None,
                     };
                 }
@@ -724,8 +724,8 @@ fn declare_local_storage_for_redacted_fields<'a>(
                 };
 
                 quote! {
-                    let mut #field_name: argh::ParseValueSlotTy::<#field_slot_type, String> =
-                        argh::ParseValueSlotTy {
+                    let mut #field_name: argp::ParseValueSlotTy::<#field_slot_type, String> =
+                        argp::ParseValueSlotTy {
                         slot: std::default::Default::default(),
                         parse_func: |arg, _| { Ok(arg.to_owned()) },
                     };
@@ -743,8 +743,8 @@ fn declare_local_storage_for_redacted_fields<'a>(
 
                 let arg_name = field.positional_arg_name();
                 quote! {
-                    let mut #field_name: argh::ParseValueSlotTy::<#field_slot_type, String> =
-                        argh::ParseValueSlotTy {
+                    let mut #field_name: argp::ParseValueSlotTy::<#field_slot_type, String> =
+                        argp::ParseValueSlotTy {
                         slot: std::default::Default::default(),
                         parse_func: |_, _| { Ok(#arg_name.to_owned()) },
                     };
@@ -821,7 +821,7 @@ fn flag_str_to_output_table_map_entries<'a>(fields: &'a [StructField<'a>]) -> Ve
     flag_str_to_output_table_map
 }
 
-/// For each non-optional field, add an entry to the `argh::MissingRequirements`.
+/// For each non-optional field, add an entry to the `argp::MissingRequirements`.
 fn append_missing_requirements<'a>(
     // missing_requirements_ident
     mri: &syn::Ident,
@@ -853,11 +853,11 @@ fn append_missing_requirements<'a>(
                 quote! {
                     if #field_name.is_none() {
                         #mri.missing_subcommands(
-                            <#ty as argh::SubCommands>::COMMANDS
+                            <#ty as argp::SubCommands>::COMMANDS
                                 .iter()
                                 .cloned()
                                 .chain(
-                                    <#ty as argh::SubCommands>::dynamic_commands()
+                                    <#ty as argp::SubCommands>::dynamic_commands()
                                         .iter()
                                         .copied()
                                 ),
@@ -973,7 +973,7 @@ fn impl_from_args_enum(
     let dynamic_from_args =
         dynamic_type_and_variant.as_ref().map(|(dynamic_type, dynamic_variant)| {
             quote! {
-                if let Some(result) = <#dynamic_type as argh::DynamicSubCommand>::try_from_args(
+                if let Some(result) = <#dynamic_type as argp::DynamicSubCommand>::try_from_args(
                     command_name, args) {
                     return result.map(#name::#dynamic_variant);
                 }
@@ -981,7 +981,7 @@ fn impl_from_args_enum(
         });
     let dynamic_redact_arg_values = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
         quote! {
-            if let Some(result) = <#dynamic_type as argh::DynamicSubCommand>::try_redact_arg_values(
+            if let Some(result) = <#dynamic_type as argp::DynamicSubCommand>::try_redact_arg_values(
                 command_name, args) {
                 return result;
             }
@@ -989,59 +989,59 @@ fn impl_from_args_enum(
     });
     let dynamic_commands = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
         quote! {
-            fn dynamic_commands() -> &'static [&'static argh::CommandInfo] {
-                <#dynamic_type as argh::DynamicSubCommand>::commands()
+            fn dynamic_commands() -> &'static [&'static argp::CommandInfo] {
+                <#dynamic_type as argp::DynamicSubCommand>::commands()
             }
         }
     });
 
     let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     quote! {
-        impl #impl_generics argh::FromArgs for #name #ty_generics #where_clause {
+        impl #impl_generics argp::FromArgs for #name #ty_generics #where_clause {
             fn from_args(command_name: &[&str], args: &[&str])
-                -> std::result::Result<Self, argh::EarlyExit>
+                -> std::result::Result<Self, argp::EarlyExit>
             {
                 let subcommand_name = if let Some(subcommand_name) = command_name.last() {
                     *subcommand_name
                 } else {
-                    return Err(argh::EarlyExit::from("no subcommand name".to_owned()));
+                    return Err(argp::EarlyExit::from("no subcommand name".to_owned()));
                 };
 
                 #(
-                    if subcommand_name == <#variant_ty as argh::SubCommand>::COMMAND.name {
+                    if subcommand_name == <#variant_ty as argp::SubCommand>::COMMAND.name {
                         return Ok(#name_repeating::#variant_names(
-                            <#variant_ty as argh::FromArgs>::from_args(command_name, args)?
+                            <#variant_ty as argp::FromArgs>::from_args(command_name, args)?
                         ));
                     }
                 )*
 
                 #dynamic_from_args
 
-                Err(argh::EarlyExit::from("no subcommand matched".to_owned()))
+                Err(argp::EarlyExit::from("no subcommand matched".to_owned()))
             }
 
-            fn redact_arg_values(command_name: &[&str], args: &[&str]) -> std::result::Result<Vec<String>, argh::EarlyExit> {
+            fn redact_arg_values(command_name: &[&str], args: &[&str]) -> std::result::Result<Vec<String>, argp::EarlyExit> {
                 let subcommand_name = if let Some(subcommand_name) = command_name.last() {
                     *subcommand_name
                 } else {
-                    return Err(argh::EarlyExit::from("no subcommand name".to_owned()));
+                    return Err(argp::EarlyExit::from("no subcommand name".to_owned()));
                 };
 
                 #(
-                    if subcommand_name == <#variant_ty as argh::SubCommand>::COMMAND.name {
-                        return <#variant_ty as argh::FromArgs>::redact_arg_values(command_name, args);
+                    if subcommand_name == <#variant_ty as argp::SubCommand>::COMMAND.name {
+                        return <#variant_ty as argp::FromArgs>::redact_arg_values(command_name, args);
                     }
                 )*
 
                 #dynamic_redact_arg_values
 
-                Err(argh::EarlyExit::from("no subcommand matched".to_owned()))
+                Err(argp::EarlyExit::from("no subcommand matched".to_owned()))
             }
         }
 
-        impl #impl_generics argh::SubCommands for #name #ty_generics #where_clause {
-            const COMMANDS: &'static [&'static argh::CommandInfo] = &[#(
-                <#variant_ty as argh::SubCommand>::COMMAND,
+        impl #impl_generics argp::SubCommands for #name #ty_generics #where_clause {
+            const COMMANDS: &'static [&'static argp::CommandInfo] = &[#(
+                <#variant_ty as argp::SubCommand>::COMMAND,
             )*];
 
             #dynamic_commands

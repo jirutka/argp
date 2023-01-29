@@ -7,6 +7,3 @@ license = "BSD-3-Clause"
 description = "Derive-based argument parsing optimized for code size"
 repository = "https://github.com/jirutka/argp"
 readme = "README.md"
-
-[lib]
-name = "argh_shared" # TODO: remove

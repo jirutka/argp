@@ -1,11 +1,11 @@
 /// Command
-#[derive(argh::FromArgs)]
+#[derive(argp::FromArgs)]
 struct Cmd {
-    #[argh(positional)]
+    #[argp(positional)]
     /// positional
     positional: Vec<String>,
 
-    #[argh(positional, greedy)]
+    #[argp(positional, greedy)]
     /// remainder
     remainder: Vec<String>,
 }

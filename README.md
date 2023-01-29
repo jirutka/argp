@@ -18,26 +18,26 @@ Argp is originally a fork of [argh](https://github.com/google/argh/).
 ## Basic Example
 
 ```rust,no_run
-use argh::FromArgs;
+use argp::FromArgs;
 
 #[derive(FromArgs)]
 /// Reach new heights.
 struct GoUp {
     /// whether or not to jump
-    #[argh(switch, short = 'j')]
+    #[argp(switch, short = 'j')]
     jump: bool,
 
     /// how high to go
-    #[argh(option)]
+    #[argp(option)]
     height: usize,
 
     /// an optional nickname for the pilot
-    #[argh(option)]
+    #[argp(option)]
     pilot_nickname: Option<String>,
 }
 
 fn main() {
-    let up: GoUp = argh::from_env();
+    let up: GoUp = argp::from_env();
 }
 ```
 
@@ -65,11 +65,11 @@ Switches, like `jump`, are optional and will be set to true if provided.
 Options, like `height` and `pilot_nickname`, can be either required,
 optional, or repeating, depending on whether they are contained in an
 `Option` or a `Vec`. Default values can be provided using the
-`#[argh(default = "<your_code_here>")]` attribute, and in this case an
+`#[argp(default = "<your_code_here>")]` attribute, and in this case an
 option is treated as optional.
 
 ```rust
-use argh::FromArgs;
+use argp::FromArgs;
 
 fn default_height() -> usize {
     5
@@ -79,20 +79,20 @@ fn default_height() -> usize {
 /// Reach new heights.
 struct GoUp {
     /// an optional nickname for the pilot
-    #[argh(option)]
+    #[argp(option)]
     pilot_nickname: Option<String>,
 
     /// an optional height
-    #[argh(option, default = "default_height()")]
+    #[argp(option, default = "default_height()")]
     height: usize,
 
     /// an optional direction which is "up" by default
-    #[argh(option, default = "String::from(\"only up\")")]
+    #[argp(option, default = "String::from(\"only up\")")]
     direction: String,
 }
 
 fn main() {
-    let up: GoUp = argh::from_env();
+    let up: GoUp = argp::from_env();
 }
 ```
 
@@ -102,13 +102,13 @@ If more customized parsing is required, you can supply a custom
 `fn(&str) -> Result<T, String>` using the `from_str_fn` attribute:
 
 ```rust
-use argh::FromArgs;
+use argp::FromArgs;
 
 #[derive(FromArgs)]
 /// Goofy thing.
 struct FiveStruct {
     /// always five
-    #[argh(option, from_str_fn(always_five))]
+    #[argp(option, from_str_fn(always_five))]
     five: usize,
 }
 
@@ -117,17 +117,17 @@ fn always_five(_value: &str) -> Result<usize, String> {
 }
 ```
 
-Positional arguments can be declared using `#[argh(positional)]`.
+Positional arguments can be declared using `#[argp(positional)]`.
 These arguments will be parsed in order of their declaration in
 the structure:
 
 ```rust
-use argh::FromArgs;
+use argp::FromArgs;
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// A command with positional arguments.
 struct WithPositional {
-    #[argh(positional)]
+    #[argp(positional)]
     first: String,
 }
 ```
@@ -140,17 +140,17 @@ Subcommands are also supported. To use a subcommand, declare a separate
 over each command:
 
 ```rust
-use argh::FromArgs;
+use argp::FromArgs;
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
 struct TopLevel {
-    #[argh(subcommand)]
+    #[argp(subcommand)]
     nested: MySubCommandEnum,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand)]
+#[argp(subcommand)]
 enum MySubCommandEnum {
     One(SubCommandOne),
     Two(SubCommandTwo),
@@ -158,31 +158,31 @@ enum MySubCommandEnum {
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// First subcommand.
-#[argh(subcommand, name = "one")]
+#[argp(subcommand, name = "one")]
 struct SubCommandOne {
-    #[argh(option)]
+    #[argp(option)]
     /// how many x
     x: usize,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Second subcommand.
-#[argh(subcommand, name = "two")]
+#[argp(subcommand, name = "two")]
 struct SubCommandTwo {
-    #[argh(switch)]
+    #[argp(switch)]
     /// whether to fooey
     fooey: bool,
 }
 ```
 
-## How to debug the expanded derive macro for `argh`
+## How to debug the expanded derive macro for `argp`
 
-The `argh::FromArgs` derive macro can be debugged with the [cargo-expand](https://crates.io/crates/cargo-expand) crate.
+The `argp::FromArgs` derive macro can be debugged with the [cargo-expand](https://crates.io/crates/cargo-expand) crate.
 
 ### Expand the derive macro in `examples/simple_example.rs`
 
-See [argh/examples/simple_example.rs](./argh/examples/simple_example.rs) for the example struct we wish to expand.
+See [argp/examples/simple_example.rs](./argp/examples/simple_example.rs) for the example struct we wish to expand.
 
 First, install `cargo-expand` by running `cargo install cargo-expand`. Note this requires the nightly build of Rust.
 
-Once installed, run `cargo expand` with in the `argh` package and you can see the expanded code.
+Once installed, run `cargo expand` with in the `argp` package and you can see the expanded code.

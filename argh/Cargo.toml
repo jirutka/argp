@@ -9,9 +9,6 @@ description = "Derive-based argument parser optimized for code size"
 repository = "https://github.com/jirutka/argp"
 readme = "README.md"
 
-[lib]
-name = "argh" # TODO: remove
-
 [dependencies]
 argp_shared = { version = "0.0.0", path = "../argh_shared" }
 argp_derive = { version = "0.0.0", path = "../argh_derive" }

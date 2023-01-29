@@ -11,7 +11,7 @@
     clippy::unwrap_in_result
 )]
 
-use {argh::FromArgs, std::fmt::Debug};
+use {argp::FromArgs, std::fmt::Debug};
 
 #[test]
 fn basic_example() {
@@ -19,15 +19,15 @@ fn basic_example() {
     /// Reach new heights.
     struct GoUp {
         /// whether or not to jump
-        #[argh(switch, short = 'j')]
+        #[argp(switch, short = 'j')]
         jump: bool,
 
         /// how high to go
-        #[argh(option)]
+        #[argp(option)]
         height: usize,
 
         /// an optional nickname for the pilot
-        #[argh(option)]
+        #[argp(option)]
         pilot_nickname: Option<String>,
     }
 
@@ -47,15 +47,15 @@ fn generic_example() {
         <S as FromStr>::Err: Display,
     {
         /// whether or not to jump
-        #[argh(switch, short = 'j')]
+        #[argp(switch, short = 'j')]
         jump: bool,
 
         /// how high to go
-        #[argh(option)]
+        #[argp(option)]
         height: usize,
 
         /// an optional nickname for the pilot
-        #[argh(option)]
+        #[argp(option)]
         pilot_nickname: Option<S>,
     }
 
@@ -69,7 +69,7 @@ fn custom_from_str_example() {
     /// Goofy thing.
     struct FiveStruct {
         /// always five
-        #[argh(option, from_str_fn(always_five))]
+        #[argp(option, from_str_fn(always_five))]
         five: usize,
     }
 
@@ -86,12 +86,12 @@ fn subcommand_example() {
     #[derive(FromArgs, PartialEq, Debug)]
     /// Top-level command.
     struct TopLevel {
-        #[argh(subcommand)]
+        #[argp(subcommand)]
         nested: MySubCommandEnum,
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
-    #[argh(subcommand)]
+    #[argp(subcommand)]
     enum MySubCommandEnum {
         One(SubCommandOne),
         Two(SubCommandTwo),
@@ -99,18 +99,18 @@ fn subcommand_example() {
 
     #[derive(FromArgs, PartialEq, Debug)]
     /// First subcommand.
-    #[argh(subcommand, name = "one")]
+    #[argp(subcommand, name = "one")]
     struct SubCommandOne {
-        #[argh(option)]
+        #[argp(option)]
         /// how many x
         x: usize,
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
     /// Second subcommand.
-    #[argh(subcommand, name = "two")]
+    #[argp(subcommand, name = "two")]
     struct SubCommandTwo {
-        #[argh(switch)]
+        #[argp(switch)]
         /// whether to fooey
         fooey: bool,
     }
@@ -129,37 +129,37 @@ fn dynamic_subcommand_example() {
         got: String,
     }
 
-    impl argh::DynamicSubCommand for DynamicSubCommandImpl {
-        fn commands() -> &'static [&'static argh::CommandInfo] {
+    impl argp::DynamicSubCommand for DynamicSubCommandImpl {
+        fn commands() -> &'static [&'static argp::CommandInfo] {
             &[
-                &argh::CommandInfo { name: "three", description: "Third command" },
-                &argh::CommandInfo { name: "four", description: "Fourth command" },
-                &argh::CommandInfo { name: "five", description: "Fifth command" },
+                &argp::CommandInfo { name: "three", description: "Third command" },
+                &argp::CommandInfo { name: "four", description: "Fourth command" },
+                &argp::CommandInfo { name: "five", description: "Fifth command" },
             ]
         }
 
         fn try_redact_arg_values(
             _command_name: &[&str],
             _args: &[&str],
-        ) -> Option<Result<Vec<String>, argh::EarlyExit>> {
-            Some(Err(argh::EarlyExit::from("Test should not redact".to_owned())))
+        ) -> Option<Result<Vec<String>, argp::EarlyExit>> {
+            Some(Err(argp::EarlyExit::from("Test should not redact".to_owned())))
         }
 
         fn try_from_args(
             command_name: &[&str],
             args: &[&str],
-        ) -> Option<Result<DynamicSubCommandImpl, argh::EarlyExit>> {
+        ) -> Option<Result<DynamicSubCommandImpl, argp::EarlyExit>> {
             let command_name = match command_name.last() {
                 Some(x) => *x,
-                None => return Some(Err(argh::EarlyExit::from("No command".to_owned()))),
+                None => return Some(Err(argp::EarlyExit::from("No command".to_owned()))),
             };
             let description = Self::commands().iter().find(|x| x.name == command_name)?.description;
             if args.len() > 1 {
-                Some(Err(argh::EarlyExit::from("Too many arguments".to_owned())))
+                Some(Err(argp::EarlyExit::from("Too many arguments".to_owned())))
             } else if let Some(arg) = args.first() {
                 Some(Ok(DynamicSubCommandImpl { got: format!("{} got {:?}", description, arg) }))
             } else {
-                Some(Err(argh::EarlyExit::from("Not enough arguments".to_owned())))
+                Some(Err(argp::EarlyExit::from("Not enough arguments".to_owned())))
             }
         }
     }
@@ -167,33 +167,33 @@ fn dynamic_subcommand_example() {
     #[derive(FromArgs, PartialEq, Debug)]
     /// Top-level command.
     struct TopLevel {
-        #[argh(subcommand)]
+        #[argp(subcommand)]
         nested: MySubCommandEnum,
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
-    #[argh(subcommand)]
+    #[argp(subcommand)]
     enum MySubCommandEnum {
         One(SubCommandOne),
         Two(SubCommandTwo),
-        #[argh(dynamic)]
+        #[argp(dynamic)]
         ThreeFourFive(DynamicSubCommandImpl),
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
     /// First subcommand.
-    #[argh(subcommand, name = "one")]
+    #[argp(subcommand, name = "one")]
     struct SubCommandOne {
-        #[argh(option)]
+        #[argp(option)]
         /// how many x
         x: usize,
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
     /// Second subcommand.
-    #[argh(subcommand, name = "two")]
+    #[argp(subcommand, name = "two")]
     struct SubCommandTwo {
-        #[argh(switch)]
+        #[argp(switch)]
         /// whether to fooey
         fooey: bool,
     }
@@ -240,7 +240,7 @@ fn multiline_doc_comment_description() {
     #[derive(FromArgs)]
     /// Short description
     struct Cmd {
-        #[argh(switch)]
+        #[argp(switch)]
         /// a switch with a description
         /// that is spread across
         /// a number of
@@ -266,7 +266,7 @@ fn explicit_long_value_for_option() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(option, long = "foo")]
+        #[argp(option, long = "foo")]
         /// bar bar
         x: u8,
     }
@@ -281,7 +281,7 @@ fn explicit_long_value_for_option() {
 #[allow(unused)]
 struct DescriptionStartsWithInitialism {
     /// URL fooey
-    #[argh(option)]
+    #[argp(option)]
     x: u8,
 }
 
@@ -290,7 +290,7 @@ fn default_number() {
     #[derive(FromArgs)]
     /// Short description
     struct Cmd {
-        #[argh(option, default = "5")]
+        #[argp(option, default = "5")]
         /// fooey
         x: u8,
     }
@@ -309,7 +309,7 @@ fn default_function() {
     #[derive(FromArgs)]
     /// Short description
     struct Cmd {
-        #[argh(option, default = "call_me_maybe()")]
+        #[argp(option, default = "call_me_maybe()")]
         /// fooey
         msg: String,
     }
@@ -323,7 +323,7 @@ fn missing_option_value() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(option)]
+        #[argp(option)]
         /// fooey
         _msg: String,
     }
@@ -358,10 +358,10 @@ fn assert_error<T: FromArgs + Debug>(args: &[&str], err_msg: &str) {
 mod options {
     use super::*;
 
-    #[derive(argh::FromArgs, Debug, PartialEq)]
+    #[derive(argp::FromArgs, Debug, PartialEq)]
     /// Woot
     struct Parsed {
-        #[argh(option, short = 'n')]
+        #[argp(option, short = 'n')]
         /// fooey
         n: usize,
     }
@@ -376,10 +376,10 @@ mod options {
         );
     }
 
-    #[derive(argh::FromArgs, Debug, PartialEq)]
+    #[derive(argp::FromArgs, Debug, PartialEq)]
     /// Woot
     struct Repeating {
-        #[argh(option, short = 'n')]
+        #[argp(option, short = 'n')]
         /// fooey
         n: Vec<String>,
     }
@@ -398,10 +398,10 @@ Options:
         );
     }
 
-    #[derive(argh::FromArgs, Debug, PartialEq)]
+    #[derive(argp::FromArgs, Debug, PartialEq)]
     /// Woot
     struct WithArgName {
-        #[argh(option, arg_name = "name")]
+        #[argp(option, arg_name = "name")]
         /// fooey
         option_name: Option<String>,
     }
@@ -427,10 +427,10 @@ mod positional {
     #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct LastRepeating {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         a: u32,
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         b: Vec<String>,
     }
@@ -461,16 +461,16 @@ Options:
     #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct LastRepeatingGreedy {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         a: u32,
-        #[argh(switch)]
+        #[argp(switch)]
         /// woo
         b: bool,
-        #[argh(option)]
+        #[argp(option)]
         /// stuff
         c: Option<String>,
-        #[argh(positional, greedy)]
+        #[argp(positional, greedy)]
         /// fooey
         d: Vec<String>,
     }
@@ -545,10 +545,10 @@ Options:
     #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct LastOptional {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         a: u32,
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         b: Option<String>,
     }
@@ -563,10 +563,10 @@ Options:
     #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct LastDefaulted {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         a: u32,
-        #[argh(positional, default = "5")]
+        #[argp(positional, default = "5")]
         /// fooey
         b: u32,
     }
@@ -581,10 +581,10 @@ Options:
     #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct LastRequired {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         a: u32,
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         b: u32,
     }
@@ -607,10 +607,10 @@ Options:
         );
     }
 
-    #[derive(argh::FromArgs, Debug, PartialEq)]
+    #[derive(argp::FromArgs, Debug, PartialEq)]
     /// Woot
     struct Parsed {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         n: usize,
     }
@@ -628,10 +628,10 @@ Options:
     #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct WithOption {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         a: String,
-        #[argh(option)]
+        #[argp(option)]
         /// fooey
         b: String,
     }
@@ -653,25 +653,25 @@ Required options not provided:
     #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct WithSubcommand {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         a: String,
-        #[argh(subcommand)]
+        #[argp(subcommand)]
         /// fooey
         b: Subcommand,
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         c: Vec<String>,
     }
 
     #[derive(FromArgs, Debug, PartialEq)]
-    #[argh(subcommand, name = "a")]
+    #[argp(subcommand, name = "a")]
     /// Subcommand of positional::WithSubcommand.
     struct Subcommand {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         a: String,
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         b: Vec<String>,
     }
@@ -707,7 +707,7 @@ Required options not provided:
     #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct Underscores {
-        #[argh(positional)]
+        #[argp(positional)]
         /// fooey
         a_: String,
     }
@@ -771,7 +771,7 @@ mod fuchsia_commandline_tools_rubric {
     #[derive(FromArgs)]
     /// One switch.
     struct OneSwitch {
-        #[argh(switch, short = 's')]
+        #[argp(switch, short = 's')]
         /// just a switch
         switchy: bool,
     }
@@ -790,10 +790,10 @@ mod fuchsia_commandline_tools_rubric {
     #[derive(FromArgs, Debug)]
     /// Two Switches
     struct TwoSwitches {
-        #[argh(switch, short = 'a')]
+        #[argp(switch, short = 'a')]
         /// a
         _a: bool,
-        #[argh(switch, short = 'b')]
+        #[argp(switch, short = 'b')]
         /// b
         _b: bool,
     }
@@ -809,7 +809,7 @@ mod fuchsia_commandline_tools_rubric {
     #[derive(FromArgs, Debug)]
     /// One keyed option
     struct OneOption {
-        #[argh(option)]
+        #[argp(option)]
         /// some description
         _foo: String,
     }
@@ -852,11 +852,11 @@ mod fuchsia_commandline_tools_rubric {
         #[derive(FromArgs, Debug, PartialEq)]
         /// Positional arguments list
         struct StringList {
-            #[argh(positional)]
+            #[argp(positional)]
             /// a list of strings
             strs: Vec<String>,
 
-            #[argh(switch)]
+            #[argp(switch)]
             /// some flag
             flag: bool,
         }
@@ -888,7 +888,7 @@ mod fuchsia_commandline_tools_rubric {
         #[derive(FromArgs, Debug)]
         /// A type for testing repeating `-v`
         struct CountVerbose {
-            #[argh(switch, short = 'v')]
+            #[argp(switch, short = 'v')]
             /// increase the verbosity of the command.
             verbose: i128,
         }
@@ -918,20 +918,20 @@ mod fuchsia_commandline_tools_rubric {
     #[derive(FromArgs, Debug)]
     /// A type for testing `--help`/`help`
     struct HelpTopLevel {
-        #[argh(subcommand)]
+        #[argp(subcommand)]
         _sub: HelpFirstSub,
     }
 
     #[derive(FromArgs, Debug)]
-    #[argh(subcommand, name = "first")]
+    #[argp(subcommand, name = "first")]
     /// First subcommmand for testing `help`.
     struct HelpFirstSub {
-        #[argh(subcommand)]
+        #[argp(subcommand)]
         _sub: HelpSecondSub,
     }
 
     #[derive(FromArgs, Debug)]
-    #[argh(subcommand, name = "second")]
+    #[argp(subcommand, name = "second")]
     /// Second subcommand for testing `help`.
     struct HelpSecondSub {}
 
@@ -1010,7 +1010,7 @@ Options:
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
-    #[argh(
+    #[argp(
         description = "Destroy the contents of <file>.",
         example = "Scribble 'abc' and then run |grind|.\n$ {command_name} -s 'abc' grind old.txt taxes.cp",
         note = "Use `{command_name} help <command>` for details on [<args>] for a subcommand.",
@@ -1019,48 +1019,48 @@ Options:
     )]
     struct HelpExample {
         /// force, ignore minor errors. This description is so long that it wraps to the next line.
-        #[argh(switch, short = 'f')]
+        #[argp(switch, short = 'f')]
         force: bool,
 
         /// documentation
-        #[argh(switch)]
+        #[argp(switch)]
         really_really_really_long_name_for_pat: bool,
 
         /// write <scribble> repeatedly
-        #[argh(option, short = 's')]
+        #[argp(option, short = 's')]
         scribble: String,
 
         /// say more. Defaults to $BLAST_VERBOSE.
-        #[argh(switch, short = 'v')]
+        #[argp(switch, short = 'v')]
         verbose: bool,
 
-        #[argh(subcommand)]
+        #[argp(subcommand)]
         command: HelpExampleSubCommands,
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
-    #[argh(subcommand)]
+    #[argp(subcommand)]
     enum HelpExampleSubCommands {
         BlowUp(BlowUp),
         Grind(GrindCommand),
-        #[argh(dynamic)]
+        #[argp(dynamic)]
         Plugin(HelpExamplePlugin),
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
-    #[argh(subcommand, name = "blow-up")]
+    #[argp(subcommand, name = "blow-up")]
     /// explosively separate
     struct BlowUp {
         /// blow up bombs safely
-        #[argh(switch)]
+        #[argp(switch)]
         safely: bool,
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
-    #[argh(subcommand, name = "grind", description = "make smaller by many small cuts")]
+    #[argp(subcommand, name = "grind", description = "make smaller by many small cuts")]
     struct GrindCommand {
         /// wear a visor while grinding
-        #[argh(switch)]
+        #[argp(switch)]
         safely: bool,
     }
 
@@ -1069,26 +1069,26 @@ Options:
         got: String,
     }
 
-    impl argh::DynamicSubCommand for HelpExamplePlugin {
-        fn commands() -> &'static [&'static argh::CommandInfo] {
-            &[&argh::CommandInfo { name: "plugin", description: "Example dynamic command" }]
+    impl argp::DynamicSubCommand for HelpExamplePlugin {
+        fn commands() -> &'static [&'static argp::CommandInfo] {
+            &[&argp::CommandInfo { name: "plugin", description: "Example dynamic command" }]
         }
 
         fn try_redact_arg_values(
             _command_name: &[&str],
             _args: &[&str],
-        ) -> Option<Result<Vec<String>, argh::EarlyExit>> {
-            Some(Err(argh::EarlyExit::from("Test should not redact".to_owned())))
+        ) -> Option<Result<Vec<String>, argp::EarlyExit>> {
+            Some(Err(argp::EarlyExit::from("Test should not redact".to_owned())))
         }
 
         fn try_from_args(
             command_name: &[&str],
             args: &[&str],
-        ) -> Option<Result<HelpExamplePlugin, argh::EarlyExit>> {
+        ) -> Option<Result<HelpExamplePlugin, argp::EarlyExit>> {
             if command_name.last() != Some(&"plugin") {
                 None
             } else if args.len() > 1 {
-                Some(Err(argh::EarlyExit::from("Too many arguments".to_owned())))
+                Some(Err(argp::EarlyExit::from("Too many arguments".to_owned())))
             } else if let Some(arg) = args.first() {
                 Some(Ok(HelpExamplePlugin { got: format!("plugin got {:?}", arg) }))
             } else {
@@ -1171,10 +1171,10 @@ Error codes:
     }
 
     #[allow(dead_code)]
-    #[derive(argh::FromArgs)]
+    #[derive(argp::FromArgs)]
     /// Destroy the contents of <file>.
     struct WithArgName {
-        #[argh(positional, arg_name = "name")]
+        #[argp(positional, arg_name = "name")]
         username: String,
     }
 
@@ -1200,13 +1200,13 @@ Options:
         /// Short description
         struct Cmd {
             /// this one should be hidden
-            #[argh(positional, hidden_help)]
+            #[argp(positional, hidden_help)]
             _one: String,
-            #[argh(positional)]
+            #[argp(positional)]
             /// this one is real
             _two: String,
             /// this one should be hidden
-            #[argh(option, hidden_help)]
+            #[argp(option, hidden_help)]
             _three: String,
         }
 
@@ -1230,7 +1230,7 @@ fn redact_arg_values_no_args() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(option)]
+        #[argp(option)]
         /// a msg param
         _msg: Option<String>,
     }
@@ -1244,7 +1244,7 @@ fn redact_arg_values_optional_arg() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(option)]
+        #[argp(option)]
         /// a msg param
         _msg: Option<String>,
     }
@@ -1258,7 +1258,7 @@ fn redact_arg_values_optional_arg_short() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(option, short = 'm')]
+        #[argp(option, short = 'm')]
         /// a msg param
         _msg: Option<String>,
     }
@@ -1272,7 +1272,7 @@ fn redact_arg_values_optional_arg_long() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(option, long = "my-msg")]
+        #[argp(option, long = "my-msg")]
         /// a msg param
         _msg: Option<String>,
     }
@@ -1286,11 +1286,11 @@ fn redact_arg_values_two_option_args() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(option)]
+        #[argp(option)]
         /// a msg param
         _msg: String,
 
-        #[argh(option)]
+        #[argp(option)]
         /// a delivery param
         _delivery: String,
     }
@@ -1306,11 +1306,11 @@ fn redact_arg_values_option_one_optional_args() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(option)]
+        #[argp(option)]
         /// a msg param
         _msg: String,
 
-        #[argh(option)]
+        #[argp(option)]
         /// a delivery param
         _delivery: Option<String>,
     }
@@ -1329,7 +1329,7 @@ fn redact_arg_values_option_repeating() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(option)]
+        #[argp(option)]
         /// fooey
         _msg: Vec<String>,
     }
@@ -1347,7 +1347,7 @@ fn redact_arg_values_switch() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(switch, short = 'f')]
+        #[argp(switch, short = 'f')]
         /// speed of cmd
         _faster: bool,
     }
@@ -1365,7 +1365,7 @@ fn redact_arg_values_positional() {
     /// Short description
     struct Cmd {
         #[allow(unused)]
-        #[argh(positional)]
+        #[argp(positional)]
         /// speed of cmd
         speed: u8,
     }
@@ -1379,7 +1379,7 @@ fn redact_arg_values_positional_arg_name() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(positional, arg_name = "speed")]
+        #[argp(positional, arg_name = "speed")]
         /// speed of cmd
         _speed: u8,
     }
@@ -1393,7 +1393,7 @@ fn redact_arg_values_positional_repeating() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(positional, arg_name = "speed")]
+        #[argp(positional, arg_name = "speed")]
         /// speed of cmd
         _speed: Vec<u8>,
     }
@@ -1407,7 +1407,7 @@ fn redact_arg_values_positional_err() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(positional, arg_name = "speed")]
+        #[argp(positional, arg_name = "speed")]
         /// speed of cmd
         _speed: u8,
     }
@@ -1415,7 +1415,7 @@ fn redact_arg_values_positional_err() {
     let actual = Cmd::redact_arg_values(&["program-name"], &[]).unwrap_err();
     assert_eq!(
         actual,
-        argh::EarlyExit {
+        argp::EarlyExit {
             output: "Required positional arguments not provided:\n    speed\n".into(),
             status: Err(()),
         }
@@ -1427,11 +1427,11 @@ fn redact_arg_values_two_positional() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(positional, arg_name = "speed")]
+        #[argp(positional, arg_name = "speed")]
         /// speed of cmd
         _speed: u8,
 
-        #[argh(positional, arg_name = "direction")]
+        #[argp(positional, arg_name = "direction")]
         /// direction
         _direction: String,
     }
@@ -1445,11 +1445,11 @@ fn redact_arg_values_positional_option() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(positional, arg_name = "speed")]
+        #[argp(positional, arg_name = "speed")]
         /// speed of cmd
         _speed: u8,
 
-        #[argh(option)]
+        #[argp(option)]
         /// direction
         _direction: String,
     }
@@ -1463,11 +1463,11 @@ fn redact_arg_values_positional_optional_option() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(positional, arg_name = "speed")]
+        #[argp(positional, arg_name = "speed")]
         /// speed of cmd
         _speed: u8,
 
-        #[argh(option)]
+        #[argp(option)]
         /// direction
         _direction: Option<String>,
     }
@@ -1481,18 +1481,18 @@ fn redact_arg_values_subcommand() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(positional, arg_name = "speed")]
+        #[argp(positional, arg_name = "speed")]
         /// speed of cmd
         _speed: u8,
 
-        #[argh(subcommand)]
+        #[argp(subcommand)]
         /// means of transportation
         _means: MeansSubcommand,
     }
 
     #[derive(FromArgs, Debug)]
     /// Short description
-    #[argh(subcommand)]
+    #[argp(subcommand)]
     enum MeansSubcommand {
         Walking(WalkingSubcommand),
         Biking(BikingSubcommand),
@@ -1500,20 +1500,20 @@ fn redact_arg_values_subcommand() {
     }
 
     #[derive(FromArgs, Debug)]
-    #[argh(subcommand, name = "walking")]
+    #[argp(subcommand, name = "walking")]
     /// Short description
     struct WalkingSubcommand {
-        #[argh(option)]
+        #[argp(option)]
         /// a song to listen to
         _music: String,
     }
 
     #[derive(FromArgs, Debug)]
-    #[argh(subcommand, name = "biking")]
+    #[argp(subcommand, name = "biking")]
     /// Short description
     struct BikingSubcommand {}
     #[derive(FromArgs, Debug)]
-    #[argh(subcommand, name = "driving")]
+    #[argp(subcommand, name = "driving")]
     /// short description
     struct DrivingSubcommand {}
 
@@ -1527,34 +1527,34 @@ fn redact_arg_values_subcommand_with_space_in_name() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(positional, arg_name = "speed")]
+        #[argp(positional, arg_name = "speed")]
         /// speed of cmd
         _speed: u8,
 
-        #[argh(subcommand)]
+        #[argp(subcommand)]
         /// means of transportation
         _means: MeansSubcommand,
     }
 
     #[derive(FromArgs, Debug)]
     /// Short description
-    #[argh(subcommand)]
+    #[argp(subcommand)]
     enum MeansSubcommand {
         Walking(WalkingSubcommand),
         Biking(BikingSubcommand),
     }
 
     #[derive(FromArgs, Debug)]
-    #[argh(subcommand, name = "has space")]
+    #[argp(subcommand, name = "has space")]
     /// Short description
     struct WalkingSubcommand {
-        #[argh(option)]
+        #[argp(option)]
         /// a song to listen to
         _music: String,
     }
 
     #[derive(FromArgs, Debug)]
-    #[argh(subcommand, name = "biking")]
+    #[argp(subcommand, name = "biking")]
     /// Short description
     struct BikingSubcommand {}
 
@@ -1565,17 +1565,17 @@ fn redact_arg_values_subcommand_with_space_in_name() {
 
 #[test]
 fn redact_arg_values_produces_help() {
-    #[derive(argh::FromArgs, Debug, PartialEq)]
+    #[derive(argp::FromArgs, Debug, PartialEq)]
     /// Woot
     struct Repeating {
-        #[argh(option, short = 'n')]
+        #[argp(option, short = 'n')]
         /// fooey
         n: Vec<String>,
     }
 
     assert_eq!(
         Repeating::redact_arg_values(&["program-name"], &["--help"]),
-        Err(argh::EarlyExit {
+        Err(argp::EarlyExit {
             output: r###"Usage: program-name [-n <n...>]
 
 Woot
@@ -1592,17 +1592,17 @@ Options:
 
 #[test]
 fn redact_arg_values_produces_errors_with_bad_arguments() {
-    #[derive(argh::FromArgs, Debug, PartialEq)]
+    #[derive(argp::FromArgs, Debug, PartialEq)]
     /// Woot
     struct Cmd {
-        #[argh(option, short = 'n')]
+        #[argp(option, short = 'n')]
         /// fooey
         n: String,
     }
 
     assert_eq!(
         Cmd::redact_arg_values(&["program-name"], &["--n"]),
-        Err(argh::EarlyExit {
+        Err(argp::EarlyExit {
             output: "No value provided for option '--n'.\n".to_owned(),
             status: Err(()),
         }),
@@ -1615,7 +1615,7 @@ fn redact_arg_values_does_not_warn_if_used() {
     #[derive(FromArgs, Debug)]
     /// Short description
     struct Cmd {
-        #[argh(positional)]
+        #[argp(positional)]
         /// speed of cmd
         speed: u8,
     }
@@ -1630,25 +1630,25 @@ fn redact_arg_values_does_not_warn_if_used() {
 #[test]
 fn subcommand_does_not_panic() {
     #[derive(FromArgs, PartialEq, Debug)]
-    #[argh(subcommand)]
+    #[argp(subcommand)]
     enum SubCommandEnum {
         Cmd(SubCommand),
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
     /// First subcommand.
-    #[argh(subcommand, name = "one")]
+    #[argp(subcommand, name = "one")]
     struct SubCommand {
-        #[argh(positional)]
+        #[argp(positional)]
         /// how many x
         x: usize,
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
     /// Second subcommand.
-    #[argh(subcommand, name = "two")]
+    #[argp(subcommand, name = "two")]
     struct SubCommandTwo {
-        #[argh(switch)]
+        #[argp(switch)]
         /// whether to fooey
         fooey: bool,
     }
@@ -1656,29 +1656,29 @@ fn subcommand_does_not_panic() {
     // Passing no subcommand name to an emum
     assert_eq!(
         SubCommandEnum::from_args(&[], &["5"]).unwrap_err(),
-        argh::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+        argp::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
     );
 
     assert_eq!(
         SubCommandEnum::redact_arg_values(&[], &["5"]).unwrap_err(),
-        argh::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+        argp::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
     );
 
     // Passing unknown subcommand name to an emum
     assert_eq!(
         SubCommandEnum::from_args(&["fooey"], &["5"]).unwrap_err(),
-        argh::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
+        argp::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
     );
 
     assert_eq!(
         SubCommandEnum::redact_arg_values(&["fooey"], &["5"]).unwrap_err(),
-        argh::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
+        argp::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
     );
 
     // Passing unknown subcommand name to a struct
     assert_eq!(
         SubCommand::redact_arg_values(&[], &["5"]).unwrap_err(),
-        argh::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+        argp::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
     );
 }
 
@@ -1687,7 +1687,7 @@ fn long_alphanumeric() {
     #[derive(FromArgs)]
     /// Short description
     struct Cmd {
-        #[argh(option, long = "ac97")]
+        #[argp(option, long = "ac97")]
         /// fooey
         ac97: String,
     }

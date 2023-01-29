@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "argh",
-    "argh_derive",
-    "argh_shared",
+    "argp",
+    "argp_derive",
+    "argp_shared",
 ]

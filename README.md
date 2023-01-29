@@ -1,10 +1,10 @@
-# Argh
-**Argh is an opinionated Derive-based argument parser optimized for code size**
+# Argp
+**Argp is a Derive-based argument parser optimized for code size**
 
-[![crates.io](https://img.shields.io/crates/v/argh.svg)](https://crates.io/crates/argh)
-[![license](https://img.shields.io/badge/license-BSD3.0-blue.svg)](https://github.com/google/argh/LICENSE)
-[![docs.rs](https://docs.rs/argh/badge.svg)](https://docs.rs/crate/argh/)
-![Argh](https://github.com/google/argh/workflows/Argh/badge.svg)
+[![crates.io](https://img.shields.io/crates/v/argp.svg)](https://crates.io/crates/argp)
+[![license](https://img.shields.io/badge/license-BSD3.0-blue.svg)](https://github.com/jirutka/argp/LICENSE)
+[![docs.rs](https://docs.rs/argp/badge.svg)](https://docs.rs/crate/argp/)
+![CI](https://github.com/jirutka/argp/workflows/CI/badge.svg)
 
 Derive-based argument parsing optimized for code size and conformance
 to the Fuchsia commandline tools specification
@@ -13,6 +13,8 @@ The public API of this library consists primarily of the `FromArgs`
 derive and the `from_env` function, which can be used to produce
 a top-level `FromArgs` type from the current program's commandline
 arguments.
+
+Argp is originally a fork of [argh](https://github.com/google/argh/).
 
 ## Basic Example
 
@@ -173,9 +175,6 @@ struct SubCommandTwo {
     fooey: bool,
 }
 ```
-
-NOTE: This is not an officially supported Google product.
-
 
 ## How to debug the expanded derive macro for `argh`
 

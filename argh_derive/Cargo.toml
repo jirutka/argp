@@ -1,18 +1,19 @@
 [package]
-name = "argh_derive"
-version = "0.1.9"
-authors = ["Taylor Cramer <cramertj@google.com>", "Benjamin Brittain <bwb@google.com>", "Erick Tryzelaar <etryzelaar@google.com>"]
+name = "argp_derive"
+version = "0.0.0"
+authors = ["Jakub Jirutka <jakub@jirutka.cz>"]
 edition = "2018"
 license = "BSD-3-Clause"
 description = "Derive-based argument parsing optimized for code size"
-repository = "https://github.com/google/argh"
+repository = "https://github.com/jirutka/argp"
 readme = "README.md"
 
 [lib]
+name = "argh_derive" # TODO: remove
 proc-macro = true
 
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "1.0"
-argh_shared = { version = "0.1.9", path = "../argh_shared" }
+argp_shared = { version = "0.0.0", path = "../argh_shared" }

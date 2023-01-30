@@ -269,15 +269,15 @@ fn impl_from_args_struct(
     let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     let trait_impl = quote_spanned! { impl_span =>
         #[automatically_derived]
-        impl #impl_generics argp::FromArgs for #name #ty_generics #where_clause {
+        impl #impl_generics ::argp::FromArgs for #name #ty_generics #where_clause {
             #from_args_method
 
             #redact_arg_values_method
         }
 
         #[automatically_derived]
-        impl #impl_generics argp::CommandHelp for #name #ty_generics #where_clause {
-            const HELP: argp::Help = #help_struct;
+        impl #impl_generics ::argp::CommandHelp for #name #ty_generics #where_clause {
+            const HELP: ::argp::Help = #help_struct;
         }
 
         #top_or_sub_cmd_impl
@@ -308,8 +308,10 @@ fn impl_from_args_struct_from_args<'a>(
     let flag_output_table = fields.iter().filter_map(|field| {
         let field_name = &field.field.ident;
         match field.kind {
-            FieldKind::Option => Some(quote! { argp::ParseStructOption::Value(&mut #field_name) }),
-            FieldKind::Switch => Some(quote! { argp::ParseStructOption::Flag(&mut #field_name) }),
+            FieldKind::Option => {
+                Some(quote! { ::argp::ParseStructOption::Value(&mut #field_name) })
+            }
+            FieldKind::Switch => Some(quote! { ::argp::ParseStructOption::Flag(&mut #field_name) }),
             FieldKind::SubCommand | FieldKind::Positional => None,
         }
     });
@@ -327,40 +329,40 @@ fn impl_from_args_struct_from_args<'a>(
         let name = subcommand.name;
         let ty = subcommand.ty_without_wrapper;
         quote_spanned! { impl_span =>
-            Some(argp::ParseStructSubCommand {
-                subcommands: <#ty as argp::SubCommands>::COMMANDS,
-                dynamic_subcommands: &<#ty as argp::SubCommands>::dynamic_commands(),
+            Some(::argp::ParseStructSubCommand {
+                subcommands: <#ty as ::argp::SubCommands>::COMMANDS,
+                dynamic_subcommands: &<#ty as ::argp::SubCommands>::dynamic_commands(),
                 parse_func: &mut |__command, __remaining_args| {
-                    #name = Some(<#ty as argp::FromArgs>::from_args(__command, __remaining_args)?);
-                    Ok(())
+                    #name = ::std::option::Option::Some(<#ty as ::argp::FromArgs>::from_args(__command, __remaining_args)?);
+                    ::std::result::Result::Ok(())
                 },
             })
         }
     } else {
-        quote_spanned! { impl_span => None }
+        quote_spanned! { impl_span => ::std::option::Option::None }
     };
 
     let method_impl = quote_spanned! { impl_span =>
         fn from_args(__cmd_name: &[&str], __args: &[&str])
-            -> std::result::Result<Self, argp::EarlyExit>
+            -> ::std::result::Result<Self, ::argp::EarlyExit>
         {
             #![allow(clippy::unwrap_in_result)]
 
             #( #init_fields )*
 
-            argp::parse_struct_args(
+            ::argp::parse_struct_args(
                 __cmd_name,
                 __args,
-                argp::ParseStructOptions {
+                ::argp::ParseStructOptions {
                     arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
                     slots: &mut [ #( #flag_output_table, )* ],
                 },
-                argp::ParseStructPositionals {
+                ::argp::ParseStructPositionals {
                     positionals: &mut [
                         #(
-                            argp::ParseStructPositional {
+                            ::argp::ParseStructPositional {
                                 name: #positional_field_names,
-                                slot: &mut #positional_field_idents as &mut dyn argp::ParseValueSlot,
+                                slot: &mut #positional_field_idents as &mut dyn ::argp::ParseValueSlot,
                             },
                         )*
                     ],
@@ -368,16 +370,16 @@ fn impl_from_args_struct_from_args<'a>(
                     last_is_greedy: #last_positional_is_greedy,
                 },
                 #parse_subcommands,
-                &<Self as argp::CommandHelp>::HELP,
+                &<Self as ::argp::CommandHelp>::HELP,
             )?;
 
-            let mut #missing_requirements_ident = argp::MissingRequirements::default();
+            let mut #missing_requirements_ident = ::argp::MissingRequirements::default();
             #(
                 #append_missing_requirements
             )*
             #missing_requirements_ident.err_on_any()?;
 
-            Ok(Self {
+            ::std::result::Result::Ok(Self {
                 #( #unwrap_fields, )*
             })
         }
@@ -411,8 +413,10 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     let flag_output_table = fields.iter().filter_map(|field| {
         let field_name = &field.field.ident;
         match field.kind {
-            FieldKind::Option => Some(quote! { argp::ParseStructOption::Value(&mut #field_name) }),
-            FieldKind::Switch => Some(quote! { argp::ParseStructOption::Flag(&mut #field_name) }),
+            FieldKind::Option => {
+                Some(quote! { ::argp::ParseStructOption::Value(&mut #field_name) })
+            }
+            FieldKind::Switch => Some(quote! { ::argp::ParseStructOption::Flag(&mut #field_name) }),
             FieldKind::SubCommand | FieldKind::Positional => None,
         }
     });
@@ -430,17 +434,17 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         let name = subcommand.name;
         let ty = subcommand.ty_without_wrapper;
         quote_spanned! { impl_span =>
-            Some(argp::ParseStructSubCommand {
-                subcommands: <#ty as argp::SubCommands>::COMMANDS,
-                dynamic_subcommands: &<#ty as argp::SubCommands>::dynamic_commands(),
+            ::std::option::Option::Some(::argp::ParseStructSubCommand {
+                subcommands: <#ty as ::argp::SubCommands>::COMMANDS,
+                dynamic_subcommands: &<#ty as ::argp::SubCommands>::dynamic_commands(),
                 parse_func: &mut |__command, __remaining_args| {
-                    #name = Some(<#ty as argp::FromArgs>::redact_arg_values(__command, __remaining_args)?);
-                    Ok(())
+                    #name = ::std::option::Option::Some(<#ty as ::argp::FromArgs>::redact_arg_values(__command, __remaining_args)?);
+                    ::std::result::Result::Ok(())
                 },
             })
         }
     } else {
-        quote_spanned! { impl_span => None }
+        quote_spanned! { impl_span => ::std::option::Option::None }
     };
 
     let unwrap_cmd_name_err_string = if type_attrs.is_subcommand.is_none() {
@@ -450,22 +454,22 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     };
 
     let method_impl = quote_spanned! { impl_span =>
-        fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> std::result::Result<Vec<String>, argp::EarlyExit> {
+        fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> ::std::result::Result<::std::vec::Vec<::std::string::String>, ::argp::EarlyExit> {
             #( #init_fields )*
 
-            argp::parse_struct_args(
+            ::argp::parse_struct_args(
                 __cmd_name,
                 __args,
-                argp::ParseStructOptions {
+                ::argp::ParseStructOptions {
                     arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
                     slots: &mut [ #( #flag_output_table, )* ],
                 },
-                argp::ParseStructPositionals {
+                ::argp::ParseStructPositionals {
                     positionals: &mut [
                         #(
-                            argp::ParseStructPositional {
+                            ::argp::ParseStructPositional {
                                 name: #positional_field_names,
-                                slot: &mut #positional_field_idents as &mut dyn argp::ParseValueSlot,
+                                slot: &mut #positional_field_idents as &mut dyn ::argp::ParseValueSlot,
                             },
                         )*
                     ],
@@ -473,26 +477,26 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                     last_is_greedy: #last_positional_is_greedy,
                 },
                 #redact_subcommands,
-                &<Self as argp::CommandHelp>::HELP,
+                &<Self as ::argp::CommandHelp>::HELP,
             )?;
 
-            let mut #missing_requirements_ident = argp::MissingRequirements::default();
+            let mut #missing_requirements_ident = ::argp::MissingRequirements::default();
             #(
                 #append_missing_requirements
             )*
             #missing_requirements_ident.err_on_any()?;
 
             let mut __redacted = vec![
-                if let Some(cmd_name) = __cmd_name.last() {
+                if let ::std::option::Option::Some(cmd_name) = __cmd_name.last() {
                     (*cmd_name).to_owned()
                 } else {
-                    return Err(argp::EarlyExit::from(#unwrap_cmd_name_err_string.to_owned()));
+                    return ::std::result::Result::Err(::argp::EarlyExit::from(#unwrap_cmd_name_err_string.to_owned()));
                 }
             ];
 
             #( #unwrap_fields )*
 
-            Ok(__redacted)
+            ::std::result::Result::Ok(__redacted)
         }
     };
 
@@ -563,7 +567,7 @@ fn ensure_only_one_subcommand(errors: &Errors, fields: &[StructField<'_>]) {
     }
 }
 
-/// Implement `argp::TopLevelCommand` or `argp::SubCommand` as appropriate.
+/// Implement `::argp::TopLevelCommand` or `::argp::SubCommand` as appropriate.
 fn top_or_sub_cmd_impl(
     errors: &Errors,
     name: &syn::Ident,
@@ -577,7 +581,7 @@ fn top_or_sub_cmd_impl(
         // Not a subcommand
         quote! {
             #[automatically_derived]
-            impl #impl_generics argp::TopLevelCommand for #name #ty_generics #where_clause {}
+            impl #impl_generics ::argp::TopLevelCommand for #name #ty_generics #where_clause {}
         }
     } else {
         let empty_str = syn::LitStr::new("", Span::call_site());
@@ -587,8 +591,8 @@ fn top_or_sub_cmd_impl(
         });
         quote! {
             #[automatically_derived]
-            impl #impl_generics argp::SubCommand for #name #ty_generics #where_clause {
-                const COMMAND: &'static argp::CommandInfo = &argp::CommandInfo {
+            impl #impl_generics ::argp::SubCommand for #name #ty_generics #where_clause {
+                const COMMAND: &'static ::argp::CommandInfo = &::argp::CommandInfo {
                     name: #subcommand_name,
                     description: #description,
                 };
@@ -613,7 +617,7 @@ fn declare_local_storage_for_from_args_fields<'a>(
         let field_slot_type = match field.optionality {
             Optionality::Optional | Optionality::Repeating => (&field.field.ty).into_token_stream(),
             Optionality::None | Optionality::Defaulted(_) => {
-                quote! { std::option::Option<#field_type> }
+                quote! { ::std::option::Option<#field_type> }
             }
         };
 
@@ -623,24 +627,24 @@ fn declare_local_storage_for_from_args_fields<'a>(
                     Some(from_str_fn) => from_str_fn.into_token_stream(),
                     None => {
                         quote! {
-                            <#field_type as argp::FromArgValue>::from_arg_value
+                            <#field_type as ::argp::FromArgValue>::from_arg_value
                         }
                     }
                 };
 
                 quote! {
-                    let mut #field_name: argp::ParseValueSlotTy<#field_slot_type, #field_type>
-                        = argp::ParseValueSlotTy {
-                            slot: std::default::Default::default(),
+                    let mut #field_name: ::argp::ParseValueSlotTy<#field_slot_type, #field_type>
+                        = ::argp::ParseValueSlotTy {
+                            slot: ::std::default::Default::default(),
                             parse_func: |_, value| { #from_str_fn(value) },
                         };
                 }
             }
             FieldKind::SubCommand => {
-                quote! { let mut #field_name: #field_slot_type = None; }
+                quote! { let mut #field_name: #field_slot_type = ::std::option::Option::None; }
             }
             FieldKind::Switch => {
-                quote! { let mut #field_name: #field_slot_type = argp::Flag::default(); }
+                quote! { let mut #field_name: #field_slot_type = ::argp::Flag::default(); }
             }
         }
     })
@@ -691,50 +695,50 @@ fn declare_local_storage_for_redacted_fields<'a>(
         match field.kind {
             FieldKind::Switch => {
                 quote! {
-                    let mut #field_name = argp::RedactFlag {
-                        slot: None,
+                    let mut #field_name = ::argp::RedactFlag {
+                        slot: ::std::option::Option::None,
                     };
                 }
             }
             FieldKind::Option => {
                 let field_slot_type = match field.optionality {
                     Optionality::Repeating => {
-                        quote! { std::vec::Vec<String> }
+                        quote! { ::std::vec::Vec<::std::string::String> }
                     }
                     Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
-                        quote! { std::option::Option<String> }
+                        quote! { ::std::option::Option<::std::string::String> }
                     }
                 };
 
                 quote! {
-                    let mut #field_name: argp::ParseValueSlotTy::<#field_slot_type, String> =
-                        argp::ParseValueSlotTy {
-                        slot: std::default::Default::default(),
-                        parse_func: |arg, _| { Ok(arg.to_owned()) },
+                    let mut #field_name: ::argp::ParseValueSlotTy::<#field_slot_type, ::std::string::String> =
+                        ::argp::ParseValueSlotTy {
+                        slot: ::std::default::Default::default(),
+                        parse_func: |arg, _| { ::std::result::Result::Ok(arg.to_owned()) },
                     };
                 }
             }
             FieldKind::Positional => {
                 let field_slot_type = match field.optionality {
                     Optionality::Repeating => {
-                        quote! { std::vec::Vec<String> }
+                        quote! { ::std::vec::Vec<::std::string::String> }
                     }
                     Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
-                        quote! { std::option::Option<String> }
+                        quote! { ::std::option::Option<::std::string::String> }
                     }
                 };
 
                 let arg_name = field.positional_arg_name();
                 quote! {
-                    let mut #field_name: argp::ParseValueSlotTy::<#field_slot_type, String> =
-                        argp::ParseValueSlotTy {
-                        slot: std::default::Default::default(),
-                        parse_func: |_, _| { Ok(#arg_name.to_owned()) },
+                    let mut #field_name: ::argp::ParseValueSlotTy::<#field_slot_type, ::std::string::String> =
+                        ::argp::ParseValueSlotTy {
+                        slot: ::std::default::Default::default(),
+                        parse_func: |_, _| { ::std::result::Result::Ok(#arg_name.to_owned()) },
                     };
                 }
             }
             FieldKind::SubCommand => {
-                quote! { let mut #field_name: std::option::Option<std::vec::Vec<String>> = None; }
+                quote! { let mut #field_name: ::std::option::Option<::std::vec::Vec<::std::string::String>> = ::std::option::Option::None; }
             }
         }
     })
@@ -751,7 +755,7 @@ fn unwrap_redacted_fields<'a>(
         match field.kind {
             FieldKind::Switch => {
                 quote! {
-                    if let Some(__field_name) = #field_name.slot {
+                    if let ::std::option::Option::Some(__field_name) = #field_name.slot {
                         __redacted.push(__field_name);
                     }
                 }
@@ -764,7 +768,7 @@ fn unwrap_redacted_fields<'a>(
                 }
                 Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
                     quote! {
-                        if let Some(__field_name) = #field_name.slot {
+                        if let ::std::option::Option::Some(__field_name) = #field_name.slot {
                             __redacted.push(__field_name);
                         }
                     }
@@ -777,7 +781,7 @@ fn unwrap_redacted_fields<'a>(
             }
             FieldKind::SubCommand => {
                 quote! {
-                    if let Some(__subcommand_args) = #field_name {
+                    if let ::std::option::Option::Some(__subcommand_args) = #field_name {
                         __redacted.extend(__subcommand_args.into_iter());
                     }
                 }
@@ -805,7 +809,7 @@ fn flag_str_to_output_table_map_entries<'a>(fields: &'a [StructField<'a>]) -> Ve
     flag_str_to_output_table_map
 }
 
-/// For each non-optional field, add an entry to the `argp::MissingRequirements`.
+/// For each non-optional field, add an entry to the `::argp::MissingRequirements`.
 fn append_missing_requirements<'a>(
     // missing_requirements_ident
     mri: &syn::Ident,
@@ -837,11 +841,11 @@ fn append_missing_requirements<'a>(
                 quote! {
                     if #field_name.is_none() {
                         #mri.missing_subcommands(
-                            <#ty as argp::SubCommands>::COMMANDS
+                            <#ty as ::argp::SubCommands>::COMMANDS
                                 .iter()
                                 .cloned()
                                 .chain(
-                                    <#ty as argp::SubCommands>::dynamic_commands()
+                                    <#ty as ::argp::SubCommands>::dynamic_commands()
                                         .iter()
                                         .copied()
                                 ),
@@ -965,23 +969,23 @@ fn impl_from_args_enum(
 
     let dynamic_commands = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
         quote! {
-            fn dynamic_commands() -> &'static [&'static argp::CommandInfo] {
-                <#dynamic_type as argp::DynamicSubCommand>::commands()
+            fn dynamic_commands() -> &'static [&'static ::argp::CommandInfo] {
+                <#dynamic_type as ::argp::DynamicSubCommand>::commands()
             }
         }
     });
 
     let (impl_generics, ty_generics, where_clause) = generic_args.split_for_impl();
     quote! {
-        impl #impl_generics argp::FromArgs for #name #ty_generics #where_clause {
+        impl #impl_generics ::argp::FromArgs for #name #ty_generics #where_clause {
             #from_args_method
 
             #redact_arg_values_method
         }
 
-        impl #impl_generics argp::SubCommands for #name #ty_generics #where_clause {
-            const COMMANDS: &'static [&'static argp::CommandInfo] = &[#(
-                <#variant_ty as argp::SubCommand>::COMMAND,
+        impl #impl_generics ::argp::SubCommands for #name #ty_generics #where_clause {
+            const COMMANDS: &'static [&'static ::argp::CommandInfo] = &[#(
+                <#variant_ty as ::argp::SubCommand>::COMMAND,
             )*];
 
             #dynamic_commands
@@ -1000,7 +1004,7 @@ fn impl_from_args_enum_from_args(
     let dynamic_from_args =
         dynamic_type_and_variant.as_ref().map(|(dynamic_type, dynamic_variant)| {
             quote! {
-                if let Some(result) = <#dynamic_type as argp::DynamicSubCommand>::try_from_args(
+                if let ::std::option::Option::Some(result) = <#dynamic_type as ::argp::DynamicSubCommand>::try_from_args(
                     command_name, args) {
                     return result.map(#name::#dynamic_variant);
                 }
@@ -1009,25 +1013,25 @@ fn impl_from_args_enum_from_args(
 
     quote! {
         fn from_args(command_name: &[&str], args: &[&str])
-            -> std::result::Result<Self, argp::EarlyExit>
+            -> ::std::result::Result<Self, ::argp::EarlyExit>
         {
-            let subcommand_name = if let Some(subcommand_name) = command_name.last() {
+            let subcommand_name = if let ::std::option::Option::Some(subcommand_name) = command_name.last() {
                 *subcommand_name
             } else {
-                return Err(argp::EarlyExit::from("no subcommand name".to_owned()));
+                return ::std::result::Result::Err(::argp::EarlyExit::from("no subcommand name".to_owned()));
             };
 
             #(
-                if subcommand_name == <#variant_ty as argp::SubCommand>::COMMAND.name {
-                    return Ok(#name_repeating::#variant_names(
-                        <#variant_ty as argp::FromArgs>::from_args(command_name, args)?
+                if subcommand_name == <#variant_ty as ::argp::SubCommand>::COMMAND.name {
+                    return ::std::result::Result::Ok(#name_repeating::#variant_names(
+                        <#variant_ty as ::argp::FromArgs>::from_args(command_name, args)?
                     ));
                 }
             )*
 
             #dynamic_from_args
 
-            Err(argp::EarlyExit::from("no subcommand matched".to_owned()))
+            ::std::result::Result::Err(::argp::EarlyExit::from("no subcommand matched".to_owned()))
         }
     }
 }
@@ -1039,7 +1043,7 @@ fn impl_from_args_enum_redact_arg_values(
 ) -> TokenStream {
     let dynamic_redact_arg_values = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
         quote! {
-            if let Some(result) = <#dynamic_type as argp::DynamicSubCommand>::try_redact_arg_values(
+            if let ::std::option::Option::Some(result) = <#dynamic_type as ::argp::DynamicSubCommand>::try_redact_arg_values(
                 command_name, args) {
                 return result;
             }
@@ -1047,22 +1051,22 @@ fn impl_from_args_enum_redact_arg_values(
     });
 
     quote! {
-        fn redact_arg_values(command_name: &[&str], args: &[&str]) -> std::result::Result<Vec<String>, argp::EarlyExit> {
+        fn redact_arg_values(command_name: &[&str], args: &[&str]) -> ::std::result::Result<::std::vec::Vec<::std::string::String>, ::argp::EarlyExit> {
             let subcommand_name = if let Some(subcommand_name) = command_name.last() {
                 *subcommand_name
             } else {
-                return Err(argp::EarlyExit::from("no subcommand name".to_owned()));
+                return ::std::result::Result::Err(::argp::EarlyExit::from("no subcommand name".to_owned()));
             };
 
             #(
-                if subcommand_name == <#variant_ty as argp::SubCommand>::COMMAND.name {
-                    return <#variant_ty as argp::FromArgs>::redact_arg_values(command_name, args);
+                if subcommand_name == <#variant_ty as ::argp::SubCommand>::COMMAND.name {
+                    return <#variant_ty as ::argp::FromArgs>::redact_arg_values(command_name, args);
                 }
             )*
 
             #dynamic_redact_arg_values
 
-            Err(argp::EarlyExit::from("no subcommand matched".to_owned()))
+            ::std::result::Result::Err(::argp::EarlyExit::from("no subcommand matched".to_owned()))
         }
     }
 }

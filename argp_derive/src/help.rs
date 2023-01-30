@@ -44,21 +44,21 @@ pub(crate) fn inst_help(
         usage.push_str(" [<args>]");
 
         quote! {
-            std::option::Option::Some(argp::HelpCommands {
+            ::std::option::Option::Some(::argp::HelpCommands {
                 usage: #usage,
-                subcommands: <#subcommand_ty as argp::SubCommands>::COMMANDS,
-                dynamic_subcommands: <#subcommand_ty as argp::SubCommands>::dynamic_commands,
+                subcommands: <#subcommand_ty as ::argp::SubCommands>::COMMANDS,
+                dynamic_subcommands: <#subcommand_ty as ::argp::SubCommands>::dynamic_commands,
             })
         }
     } else {
-        quote! { std::option::Option::None }
+        quote! { ::std::option::Option::None }
     };
 
     let description = require_description(errors, Span::call_site(), &ty_attrs.description, "type");
     let footer = ty_attrs.footer.iter().map(LitStr::value).collect::<Vec<_>>().join("\n\n");
 
     quote! {
-        argp::Help {
+        ::argp::Help {
             description: #description,
             positionals: &[ #( #positionals, )* ],
             options: &[ #( #options, )* ],
@@ -174,7 +174,7 @@ fn positional_info(field: &StructField<'_>) -> TokenStream {
     }
 
     quote! {
-        argp::OptionArgInfo { usage: #usage, names: #field_name, description: #description }
+        ::argp::OptionArgInfo { usage: #usage, names: #field_name, description: #description }
     }
 }
 
@@ -205,6 +205,6 @@ fn option_info(errors: &Errors, field: &StructField<'_>) -> TokenStream {
         require_description(errors, field.name.span(), &field.attrs.description, "field");
 
     quote! {
-        argp::OptionArgInfo { usage: #usage, names: #names, description: #description }
+        ::argp::OptionArgInfo { usage: #usage, names: #names, description: #description }
     }
 }

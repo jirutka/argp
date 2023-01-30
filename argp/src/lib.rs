@@ -976,8 +976,8 @@ impl<'a> ParseStructOptions<'a> {
     }
 }
 
-fn unrecognized_argument(x: &str) -> String {
-    ["Unrecognized argument: ", x, "\n"].concat()
+fn unrecognized_argument(arg: &str) -> String {
+    ["Unrecognized argument: ", arg, "\n"].concat()
 }
 
 // `--` or `-` options, including a mutable reference to their value.
@@ -1020,7 +1020,7 @@ impl<'a> ParseStructPositionals<'a> {
                 Ok(false)
             }
         } else {
-            Err(EarlyExit { output: unrecognized_arg(arg), status: Err(()) })
+            Err(EarlyExit { output: unrecognized_argument(arg), status: Err(()) })
         }
     }
 }
@@ -1105,10 +1105,6 @@ impl<'a> ParseStructSubCommand<'a> {
 // This is used to pass the `help` argument on to subcommands.
 fn prepend_help<'a>(args: &[&'a str]) -> Vec<&'a str> {
     [&["help"], args].concat()
-}
-
-fn unrecognized_arg(arg: &str) -> String {
-    ["Unrecognized argument: ", arg, "\n"].concat()
 }
 
 // An error string builder to report missing required options and subcommands.

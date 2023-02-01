@@ -10,7 +10,7 @@ Derive-based argument parsing optimized for code size and flexibility.
 
 The public API of this library consists primarily of the `FromArgs`
 derive and the `from_env` function, which can be used to produce
-a top-level `FromArgs` type from the current program's commandline
+a top-level `FromArgs` type from the current program's command-line
 arguments.
 
 Argp is originally a fork of [argh](https://github.com/google/argh/).

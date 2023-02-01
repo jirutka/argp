@@ -5,7 +5,7 @@
 //!
 //! The public API of this library consists primarily of the `FromArgs`
 //! derive and the `from_env` function, which can be used to produce
-//! a top-level `FromArgs` type from the current program's commandline
+//! a top-level `FromArgs` type from the current program's command-line
 //! arguments.
 //!
 //! ## Basic Example
@@ -321,7 +321,7 @@ pub use argp_derive::FromArgs;
 /// Information about a particular command used for output.
 pub type CommandInfo = argp_shared::CommandInfo<'static>;
 
-/// Types which can be constructed from a set of commandline arguments.
+/// Types which can be constructed from a set of command-line arguments.
 pub trait FromArgs: Sized {
     /// Construct the type from an input set of arguments.
     ///
@@ -638,7 +638,7 @@ pub trait DynamicSubCommand: Sized {
 /// This can occur due to either failed parsing or a flag like `--help`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EarlyExit {
-    /// The output to display to the user of the commandline tool.
+    /// The output to display to the user of the command-line tool.
     pub output: String,
     /// Status of argument parsing.
     ///
@@ -722,14 +722,14 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
     })
 }
 
-/// Types which can be constructed from a single commandline value.
+/// Types which can be constructed from a single command-line value.
 ///
 /// Any field type declared in a struct that derives `FromArgs` must implement
 /// this trait. A blanket implementation exists for types implementing
 /// `FromStr<Error: Display>`. Custom types can implement this trait
 /// directly.
 pub trait FromArgValue: Sized {
-    /// Construct the type from a commandline value, returning an error string
+    /// Construct the type from a command-line value, returning an error string
     /// on failure.
     fn from_arg_value(value: &str) -> Result<Self, String>;
 }
@@ -933,7 +933,7 @@ pub struct ParseStructOptions<'a> {
 }
 
 impl<'a> ParseStructOptions<'a> {
-    /// Parse a commandline option.
+    /// Parse a command-line option.
     ///
     /// `arg`: the current option argument being parsed (e.g. `--foo`).
     /// `remaining_args`: the remaining command line arguments. This slice

@@ -144,7 +144,7 @@ fn dynamic_subcommand_example() {
             _command_name: &[&str],
             _args: &[&str],
         ) -> Option<Result<Vec<String>, EarlyExit>> {
-            Some(Err(EarlyExit::from("Test should not redact".to_owned())))
+            Some(Err(EarlyExit::with_err("Test should not redact")))
         }
 
         fn try_from_args(
@@ -153,15 +153,15 @@ fn dynamic_subcommand_example() {
         ) -> Option<Result<DynamicSubCommandImpl, EarlyExit>> {
             let command_name = match command_name.last() {
                 Some(x) => *x,
-                None => return Some(Err(EarlyExit::from("No command".to_owned()))),
+                None => return Some(Err(EarlyExit::with_err("No command"))),
             };
             let description = Self::commands().iter().find(|x| x.name == command_name)?.description;
             if args.len() > 1 {
-                Some(Err(EarlyExit::from("Too many arguments".to_owned())))
+                Some(Err(EarlyExit::with_err("Too many arguments")))
             } else if let Some(arg) = args.first() {
                 Some(Ok(DynamicSubCommandImpl { got: format!("{} got {:?}", description, arg) }))
             } else {
-                Some(Err(EarlyExit::from("Not enough arguments".to_owned())))
+                Some(Err(EarlyExit::with_err("Not enough arguments")))
             }
         }
     }
@@ -1220,7 +1220,7 @@ Options:
             _command_name: &[&str],
             _args: &[&str],
         ) -> Option<Result<Vec<String>, EarlyExit>> {
-            Some(Err(EarlyExit::from("Test should not redact".to_owned())))
+            Some(Err(EarlyExit::with_err("Test should not redact")))
         }
 
         fn try_from_args(
@@ -1230,7 +1230,7 @@ Options:
             if command_name.last() != Some(&"plugin") {
                 None
             } else if args.len() > 1 {
-                Some(Err(EarlyExit::from("Too many arguments".to_owned())))
+                Some(Err(EarlyExit::with_err("Too many arguments")))
             } else if let Some(arg) = args.first() {
                 Some(Ok(HelpExamplePlugin { got: format!("plugin got {:?}", arg) }))
             } else {
@@ -1565,10 +1565,7 @@ mod redact_arg_values {
         let actual = Cmd::redact_arg_values(&["program-name"], &[]).unwrap_err();
         assert_eq!(
             actual,
-            EarlyExit {
-                output: "Required positional arguments not provided:\n    speed\n".into(),
-                status: Err(()),
-            }
+            EarlyExit::with_err("Required positional arguments not provided:\n    speed\n")
         );
     }
 
@@ -1755,10 +1752,7 @@ Options:
 
         assert_eq!(
             Cmd::redact_arg_values(&["program-name"], &["--n"]),
-            Err(EarlyExit {
-                output: "No value provided for option '--n'.\n".to_owned(),
-                status: Err(()),
-            }),
+            Err(EarlyExit::with_err("No value provided for option '--n'.\n")),
         );
     }
 
@@ -1810,32 +1804,32 @@ fn subcommand_does_not_panic() {
     // Passing no subcommand name to an emum
     assert_eq!(
         SubCommandEnum::from_args(&[], &["5"]).unwrap_err(),
-        EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+        EarlyExit::with_err("no subcommand name"),
     );
 
     #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommandEnum::redact_arg_values(&[], &["5"]).unwrap_err(),
-        EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+        EarlyExit::with_err("no subcommand name"),
     );
 
     // Passing unknown subcommand name to an emum
     assert_eq!(
         SubCommandEnum::from_args(&["fooey"], &["5"]).unwrap_err(),
-        EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
+        EarlyExit::with_err("no subcommand matched"),
     );
 
     #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommandEnum::redact_arg_values(&["fooey"], &["5"]).unwrap_err(),
-        EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
+        EarlyExit::with_err("no subcommand matched"),
     );
 
     // Passing unknown subcommand name to a struct
     #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommand::redact_arg_values(&[], &["5"]).unwrap_err(),
-        EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+        EarlyExit::with_err("no subcommand name"),
     );
 }
 

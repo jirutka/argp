@@ -508,7 +508,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                 if let ::std::option::Option::Some(cmd_name) = __cmd_name.last() {
                     (*cmd_name).to_owned()
                 } else {
-                    return ::std::result::Result::Err(::argp::EarlyExit::from(#unwrap_cmd_name_err_string.to_owned()));
+                    return ::std::result::Result::Err(::argp::EarlyExit::with_err(#unwrap_cmd_name_err_string));
                 }
             ];
 
@@ -1049,7 +1049,7 @@ fn impl_from_args_enum_from_args(
             let subcommand_name = if let ::std::option::Option::Some(subcommand_name) = command_name.last() {
                 *subcommand_name
             } else {
-                return ::std::result::Result::Err(::argp::EarlyExit::from("no subcommand name".to_owned()));
+                return ::std::result::Result::Err(::argp::EarlyExit::with_err("no subcommand name"));
             };
 
             #(
@@ -1062,7 +1062,7 @@ fn impl_from_args_enum_from_args(
 
             #dynamic_from_args
 
-            ::std::result::Result::Err(::argp::EarlyExit::from("no subcommand matched".to_owned()))
+            ::std::result::Result::Err(::argp::EarlyExit::with_err("no subcommand matched"))
         }
     }
 }
@@ -1086,7 +1086,7 @@ fn impl_from_args_enum_redact_arg_values(
             let subcommand_name = if let Some(subcommand_name) = command_name.last() {
                 *subcommand_name
             } else {
-                return ::std::result::Result::Err(::argp::EarlyExit::from("no subcommand name".to_owned()));
+                return ::std::result::Result::Err(::argp::EarlyExit::with_err("no subcommand name"));
             };
 
             #(
@@ -1097,7 +1097,7 @@ fn impl_from_args_enum_redact_arg_values(
 
             #dynamic_redact_arg_values
 
-            ::std::result::Result::Err(::argp::EarlyExit::from("no subcommand matched".to_owned()))
+            ::std::result::Result::Err(::argp::EarlyExit::with_err("no subcommand matched"))
         }
     }
 }

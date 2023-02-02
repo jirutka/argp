@@ -286,8 +286,7 @@
 //!             if command_name.last() == Some(&command.name) {
 //!                 // Process arguments and redact values here.
 //!                 if !args.is_empty() {
-//!                     return Some(Err("Our example dynamic command never takes arguments!"
-//!                                     .to_string().into()));
+//!                     return Some(Err(EarlyExit::with_err("Our example dynamic command never takes arguments!")));
 //!                 }
 //!                 return Some(Ok(Vec::new()))
 //!             }
@@ -299,8 +298,7 @@
 //!         for command in Self::commands() {
 //!             if command_name.last() == Some(&command.name) {
 //!                 if !args.is_empty() {
-//!                     return Some(Err("Our example dynamic command never takes arguments!"
-//!                                     .to_string().into()));
+//!                     return Some(Err(EarlyExit::with_err("Our example dynamic command never takes arguments!")));
 //!                 }
 //!                 return Some(Ok(Dynamic { name: command.name.to_string() }))
 //!             }
@@ -419,8 +417,8 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///     early_exit,
-    ///     argp::EarlyExit {
-    ///        output: r#"Usage: classroom <command> [<args>]
+    ///     argp::EarlyExit::with_help(
+    ///        r#"Usage: classroom <command> [<args>]
     ///
     /// Command to manage a classroom.
     ///
@@ -430,9 +428,7 @@ pub trait FromArgs: Sized {
     /// Commands:
     ///   list        list all the classes.
     ///   add         add students to a class.
-    /// "#.to_string(),
-    ///        status: Ok(()),
-    ///     },
+    /// "#),
     /// );
     ///
     /// // Help works with subcommands.
@@ -442,17 +438,15 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///     early_exit,
-    ///     argp::EarlyExit {
-    ///        output: r#"Usage: classroom list [--teacher-name <name>]
+    ///     argp::EarlyExit::with_help(
+    ///        r#"Usage: classroom list [--teacher-name <name>]
     ///
     /// list all the classes.
     ///
     /// Options:
     ///   --teacher-name <name>  list classes for only this teacher.
     ///   -h, --help             Show this help message and exit
-    /// "#.to_string(),
-    ///        status: Ok(()),
-    ///     },
+    /// "#),
     /// );
     ///
     /// // Incorrect arguments will error out.
@@ -462,10 +456,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///    err,
-    ///    argp::EarlyExit {
-    ///        output: "Unrecognized argument: lisp\n".to_string(),
-    ///        status: Err(()),
-    ///     },
+    ///    argp::EarlyExit::with_err("Unrecognized argument: lisp\n"),
     /// );
     /// ```
     fn from_args(command_name: &[&str], args: &[&str]) -> Result<Self, EarlyExit> {
@@ -578,17 +569,14 @@ pub trait FromArgs: Sized {
     /// // `ClassroomCmd::redact_arg_values` will error out if passed invalid arguments.
     /// assert_eq!(
     ///     ClassroomCmd::redact_arg_values(&["classroom"], &["add", "--teacher-name"]),
-    ///     Err(argp::EarlyExit {
-    ///         output: "No value provided for option '--teacher-name'.\n".into(),
-    ///         status: Err(()),
-    ///     }),
+    ///     Err(argp::EarlyExit::with_err("No value provided for option '--teacher-name'.\n")),
     /// );
     ///
     /// // `ClassroomCmd::redact_arg_values` will generate help messages.
     /// assert_eq!(
     ///     ClassroomCmd::redact_arg_values(&["classroom"], &["help"]),
-    ///     Err(argp::EarlyExit {
-    ///         output: r#"Usage: classroom <command> [<args>]
+    ///     Err(argp::EarlyExit::with_help(
+    ///         r#"Usage: classroom <command> [<args>]
     ///
     /// Command to manage a classroom.
     ///
@@ -598,9 +586,7 @@ pub trait FromArgs: Sized {
     /// Commands:
     ///   list        list all the classes.
     ///   add         add students to a class.
-    /// "#.to_string(),
-    ///         status: Ok(()),
-    ///     }),
+    /// "#.to_string())),
     /// );
     /// ```
     #[cfg(feature = "redact_arg_values")]
@@ -693,9 +679,15 @@ pub struct EarlyExit {
     pub status: Result<(), ()>,
 }
 
-impl From<String> for EarlyExit {
-    fn from(err_msg: String) -> Self {
-        Self { output: err_msg, status: Err(()) }
+impl EarlyExit {
+    /// Creates a new [EarlyExit] with the given error message.
+    pub fn with_err<S: Into<String>>(err_msg: S) -> Self {
+        Self { output: err_msg.into(), status: Err(()) }
+    }
+
+    /// Creates a new [EarlyExit] with the given help message.
+    pub fn with_help<S: Into<String>>(help_msg: S) -> Self {
+        Self { output: help_msg.into(), status: Ok(()) }
     }
 }
 
@@ -940,10 +932,12 @@ pub fn parse_struct_args(
             }
 
             if help_requested {
-                return Err("Trailing arguments are not allowed after `help`.".to_string().into());
+                return Err(EarlyExit::with_err(
+                    "Trailing arguments are not allowed after `help`.",
+                ));
             }
 
-            parse_options.parse(next_arg, &mut remaining_args)?;
+            parse_options.parse(next_arg, &mut remaining_args).map_err(EarlyExit::with_err)?;
 
             continue;
         }
@@ -968,7 +962,7 @@ pub fn parse_struct_args(
     if help_requested {
         let global_options = parse_options.parent.map_or_else(Vec::new, |p| p.global_options());
 
-        Err(EarlyExit { output: help.generate(cmd_name, &global_options), status: Ok(()) })
+        Err(EarlyExit::with_help(help.generate(cmd_name, &global_options)))
     } else {
         Ok(())
     }
@@ -1119,7 +1113,7 @@ impl<'a> ParseStructPositionals<'a> {
                 Ok(false)
             }
         } else {
-            Err(EarlyExit { output: format!("Unrecognized argument: {}\n", arg), status: Err(()) })
+            Err(EarlyExit::with_err(format!("Unrecognized argument: {}\n", arg)))
         }
     }
 }
@@ -1139,11 +1133,10 @@ impl<'a> ParseStructPositional<'a> {
     /// `arg`: the argument supplied by the user.
     fn parse(&mut self, arg: &str) -> Result<(), EarlyExit> {
         self.slot.fill_slot("", arg).map_err(|s| {
-            format!(
+            EarlyExit::with_err(format!(
                 "Error parsing positional argument '{}' with value '{}': {}\n",
                 self.name, arg, &s
-            )
-            .into()
+            ))
         })
     }
 }
@@ -1238,7 +1231,7 @@ impl MissingRequirements {
     // If any missing options or subcommands were provided, returns an error string
     // describing the missing args.
     #[doc(hidden)]
-    pub fn err_on_any(&self) -> Result<(), String> {
+    pub fn err_on_any(&self) -> Result<(), EarlyExit> {
         if self.options.is_empty() && self.subcommands.is_none() && self.positional_args.is_empty()
         {
             return Ok(());
@@ -1280,7 +1273,7 @@ impl MissingRequirements {
 
         output.push('\n');
 
-        Err(output)
+        Err(EarlyExit::with_err(output))
     }
 }
 

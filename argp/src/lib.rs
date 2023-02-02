@@ -1030,7 +1030,7 @@ impl<'a, 'p> ParseStructOptions<'a, 'p> {
             Some((_, pos)) => Self::fill_slot(&mut self.slots[*pos], arg, remaining_args),
             None => self
                 .try_parse_global(arg, remaining_args)
-                .unwrap_or_else(|| Err(unrecognized_argument(arg))),
+                .unwrap_or_else(|| Err(format!("Unrecognized argument: {}\n", arg))),
         }
     }
 
@@ -1044,11 +1044,10 @@ impl<'a, 'p> ParseStructOptions<'a, 'p> {
             ParseStructOption::Value(ref mut pvs) => {
                 let value = remaining_args
                     .first()
-                    .ok_or_else(|| ["No value provided for option '", arg, "'.\n"].concat())?;
+                    .ok_or_else(|| format!("No value provided for option '{}'.\n", arg))?;
                 *remaining_args = &remaining_args[1..];
                 pvs.fill_slot(arg, value).map_err(|s| {
-                    ["Error parsing option '", arg, "' with value '", value, "': ", &s, "\n"]
-                        .concat()
+                    format!("Error parsing option '{}' with value '{}': {}\n", arg, value, &s)
                 })?;
             }
         }
@@ -1074,10 +1073,6 @@ impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
         opts.extend(self.help.options.iter().filter(|o| o.global));
         opts
     }
-}
-
-fn unrecognized_argument(arg: &str) -> String {
-    ["Unrecognized argument: ", arg, "\n"].concat()
 }
 
 // `--` or `-` options, including a mutable reference to their value.
@@ -1120,7 +1115,7 @@ impl<'a> ParseStructPositionals<'a> {
                 Ok(false)
             }
         } else {
-            Err(EarlyExit { output: unrecognized_argument(arg), status: Err(()) })
+            Err(EarlyExit { output: format!("Unrecognized argument: {}\n", arg), status: Err(()) })
         }
     }
 }
@@ -1140,16 +1135,10 @@ impl<'a> ParseStructPositional<'a> {
     /// `arg`: the argument supplied by the user.
     fn parse(&mut self, arg: &str) -> Result<(), EarlyExit> {
         self.slot.fill_slot("", arg).map_err(|s| {
-            [
-                "Error parsing positional argument '",
-                self.name,
-                "' with value '",
-                arg,
-                "': ",
-                &s,
-                "\n",
-            ]
-            .concat()
+            format!(
+                "Error parsing positional argument '{}' with value '{}': {}\n",
+                self.name, arg, &s
+            )
             .into()
         })
     }

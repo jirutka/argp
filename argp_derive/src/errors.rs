@@ -60,8 +60,8 @@ impl Errors {
     }
 
     fn duplicate_attrs_inner(&self, attr_kind: &str, first: Span, second: Span) {
-        self.err_span(second, &["Duplicate ", attr_kind, " attribute"].concat());
-        self.err_span(first, &["First ", attr_kind, " attribute here"].concat());
+        self.err_span(second, &format!("Duplicate {} attribute", attr_kind));
+        self.err_span(first, &format!("First {} attribute here", attr_kind));
     }
 
     /// Error on literals, expecting attribute syntax.
@@ -103,7 +103,7 @@ impl Errors {
 
         self.err(
             found,
-            &["Expected ", expected, " literal, found ", lit_kind(found), " literal"].concat(),
+            &format!("Expected {} literal, found {} literal", expected, lit_kind(found)),
         )
     }
 
@@ -119,7 +119,7 @@ impl Errors {
 
         self.err(
             found,
-            &["Expected ", expected, " attribute, found ", meta_kind(found), " attribute"].concat(),
+            &format!("Expected {} attribute, found {} attribute", expected, meta_kind(found)),
         )
     }
 

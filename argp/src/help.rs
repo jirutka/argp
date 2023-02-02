@@ -196,7 +196,7 @@ fn indent_description(line: &mut String, width: usize) -> bool {
     let cur_len = char_len(line);
     if cur_len < width {
         let num_spaces = width - cur_len;
-        line.extend(std::iter::repeat(' ').take(num_spaces));
+        line.extend(iter::repeat(' ').take(num_spaces));
         true
     } else {
         false

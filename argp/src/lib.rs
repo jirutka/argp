@@ -337,6 +337,10 @@
 
 mod help;
 
+use std::env;
+use std::fmt;
+use std::path::Path;
+use std::process::exit;
 use std::str::FromStr;
 
 pub use crate::help::{CommandInfo, Help, HelpCommands, OptionArgInfo};
@@ -697,7 +701,7 @@ impl From<String> for EarlyExit {
 
 /// Extract the base cmd from a path
 fn cmd<'a>(default: &'a str, path: &'a str) -> &'a str {
-    std::path::Path::new(path).file_name().and_then(|s| s.to_str()).unwrap_or(default)
+    Path::new(path).file_name().and_then(|s| s.to_str()).unwrap_or(default)
 }
 
 /// Create a `FromArgs` type from the current process's `env::args`.
@@ -706,23 +710,23 @@ fn cmd<'a>(default: &'a str, path: &'a str) -> &'a str {
 /// was unsuccessful or if information like `--help` was requested. Error messages will be printed
 /// to stderr, and `--help` output to stdout.
 pub fn from_env<T: TopLevelCommand>() -> T {
-    let strings: Vec<String> = std::env::args_os()
+    let strings: Vec<String> = env::args_os()
         .map(|s| s.into_string())
         .collect::<Result<Vec<_>, _>>()
         .unwrap_or_else(|arg| {
             eprintln!("Invalid utf8: {}", arg.to_string_lossy());
-            std::process::exit(1)
+            exit(1)
         });
 
     if strings.is_empty() {
         eprintln!("No program name, argv is empty");
-        std::process::exit(1)
+        exit(1)
     }
 
     let cmd = cmd(&strings[0], &strings[0]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     T::from_args(&[cmd], &strs[1..]).unwrap_or_else(|early_exit| {
-        std::process::exit(match early_exit.status {
+        exit(match early_exit.status {
             Ok(()) => {
                 println!("{}", early_exit.output);
                 0
@@ -744,11 +748,11 @@ pub fn from_env<T: TopLevelCommand>() -> T {
 /// was unsuccessful or if information like `--help` was requested. Error messages will be printed
 /// to stderr, and `--help` output to stdout.
 pub fn cargo_from_env<T: TopLevelCommand>() -> T {
-    let strings: Vec<String> = std::env::args().collect();
+    let strings: Vec<String> = env::args().collect();
     let cmd = cmd(&strings[1], &strings[1]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     T::from_args(&[cmd], &strs[2..]).unwrap_or_else(|early_exit| {
-        std::process::exit(match early_exit.status {
+        exit(match early_exit.status {
             Ok(()) => {
                 println!("{}", early_exit.output);
                 0
@@ -776,7 +780,7 @@ pub trait FromArgValue: Sized {
 impl<T> FromArgValue for T
 where
     T: FromStr,
-    T::Err: std::fmt::Display,
+    T::Err: fmt::Display,
 {
     fn from_arg_value(value: &str) -> Result<Self, String> {
         T::from_str(value).map_err(|x| x.to_string())

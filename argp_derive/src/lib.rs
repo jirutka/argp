@@ -11,6 +11,7 @@ mod help;
 mod parse_attrs;
 
 use std::collections::HashMap;
+use std::iter;
 use std::str::FromStr;
 
 use proc_macro2::{Span, TokenStream};
@@ -1027,7 +1028,7 @@ fn impl_from_args_enum_from_args(
     variant_ty: &[&Type],
     dynamic_type_and_variant: Option<(&Type, &syn::Ident)>,
 ) -> TokenStream {
-    let name_repeating = std::iter::repeat(name.clone());
+    let name_repeating = iter::repeat(name.clone());
 
     let dynamic_from_args =
         dynamic_type_and_variant.as_ref().map(|(dynamic_type, dynamic_variant)| {

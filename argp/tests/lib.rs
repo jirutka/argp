@@ -322,16 +322,14 @@ fn missing_option_value() {
 
     let e = Cmd::from_args(&["cmdname"], &["--msg"])
         .expect_err("Parsing missing option value should fail");
-    assert_eq!(e.output, "No value provided for option \'--msg\'.\n");
-    assert!(e.status.is_err());
+    assert_eq!(e, EarlyExit::with_err("No value provided for option \'--msg\'.\n"));
 }
 
 fn assert_help_string<T: FromArgs>(help_str: &str) {
     match T::from_args(&["test_arg_0"], &["--help"]) {
         Ok(_) => panic!("help was parsed as args"),
         Err(e) => {
-            assert_eq!(help_str, e.output);
-            e.status.expect("help returned an error");
+            assert_eq!(EarlyExit::with_help(help_str), e);
         }
     }
 }
@@ -343,8 +341,7 @@ fn assert_output<T: FromArgs + Debug + PartialEq>(args: &[&str], expected: T) {
 
 fn assert_error<T: FromArgs + Debug>(args: &[&str], err_msg: &str) {
     let e = T::from_args(&["cmd"], args).expect_err("unexpectedly succeeded parsing");
-    assert_eq!(err_msg, e.output);
-    e.status.expect_err("error had a positive status");
+    assert_eq!(EarlyExit::with_err(err_msg), e);
 }
 
 mod options {
@@ -466,8 +463,7 @@ mod global_options {
 
     fn expect_help(args: &[&str], expected_help_string: &str) {
         let e = TopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
-        assert_eq!(expected_help_string, e.output);
-        e.status.expect("help returned an error");
+        assert_eq!(EarlyExit::with_help(expected_help_string), e);
     }
 
     #[test]
@@ -553,14 +549,14 @@ Options:
     fn globals_are_not_propagated_up() {
         let e = TopLevel::from_args(&["cmdname"], &["one", "two", "--x", "6"])
             .expect_err("unexpectedly succeeded parsing sc 4");
-        assert_eq!(e.output, "Unrecognized argument: --x\n");
+        assert_eq!(e.to_string(), "Unrecognized argument: --x\n");
     }
 
     #[test]
     fn local_option_is_not_global() {
         let e = TopLevel::from_args(&["cmdname"], &["--b", "one"])
             .expect_err("unexpectedly succeeded parsing");
-        assert_eq!(e.output, "Unrecognized argument: --b\n");
+        assert_eq!(e.to_string(), "Unrecognized argument: --b\n");
     }
 }
 
@@ -965,8 +961,7 @@ mod fuchsia_commandline_tools_rubric {
 
         let e = OneOption::from_args(&["cmdname"], &["--foo=bar"])
             .expect_err("Parsing option value using `=` should fail");
-        assert_eq!(e.output, "Unrecognized argument: --foo=bar\n");
-        assert!(e.status.is_err());
+        assert_eq!(e, EarlyExit::with_err("Unrecognized argument: --foo=bar\n"));
     }
 
     // Two dashes on their own indicates the end of options.
@@ -1080,8 +1075,7 @@ mod fuchsia_commandline_tools_rubric {
 
     fn expect_help(args: &[&str], expected_help_string: &str) {
         let e = HelpTopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
-        assert_eq!(expected_help_string, e.output);
-        e.status.expect("help returned an error");
+        assert_eq!(EarlyExit::Help(expected_help_string.to_owned()), e);
     }
 
     const MAIN_HELP_STRING: &str = r###"Usage: cmdname <command> [<args>]
@@ -1148,8 +1142,10 @@ Options:
     fn help_flag_trailing_arguments_are_an_error() {
         let e = OneOption::from_args(&["cmdname"], &["--help", "--foo", "bar"])
             .expect_err("should exit early");
-        assert_eq!("Trailing arguments are not allowed after `help`.", e.output);
-        e.status.expect_err("should be an error");
+        assert_eq!(
+            EarlyExit::with_err("Trailing arguments are not allowed after `help`."),
+            e
+        );
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
@@ -1262,10 +1258,9 @@ Options:
     #[test]
     fn example_errors_on_missing_required_option_and_missing_required_subcommand() {
         let exit = HelpExample::from_args(&["program-name"], &[]).unwrap_err();
-        exit.status.unwrap_err();
         assert_eq!(
-            exit.output,
-            concat!(
+            exit,
+            EarlyExit::with_err(concat!(
                 "Required options not provided:\n",
                 "    --scribble\n",
                 "One of the following subcommands must be present:\n",
@@ -1273,7 +1268,7 @@ Options:
                 "    blow-up\n",
                 "    grind\n",
                 "    plugin\n",
-            ),
+            )),
         );
     }
 
@@ -1725,8 +1720,8 @@ mod redact_arg_values {
 
         assert_eq!(
             Repeating::redact_arg_values(&["program-name"], &["--help"]),
-            Err(EarlyExit {
-                output: r###"Usage: program-name [-n <n...>]
+            Err(EarlyExit::with_help(
+                r###"Usage: program-name [-n <n...>]
 
 Woot
 
@@ -1734,9 +1729,7 @@ Options:
   -n, --n <n>  fooey
   -h, --help   Show this help message and exit
 "###
-                .to_owned(),
-                status: Ok(()),
-            }),
+            )),
         );
     }
 

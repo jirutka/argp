@@ -410,7 +410,7 @@ pub trait FromArgs: Sized {
     ///     },
     /// );
     ///
-    /// // Help returns an error, but internally returns an `Ok` status.
+    /// // Help returns an error with `EarlyExit::Help`.
     /// let early_exit = ClassroomCmd::from_args(
     ///     &["classroom"],
     ///     &["help"],
@@ -666,28 +666,32 @@ pub trait CommandHelp: FromArgs {
 ///
 /// This can occur due to either failed parsing or a flag like `--help`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EarlyExit {
-    /// The output to display to the user of the command-line tool.
-    pub output: String,
-    /// Status of argument parsing.
-    ///
-    /// `Ok` if the command was parsed successfully and the early exit is due
-    /// to a flag like `--help` causing early exit with output.
-    ///
-    /// `Err` if the arguments were not successfully parsed.
-    // TODO replace with std::process::ExitCode when stable.
-    pub status: Result<(), ()>,
+pub enum EarlyExit {
+    /// Early exit and display the error message.
+    Err(String),
+
+    /// Early exit and display the help message.
+    Help(String),
 }
 
 impl EarlyExit {
     /// Creates a new [EarlyExit] with the given error message.
     pub fn with_err<S: Into<String>>(err_msg: S) -> Self {
-        Self { output: err_msg.into(), status: Err(()) }
+        Self::Err(err_msg.into())
     }
 
     /// Creates a new [EarlyExit] with the given help message.
     pub fn with_help<S: Into<String>>(help_msg: S) -> Self {
-        Self { output: help_msg.into(), status: Ok(()) }
+        Self::Help(help_msg.into())
+    }
+}
+
+impl fmt::Display for EarlyExit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EarlyExit::Err(output) => output.fmt(f),
+            EarlyExit::Help(output) => output.fmt(f),
+        }
     }
 }
 
@@ -718,13 +722,13 @@ pub fn from_env<T: TopLevelCommand>() -> T {
     let cmd = cmd(&strings[0], &strings[0]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     T::from_args(&[cmd], &strs[1..]).unwrap_or_else(|early_exit| {
-        exit(match early_exit.status {
-            Ok(()) => {
-                println!("{}", early_exit.output);
+        exit(match early_exit {
+            EarlyExit::Help(output) => {
+                println!("{}", output);
                 0
             }
-            Err(()) => {
-                eprintln!("{}\nRun {} --help for more information.", early_exit.output, cmd);
+            EarlyExit::Err(output) => {
+                eprintln!("{}\nRun {} --help for more information.", output, cmd);
                 1
             }
         })
@@ -744,13 +748,13 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
     let cmd = cmd(&strings[1], &strings[1]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     T::from_args(&[cmd], &strs[2..]).unwrap_or_else(|early_exit| {
-        exit(match early_exit.status {
-            Ok(()) => {
-                println!("{}", early_exit.output);
+        exit(match early_exit {
+            EarlyExit::Help(output) => {
+                println!("{}", output);
                 0
             }
-            Err(()) => {
-                eprintln!("{}\nRun --help for more information.", early_exit.output);
+            EarlyExit::Err(output) => {
+                eprintln!("{}\nRun --help for more information.", output);
                 1
             }
         })

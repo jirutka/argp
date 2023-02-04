@@ -13,7 +13,7 @@
 
 use std::fmt::Debug;
 
-use argp::{CommandInfo, DynamicSubCommand, EarlyExit, FromArgs};
+use argp::{CommandInfo, DynamicSubCommand, EarlyExit, Error, FromArgs, MissingRequirements};
 
 #[test]
 fn basic_example() {
@@ -144,7 +144,7 @@ fn dynamic_subcommand_example() {
             _command_name: &[&str],
             _args: &[&str],
         ) -> Option<Result<Vec<String>, EarlyExit>> {
-            Some(Err(EarlyExit::with_err("Test should not redact")))
+            Some(Err(EarlyExit::Err(Error::other("Test should not redact"))))
         }
 
         fn try_from_args(
@@ -153,15 +153,15 @@ fn dynamic_subcommand_example() {
         ) -> Option<Result<DynamicSubCommandImpl, EarlyExit>> {
             let command_name = match command_name.last() {
                 Some(x) => *x,
-                None => return Some(Err(EarlyExit::with_err("No command"))),
+                None => return Some(Err(EarlyExit::Err(Error::other("No command")))),
             };
             let description = Self::commands().iter().find(|x| x.name == command_name)?.description;
             if args.len() > 1 {
-                Some(Err(EarlyExit::with_err("Too many arguments")))
+                Some(Err(EarlyExit::Err(Error::other("Too many arguments"))))
             } else if let Some(arg) = args.first() {
                 Some(Ok(DynamicSubCommandImpl { got: format!("{} got {:?}", description, arg) }))
             } else {
-                Some(Err(EarlyExit::with_err("Not enough arguments")))
+                Some(Err(EarlyExit::Err(Error::other("Not enough arguments"))))
             }
         }
     }
@@ -322,14 +322,14 @@ fn missing_option_value() {
 
     let e = Cmd::from_args(&["cmdname"], &["--msg"])
         .expect_err("Parsing missing option value should fail");
-    assert_eq!(e, EarlyExit::with_err("No value provided for option \'--msg\'."));
+    assert_eq!(e, EarlyExit::Err(Error::MissingArgValue("--msg".to_owned())));
 }
 
 fn assert_help_string<T: FromArgs>(help_str: &str) {
     match T::from_args(&["test_arg_0"], &["--help"]) {
         Ok(_) => panic!("help was parsed as args"),
         Err(e) => {
-            assert_eq!(EarlyExit::with_help(help_str), e);
+            assert_eq!(EarlyExit::Help(help_str.to_owned()), e);
         }
     }
 }
@@ -339,9 +339,29 @@ fn assert_output<T: FromArgs + Debug + PartialEq>(args: &[&str], expected: T) {
     assert_eq!(t, expected);
 }
 
-fn assert_error<T: FromArgs + Debug>(args: &[&str], err_msg: &str) {
+fn assert_error<T: FromArgs + Debug>(args: &[&str], expected: Error) {
     let e = T::from_args(&["cmd"], args).expect_err("unexpectedly succeeded parsing");
-    assert_eq!(EarlyExit::with_err(err_msg), e);
+    assert_eq!(EarlyExit::Err(expected), e);
+}
+
+fn missing_requirements(
+    positionals: &[&'static str],
+    options: &[&'static str],
+    subcommands: &[&'static str],
+) -> MissingRequirements {
+    let mut missing = MissingRequirements::default();
+
+    for pos in positionals {
+        missing.missing_positional_arg(pos);
+    }
+    for opt in options {
+        missing.missing_option(opt);
+    }
+    if !subcommands.is_empty() {
+        missing.missing_subcommands(subcommands.iter().copied());
+    }
+
+    missing
 }
 
 mod options {
@@ -360,7 +380,11 @@ mod options {
         assert_output(&["-n", "5"], Parsed { n: 5 });
         assert_error::<Parsed>(
             &["-n", "x"],
-            "Error parsing option '-n' with value 'x': invalid digit found in string",
+            Error::ParseArgument {
+                arg: "-n".to_owned(),
+                value: "x".to_owned(),
+                msg: "invalid digit found in string".to_owned(),
+            },
         );
     }
 
@@ -462,7 +486,7 @@ mod global_options {
 
     fn expect_help(args: &[&str], expected_help_string: &str) {
         let e = TopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
-        assert_eq!(EarlyExit::with_help(expected_help_string), e);
+        assert_eq!(EarlyExit::Help(expected_help_string.to_owned()), e);
     }
 
     #[test]
@@ -695,7 +719,7 @@ Options:
     fn optional() {
         assert_output(&["5"], LastOptional { a: 5, b: None });
         assert_output(&["5", "6"], LastOptional { a: 5, b: Some("6".into()) });
-        assert_error::<LastOptional>(&["5", "6", "7"], "Unrecognized argument: 7");
+        assert_error::<LastOptional>(&["5", "6", "7"], Error::UnknownArgument("7".to_owned()));
     }
 
     #[derive(FromArgs, Debug, PartialEq)]
@@ -713,7 +737,7 @@ Options:
     fn defaulted() {
         assert_output(&["5"], LastDefaulted { a: 5, b: 5 });
         assert_output(&["5", "6"], LastDefaulted { a: 5, b: 6 });
-        assert_error::<LastDefaulted>(&["5", "6", "7"], "Unrecognized argument: 7");
+        assert_error::<LastDefaulted>(&["5", "6", "7"], Error::UnknownArgument("7".to_owned()));
     }
 
     #[derive(FromArgs, Debug, PartialEq)]
@@ -732,16 +756,11 @@ Options:
         assert_output(&["5", "6"], LastRequired { a: 5, b: 6 });
         assert_error::<LastRequired>(
             &[],
-            r###"Required positional arguments not provided:
-    a
-    b
-"###,
+            Error::MissingRequirements(missing_requirements(&["a", "b"], &[], &[])),
         );
         assert_error::<LastRequired>(
             &["5"],
-            r###"Required positional arguments not provided:
-    b
-"###,
+            Error::MissingRequirements(missing_requirements(&["b"], &[], &[])),
         );
     }
 
@@ -758,7 +777,11 @@ Options:
         assert_output(&["5"], Parsed { n: 5 });
         assert_error::<Parsed>(
             &["x"],
-            "Error parsing positional argument 'n' with value 'x': invalid digit found in string",
+            Error::ParseArgument {
+                arg: "n".to_owned(),
+                value: "x".to_owned(),
+                msg: "invalid digit found in string".to_owned(),
+            },
         );
     }
 
@@ -779,11 +802,7 @@ Options:
 
         assert_error::<WithOption>(
             &[],
-            r###"Required positional arguments not provided:
-    a
-Required options not provided:
-    --b
-"###,
+            Error::MissingRequirements(missing_requirements(&["a"], &["--b"], &[])),
         );
     }
 
@@ -826,9 +845,7 @@ Required options not provided:
 
         assert_error::<WithSubcommand>(
             &["a", "a", "a"],
-            r###"Required positional arguments not provided:
-    a
-"###,
+            Error::MissingRequirements(missing_requirements(&["a"], &[], &[])),
         );
 
         assert_output(
@@ -855,9 +872,7 @@ Required options not provided:
 
         assert_error::<Underscores>(
             &[],
-            r###"Required positional arguments not provided:
-    a
-"###,
+            Error::MissingRequirements(missing_requirements(&["a"], &[], &[])),
         );
     }
 }
@@ -959,7 +974,7 @@ mod fuchsia_commandline_tools_rubric {
 
         let e = OneOption::from_args(&["cmdname"], &["--foo=bar"])
             .expect_err("Parsing option value using `=` should fail");
-        assert_eq!(e, EarlyExit::with_err("Unrecognized argument: --foo=bar"));
+        assert_eq!(e, EarlyExit::Err(Error::UnknownArgument("--foo=bar".to_owned())));
     }
 
     // Two dashes on their own indicates the end of options.
@@ -1140,10 +1155,7 @@ Options:
     fn help_flag_trailing_arguments_are_an_error() {
         let e = OneOption::from_args(&["cmdname"], &["--help", "--foo", "bar"])
             .expect_err("should exit early");
-        assert_eq!(
-            EarlyExit::with_err("Trailing arguments are not allowed after `help`."),
-            e
-        );
+        assert_eq!(EarlyExit::Err(Error::OptionsAfterHelp), e);
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
@@ -1214,7 +1226,7 @@ Options:
             _command_name: &[&str],
             _args: &[&str],
         ) -> Option<Result<Vec<String>, EarlyExit>> {
-            Some(Err(EarlyExit::with_err("Test should not redact")))
+            Some(Err(EarlyExit::Err(Error::other("Test should not redact"))))
         }
 
         fn try_from_args(
@@ -1224,7 +1236,7 @@ Options:
             if command_name.last() != Some(&"plugin") {
                 None
             } else if args.len() > 1 {
-                Some(Err(EarlyExit::with_err("Too many arguments")))
+                Some(Err(EarlyExit::Err(Error::other("Too many arguments"))))
             } else if let Some(arg) = args.first() {
                 Some(Ok(HelpExamplePlugin { got: format!("plugin got {:?}", arg) }))
             } else {
@@ -1258,15 +1270,11 @@ Options:
         let exit = HelpExample::from_args(&["program-name"], &[]).unwrap_err();
         assert_eq!(
             exit,
-            EarlyExit::with_err(concat!(
-                "Required options not provided:\n",
-                "    --scribble\n",
-                "One of the following subcommands must be present:\n",
-                "    help\n",
-                "    blow-up\n",
-                "    grind\n",
-                "    plugin\n",
-            )),
+            EarlyExit::Err(Error::MissingRequirements(missing_requirements(
+                &[],
+                &["--scribble"],
+                &["blow-up", "grind", "plugin"]
+            )))
         );
     }
 
@@ -1558,7 +1566,7 @@ mod redact_arg_values {
         let actual = Cmd::redact_arg_values(&["program-name"], &[]).unwrap_err();
         assert_eq!(
             actual,
-            EarlyExit::with_err("Required positional arguments not provided:\n    speed\n")
+            EarlyExit::Err(Error::MissingRequirements(missing_requirements(&["speed"], &[], &[])))
         );
     }
 
@@ -1718,7 +1726,7 @@ mod redact_arg_values {
 
         assert_eq!(
             Repeating::redact_arg_values(&["program-name"], &["--help"]),
-            Err(EarlyExit::with_help(
+            Err(EarlyExit::Help(
                 r###"Usage: program-name [-n <n...>]
 
 Woot
@@ -1727,6 +1735,7 @@ Options:
   -n, --n <n>  fooey
   -h, --help   Show this help message and exit
 "###
+                .to_owned()
             )),
         );
     }
@@ -1743,7 +1752,7 @@ Options:
 
         assert_eq!(
             Cmd::redact_arg_values(&["program-name"], &["--n"]),
-            Err(EarlyExit::with_err("No value provided for option '--n'.")),
+            Err(EarlyExit::Err(Error::MissingArgValue("--n".to_owned()))),
         );
     }
 
@@ -1795,32 +1804,32 @@ fn subcommand_does_not_panic() {
     // Passing no subcommand name to an emum
     assert_eq!(
         SubCommandEnum::from_args(&[], &["5"]).unwrap_err(),
-        EarlyExit::with_err("no subcommand name"),
+        EarlyExit::Err(Error::other("no subcommand name")),
     );
 
     #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommandEnum::redact_arg_values(&[], &["5"]).unwrap_err(),
-        EarlyExit::with_err("no subcommand name"),
+        EarlyExit::Err(Error::other("no subcommand name")),
     );
 
     // Passing unknown subcommand name to an emum
     assert_eq!(
         SubCommandEnum::from_args(&["fooey"], &["5"]).unwrap_err(),
-        EarlyExit::with_err("no subcommand matched"),
+        EarlyExit::Err(Error::other("no subcommand matched")),
     );
 
     #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommandEnum::redact_arg_values(&["fooey"], &["5"]).unwrap_err(),
-        EarlyExit::with_err("no subcommand matched"),
+        EarlyExit::Err(Error::other("no subcommand matched")),
     );
 
     // Passing unknown subcommand name to a struct
     #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommand::redact_arg_values(&[], &["5"]).unwrap_err(),
-        EarlyExit::with_err("no subcommand name"),
+        EarlyExit::Err(Error::other("no subcommand name")),
     );
 }
 

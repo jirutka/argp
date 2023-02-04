@@ -508,7 +508,9 @@ fn impl_from_args_struct_redact_arg_values<'a>(
                 if let ::std::option::Option::Some(cmd_name) = __cmd_name.last() {
                     (*cmd_name).to_owned()
                 } else {
-                    return ::std::result::Result::Err(::argp::EarlyExit::with_err(#unwrap_cmd_name_err_string));
+                    return ::std::result::Result::Err(
+                        ::argp::EarlyExit::Err(::argp::Error::other(#unwrap_cmd_name_err_string))
+                    );
                 }
             ];
 
@@ -853,7 +855,7 @@ fn append_missing_requirements<'a>(
                 let name = field.positional_arg_name();
                 quote! {
                     if #field_name.slot.is_none() {
-                        #mri.missing_positional_arg(#name)
+                        #mri.missing_positional_arg(#name);
                     }
                 }
             }
@@ -861,7 +863,7 @@ fn append_missing_requirements<'a>(
                 let name = field.long_name.as_ref().expect("options always have a long name");
                 quote! {
                     if #field_name.slot.is_none() {
-                        #mri.missing_option(#name)
+                        #mri.missing_option(#name);
                     }
                 }
             }
@@ -878,7 +880,7 @@ fn append_missing_requirements<'a>(
                                         .iter()
                                         .map(|r| r.name)
                                 ),
-                        )
+                        );
                     }
                 }
             }
@@ -1049,7 +1051,9 @@ fn impl_from_args_enum_from_args(
             let subcommand_name = if let ::std::option::Option::Some(subcommand_name) = command_name.last() {
                 *subcommand_name
             } else {
-                return ::std::result::Result::Err(::argp::EarlyExit::with_err("no subcommand name"));
+                return ::std::result::Result::Err(
+                    ::argp::EarlyExit::Err(::argp::Error::other("no subcommand name"))
+                );
             };
 
             #(
@@ -1062,7 +1066,9 @@ fn impl_from_args_enum_from_args(
 
             #dynamic_from_args
 
-            ::std::result::Result::Err(::argp::EarlyExit::with_err("no subcommand matched"))
+            ::std::result::Result::Err(
+                ::argp::EarlyExit::Err(::argp::Error::other("no subcommand matched"))
+            )
         }
     }
 }
@@ -1086,7 +1092,9 @@ fn impl_from_args_enum_redact_arg_values(
             let subcommand_name = if let Some(subcommand_name) = command_name.last() {
                 *subcommand_name
             } else {
-                return ::std::result::Result::Err(::argp::EarlyExit::with_err("no subcommand name"));
+                return ::std::result::Result::Err(
+                    ::argp::EarlyExit::Err(::argp::Error::other("no subcommand name"))
+                );
             };
 
             #(
@@ -1097,7 +1105,9 @@ fn impl_from_args_enum_redact_arg_values(
 
             #dynamic_redact_arg_values
 
-            ::std::result::Result::Err(::argp::EarlyExit::with_err("no subcommand matched"))
+            ::std::result::Result::Err(
+                ::argp::EarlyExit::Err(::argp::Error::other("no subcommand matched"))
+            )
         }
     }
 }

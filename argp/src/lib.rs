@@ -222,6 +222,7 @@
 //! # use argp::CommandInfo;
 //! # use argp::DynamicSubCommand;
 //! # use argp::EarlyExit;
+//! # use argp::Error;
 //! # use argp::FromArgs;
 //! # use once_cell::sync::OnceCell;
 //!
@@ -286,7 +287,7 @@
 //!             if command_name.last() == Some(&command.name) {
 //!                 // Process arguments and redact values here.
 //!                 if !args.is_empty() {
-//!                     return Some(Err(EarlyExit::with_err("Our example dynamic command never takes arguments!")));
+//!                     return Some(Err(Error::other("Our example dynamic command never takes arguments!").into()));
 //!                 }
 //!                 return Some(Ok(Vec::new()))
 //!             }
@@ -298,7 +299,7 @@
 //!         for command in Self::commands() {
 //!             if command_name.last() == Some(&command.name) {
 //!                 if !args.is_empty() {
-//!                     return Some(Err(EarlyExit::with_err("Our example dynamic command never takes arguments!")));
+//!                     return Some(Err(Error::other("Our example dynamic command never takes arguments!").into()));
 //!                 }
 //!                 return Some(Ok(Dynamic { name: command.name.to_string() }))
 //!             }
@@ -333,14 +334,17 @@
 
 #![deny(missing_docs)]
 
+mod error;
 mod help;
 
 use std::env;
 use std::fmt;
+use std::fmt::Write;
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 
+pub use crate::error::Error;
 pub use crate::help::{CommandInfo, Help, HelpCommands, OptionArgInfo};
 pub use argp_derive::FromArgs;
 
@@ -417,7 +421,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///     early_exit,
-    ///     argp::EarlyExit::with_help(
+    ///     argp::EarlyExit::Help(
     ///        r#"Usage: classroom <command> [<args>]
     ///
     /// Command to manage a classroom.
@@ -428,7 +432,7 @@ pub trait FromArgs: Sized {
     /// Commands:
     ///   list        list all the classes.
     ///   add         add students to a class.
-    /// "#),
+    /// "#.to_owned()),
     /// );
     ///
     /// // Help works with subcommands.
@@ -438,7 +442,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///     early_exit,
-    ///     argp::EarlyExit::with_help(
+    ///     argp::EarlyExit::Help(
     ///        r#"Usage: classroom list [--teacher-name <name>]
     ///
     /// list all the classes.
@@ -446,7 +450,7 @@ pub trait FromArgs: Sized {
     /// Options:
     ///   --teacher-name <name>  list classes for only this teacher.
     ///   -h, --help             Show this help message and exit
-    /// "#),
+    /// "#.to_owned()),
     /// );
     ///
     /// // Incorrect arguments will error out.
@@ -456,7 +460,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///    err,
-    ///    argp::EarlyExit::with_err("Unrecognized argument: lisp"),
+    ///    argp::EarlyExit::Err(argp::Error::UnknownArgument("lisp".to_owned())),
     /// );
     /// ```
     fn from_args(command_name: &[&str], args: &[&str]) -> Result<Self, EarlyExit> {
@@ -569,13 +573,13 @@ pub trait FromArgs: Sized {
     /// // `ClassroomCmd::redact_arg_values` will error out if passed invalid arguments.
     /// assert_eq!(
     ///     ClassroomCmd::redact_arg_values(&["classroom"], &["add", "--teacher-name"]),
-    ///     Err(argp::EarlyExit::with_err("No value provided for option '--teacher-name'.")),
+    ///     Err(argp::EarlyExit::Err(argp::Error::MissingArgValue("--teacher-name".to_owned()))),
     /// );
     ///
     /// // `ClassroomCmd::redact_arg_values` will generate help messages.
     /// assert_eq!(
     ///     ClassroomCmd::redact_arg_values(&["classroom"], &["help"]),
-    ///     Err(argp::EarlyExit::with_help(
+    ///     Err(argp::EarlyExit::Help(
     ///         r#"Usage: classroom <command> [<args>]
     ///
     /// Command to manage a classroom.
@@ -665,33 +669,27 @@ pub trait CommandHelp: FromArgs {
 /// Information to display to the user about why a `FromArgs` construction exited early.
 ///
 /// This can occur due to either failed parsing or a flag like `--help`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum EarlyExit {
     /// Early exit and display the error message.
-    Err(String),
+    Err(Error),
 
     /// Early exit and display the help message.
     Help(String),
 }
 
-impl EarlyExit {
-    /// Creates a new [EarlyExit] with the given error message.
-    pub fn with_err<S: Into<String>>(err_msg: S) -> Self {
-        Self::Err(err_msg.into())
-    }
-
-    /// Creates a new [EarlyExit] with the given help message.
-    pub fn with_help<S: Into<String>>(help_msg: S) -> Self {
-        Self::Help(help_msg.into())
-    }
-}
-
 impl fmt::Display for EarlyExit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EarlyExit::Err(output) => output.fmt(f),
+            EarlyExit::Err(err) => err.fmt(f),
             EarlyExit::Help(output) => output.fmt(f),
         }
+    }
+}
+
+impl From<Error> for EarlyExit {
+    fn from(value: Error) -> Self {
+        Self::Err(value)
     }
 }
 
@@ -727,8 +725,8 @@ pub fn from_env<T: TopLevelCommand>() -> T {
                 println!("{}", output);
                 0
             }
-            EarlyExit::Err(output) => {
-                eprintln!("{}\nRun {} --help for more information.", output, cmd);
+            EarlyExit::Err(err) => {
+                eprintln!("{}\nRun {} --help for more information.", err, cmd);
                 1
             }
         })
@@ -753,8 +751,8 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
                 println!("{}", output);
                 0
             }
-            EarlyExit::Err(output) => {
-                eprintln!("{}\nRun --help for more information.", output);
+            EarlyExit::Err(err) => {
+                eprintln!("{}\nRun --help for more information.", err);
                 1
             }
         })
@@ -818,7 +816,7 @@ impl ParseFlag for RedactFlag {
 // generic parameters.
 #[doc(hidden)]
 pub trait ParseValueSlot {
-    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), String>;
+    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), Error>;
 }
 
 // The concrete type implementing the `ParseValueSlot` trait.
@@ -836,19 +834,29 @@ pub struct ParseValueSlotTy<Slot, T> {
 // `ParseValueSlotTy<Option<T>, T>` is used as the slot for all non-repeating
 // arguments, both optional and required.
 impl<T> ParseValueSlot for ParseValueSlotTy<Option<T>, T> {
-    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), String> {
+    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), Error> {
         if self.slot.is_some() {
-            return Err("duplicate values provided".to_string());
+            return Err(Error::DuplicateOption(arg.to_owned()));
         }
-        self.slot = Some((self.parse_func)(arg, value)?);
+        let parsed = (self.parse_func)(arg, value).map_err(|e| Error::ParseArgument {
+            arg: arg.to_owned(),
+            value: value.to_owned(),
+            msg: e,
+        })?;
+        self.slot = Some(parsed);
         Ok(())
     }
 }
 
 // `ParseValueSlotTy<Vec<T>, T>` is used as the slot for repeating arguments.
 impl<T> ParseValueSlot for ParseValueSlotTy<Vec<T>, T> {
-    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), String> {
-        self.slot.push((self.parse_func)(arg, value)?);
+    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), Error> {
+        let parsed = (self.parse_func)(arg, value).map_err(|e| Error::ParseArgument {
+            arg: arg.to_owned(),
+            value: value.to_owned(),
+            msg: e,
+        })?;
+        self.slot.push(parsed);
         Ok(())
     }
 }
@@ -936,12 +944,10 @@ pub fn parse_struct_args(
             }
 
             if help_requested {
-                return Err(EarlyExit::with_err(
-                    "Trailing arguments are not allowed after `help`.",
-                ));
+                return Err(Error::OptionsAfterHelp.into());
             }
 
-            parse_options.parse(next_arg, &mut remaining_args).map_err(EarlyExit::with_err)?;
+            parse_options.parse(next_arg, &mut remaining_args)?;
 
             continue;
         }
@@ -966,7 +972,7 @@ pub fn parse_struct_args(
     if help_requested {
         let global_options = parse_options.parent.map_or_else(Vec::new, |p| p.global_options());
 
-        Err(EarlyExit::with_help(help.generate(cmd_name, &global_options)))
+        Err(EarlyExit::Help(help.generate(cmd_name, &global_options)))
     } else {
         Ok(())
     }
@@ -1010,7 +1016,7 @@ pub trait ParseGlobalOptions {
         &mut self,
         arg: &str,
         remaining_args: &mut &[&str],
-    ) -> Option<Result<(), String>>;
+    ) -> Option<Result<(), Error>>;
 
     /// Returns a vector representing global options specified on this instance
     /// and recursively on the parent. This is used for generating a help
@@ -1027,12 +1033,12 @@ impl<'a, 'p> ParseStructOptions<'a, 'p> {
     /// - `arg`: The current option argument being parsed (e.g. `--foo`).
     /// - `remaining_args`: The remaining command line arguments. This slice
     ///    will be advanced forwards if the option takes a value argument.
-    fn parse(&mut self, arg: &str, remaining_args: &mut &[&str]) -> Result<(), String> {
+    fn parse(&mut self, arg: &str, remaining_args: &mut &[&str]) -> Result<(), Error> {
         match self.arg_to_slot.iter().find(|(name, _)| *name == arg) {
             Some((_, pos)) => Self::fill_slot(&mut self.slots[*pos], arg, remaining_args),
             None => self
                 .try_parse_global(arg, remaining_args)
-                .unwrap_or_else(|| Err(format!("Unrecognized argument: {}", arg))),
+                .unwrap_or_else(|| Err(Error::UnknownArgument(arg.to_owned()))),
         }
     }
 
@@ -1040,17 +1046,14 @@ impl<'a, 'p> ParseStructOptions<'a, 'p> {
         slot: &mut ParseStructOption<'a>,
         arg: &str,
         remaining_args: &mut &[&str],
-    ) -> Result<(), String> {
+    ) -> Result<(), Error> {
         match slot {
             ParseStructOption::Flag(ref mut b) => b.set_flag(arg),
             ParseStructOption::Value(ref mut pvs) => {
-                let value = remaining_args
-                    .first()
-                    .ok_or_else(|| format!("No value provided for option '{}'.", arg))?;
+                let value =
+                    remaining_args.first().ok_or_else(|| Error::MissingArgValue(arg.to_owned()))?;
                 *remaining_args = &remaining_args[1..];
-                pvs.fill_slot(arg, value).map_err(|s| {
-                    format!("Error parsing option '{}' with value '{}': {}", arg, value, &s)
-                })?;
+                pvs.fill_slot(arg, value)?;
             }
         }
         Ok(())
@@ -1062,7 +1065,7 @@ impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
         &mut self,
         arg: &str,
         remaining_args: &mut &[&str],
-    ) -> Option<Result<(), String>> {
+    ) -> Option<Result<(), Error>> {
         self.arg_to_slot
             .iter()
             .find(|(name, pos)| *name == arg && self.slots_global[*pos])
@@ -1101,7 +1104,7 @@ impl<'a> ParseStructPositionals<'a> {
     ///
     /// Returns true if non-positional argument parsing should stop
     /// after this one.
-    fn parse(&mut self, index: &mut usize, arg: &str) -> Result<bool, EarlyExit> {
+    fn parse(&mut self, index: &mut usize, arg: &str) -> Result<bool, Error> {
         if *index < self.positionals.len() {
             self.positionals[*index].parse(arg)?;
 
@@ -1117,7 +1120,7 @@ impl<'a> ParseStructPositionals<'a> {
                 Ok(false)
             }
         } else {
-            Err(EarlyExit::with_err(format!("Unrecognized argument: {}", arg)))
+            Err(Error::UnknownArgument(arg.to_owned()))
         }
     }
 }
@@ -1135,13 +1138,8 @@ impl<'a> ParseStructPositional<'a> {
     /// Parse a positional argument.
     ///
     /// `arg`: the argument supplied by the user.
-    fn parse(&mut self, arg: &str) -> Result<(), EarlyExit> {
-        self.slot.fill_slot("", arg).map_err(|s| {
-            EarlyExit::with_err(format!(
-                "Error parsing positional argument '{}' with value '{}': {}",
-                self.name, arg, &s
-            ))
-        })
+    fn parse(&mut self, arg: &str) -> Result<(), Error> {
+        self.slot.fill_slot(self.name, arg)
     }
 }
 
@@ -1204,7 +1202,7 @@ fn prepend_help<'a>(args: &[&'a str]) -> Vec<&'a str> {
 
 // An error string builder to report missing required options and subcommands.
 #[doc(hidden)]
-#[derive(Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct MissingRequirements {
     options: Vec<&'static str>,
     subcommands: Option<Vec<&'static str>>,
@@ -1235,49 +1233,51 @@ impl MissingRequirements {
     // If any missing options or subcommands were provided, returns an error string
     // describing the missing args.
     #[doc(hidden)]
-    pub fn err_on_any(&self) -> Result<(), EarlyExit> {
+    pub fn err_on_any(self) -> Result<(), Error> {
         if self.options.is_empty() && self.subcommands.is_none() && self.positional_args.is_empty()
         {
-            return Ok(());
+            Ok(())
+        } else {
+            Err(Error::MissingRequirements(self))
         }
+    }
+}
 
-        let mut output = String::new();
-
+impl fmt::Display for MissingRequirements {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.positional_args.is_empty() {
-            output.push_str("Required positional arguments not provided:");
+            f.write_str("Required positional arguments not provided:")?;
             for arg in &self.positional_args {
-                output.push_str(NEWLINE_INDENT);
-                output.push_str(arg);
+                f.write_str(NEWLINE_INDENT)?;
+                f.write_str(arg)?;
             }
         }
 
         if !self.options.is_empty() {
             if !self.positional_args.is_empty() {
-                output.push('\n');
+                f.write_char('\n')?;
             }
-            output.push_str("Required options not provided:");
+            f.write_str("Required options not provided:")?;
             for option in &self.options {
-                output.push_str(NEWLINE_INDENT);
-                output.push_str(option);
+                f.write_str(NEWLINE_INDENT)?;
+                f.write_str(option)?;
             }
         }
 
         if let Some(missing_subcommands) = &self.subcommands {
             if !self.options.is_empty() {
-                output.push('\n');
+                f.write_char('\n')?;
             }
-            output.push_str("One of the following subcommands must be present:");
-            output.push_str(NEWLINE_INDENT);
-            output.push_str("help");
+            f.write_str("One of the following subcommands must be present:")?;
+            f.write_str(NEWLINE_INDENT)?;
+            f.write_str("help")?;
             for subcommand in missing_subcommands {
-                output.push_str(NEWLINE_INDENT);
-                output.push_str(subcommand);
+                f.write_str(NEWLINE_INDENT)?;
+                f.write_str(subcommand)?;
             }
         }
 
-        output.push('\n');
-
-        Err(EarlyExit::with_err(output))
+        f.write_char('\n')
     }
 }
 

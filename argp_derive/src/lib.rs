@@ -872,11 +872,11 @@ fn append_missing_requirements<'a>(
                         #mri.missing_subcommands(
                             <#ty as ::argp::SubCommands>::COMMANDS
                                 .iter()
-                                .cloned()
+                                .map(|r| r.name)
                                 .chain(
                                     <#ty as ::argp::SubCommands>::dynamic_commands()
                                         .iter()
-                                        .copied()
+                                        .map(|r| r.name)
                                 ),
                         )
                     }

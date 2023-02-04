@@ -1207,7 +1207,7 @@ fn prepend_help<'a>(args: &[&'a str]) -> Vec<&'a str> {
 #[derive(Default)]
 pub struct MissingRequirements {
     options: Vec<&'static str>,
-    subcommands: Option<Vec<&'static CommandInfo>>,
+    subcommands: Option<Vec<&'static str>>,
     positional_args: Vec<&'static str>,
 }
 
@@ -1222,7 +1222,7 @@ impl MissingRequirements {
 
     // Add a missing required subcommand.
     #[doc(hidden)]
-    pub fn missing_subcommands(&mut self, commands: impl Iterator<Item = &'static CommandInfo>) {
+    pub fn missing_subcommands(&mut self, commands: impl Iterator<Item = &'static str>) {
         self.subcommands = Some(commands.collect());
     }
 
@@ -1271,7 +1271,7 @@ impl MissingRequirements {
             output.push_str("help");
             for subcommand in missing_subcommands {
                 output.push_str(NEWLINE_INDENT);
-                output.push_str(subcommand.name);
+                output.push_str(subcommand);
             }
         }
 

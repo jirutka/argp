@@ -456,7 +456,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///    err,
-    ///    argp::EarlyExit::with_err("Unrecognized argument: lisp\n"),
+    ///    argp::EarlyExit::with_err("Unrecognized argument: lisp"),
     /// );
     /// ```
     fn from_args(command_name: &[&str], args: &[&str]) -> Result<Self, EarlyExit> {
@@ -569,7 +569,7 @@ pub trait FromArgs: Sized {
     /// // `ClassroomCmd::redact_arg_values` will error out if passed invalid arguments.
     /// assert_eq!(
     ///     ClassroomCmd::redact_arg_values(&["classroom"], &["add", "--teacher-name"]),
-    ///     Err(argp::EarlyExit::with_err("No value provided for option '--teacher-name'.\n")),
+    ///     Err(argp::EarlyExit::with_err("No value provided for option '--teacher-name'.")),
     /// );
     ///
     /// // `ClassroomCmd::redact_arg_values` will generate help messages.
@@ -1032,7 +1032,7 @@ impl<'a, 'p> ParseStructOptions<'a, 'p> {
             Some((_, pos)) => Self::fill_slot(&mut self.slots[*pos], arg, remaining_args),
             None => self
                 .try_parse_global(arg, remaining_args)
-                .unwrap_or_else(|| Err(format!("Unrecognized argument: {}\n", arg))),
+                .unwrap_or_else(|| Err(format!("Unrecognized argument: {}", arg))),
         }
     }
 
@@ -1046,10 +1046,10 @@ impl<'a, 'p> ParseStructOptions<'a, 'p> {
             ParseStructOption::Value(ref mut pvs) => {
                 let value = remaining_args
                     .first()
-                    .ok_or_else(|| format!("No value provided for option '{}'.\n", arg))?;
+                    .ok_or_else(|| format!("No value provided for option '{}'.", arg))?;
                 *remaining_args = &remaining_args[1..];
                 pvs.fill_slot(arg, value).map_err(|s| {
-                    format!("Error parsing option '{}' with value '{}': {}\n", arg, value, &s)
+                    format!("Error parsing option '{}' with value '{}': {}", arg, value, &s)
                 })?;
             }
         }
@@ -1117,7 +1117,7 @@ impl<'a> ParseStructPositionals<'a> {
                 Ok(false)
             }
         } else {
-            Err(EarlyExit::with_err(format!("Unrecognized argument: {}\n", arg)))
+            Err(EarlyExit::with_err(format!("Unrecognized argument: {}", arg)))
         }
     }
 }
@@ -1138,7 +1138,7 @@ impl<'a> ParseStructPositional<'a> {
     fn parse(&mut self, arg: &str) -> Result<(), EarlyExit> {
         self.slot.fill_slot("", arg).map_err(|s| {
             EarlyExit::with_err(format!(
-                "Error parsing positional argument '{}' with value '{}': {}\n",
+                "Error parsing positional argument '{}' with value '{}': {}",
                 self.name, arg, &s
             ))
         })

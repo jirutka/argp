@@ -322,7 +322,7 @@ fn missing_option_value() {
 
     let e = Cmd::from_args(&["cmdname"], &["--msg"])
         .expect_err("Parsing missing option value should fail");
-    assert_eq!(e, EarlyExit::with_err("No value provided for option \'--msg\'.\n"));
+    assert_eq!(e, EarlyExit::with_err("No value provided for option \'--msg\'."));
 }
 
 fn assert_help_string<T: FromArgs>(help_str: &str) {
@@ -360,8 +360,7 @@ mod options {
         assert_output(&["-n", "5"], Parsed { n: 5 });
         assert_error::<Parsed>(
             &["-n", "x"],
-            r###"Error parsing option '-n' with value 'x': invalid digit found in string
-"###,
+            "Error parsing option '-n' with value 'x': invalid digit found in string",
         );
     }
 
@@ -549,14 +548,14 @@ Options:
     fn globals_are_not_propagated_up() {
         let e = TopLevel::from_args(&["cmdname"], &["one", "two", "--x", "6"])
             .expect_err("unexpectedly succeeded parsing sc 4");
-        assert_eq!(e.to_string(), "Unrecognized argument: --x\n");
+        assert_eq!(e.to_string(), "Unrecognized argument: --x");
     }
 
     #[test]
     fn local_option_is_not_global() {
         let e = TopLevel::from_args(&["cmdname"], &["--b", "one"])
             .expect_err("unexpectedly succeeded parsing");
-        assert_eq!(e.to_string(), "Unrecognized argument: --b\n");
+        assert_eq!(e.to_string(), "Unrecognized argument: --b");
     }
 }
 
@@ -696,7 +695,7 @@ Options:
     fn optional() {
         assert_output(&["5"], LastOptional { a: 5, b: None });
         assert_output(&["5", "6"], LastOptional { a: 5, b: Some("6".into()) });
-        assert_error::<LastOptional>(&["5", "6", "7"], "Unrecognized argument: 7\n");
+        assert_error::<LastOptional>(&["5", "6", "7"], "Unrecognized argument: 7");
     }
 
     #[derive(FromArgs, Debug, PartialEq)]
@@ -714,7 +713,7 @@ Options:
     fn defaulted() {
         assert_output(&["5"], LastDefaulted { a: 5, b: 5 });
         assert_output(&["5", "6"], LastDefaulted { a: 5, b: 6 });
-        assert_error::<LastDefaulted>(&["5", "6", "7"], "Unrecognized argument: 7\n");
+        assert_error::<LastDefaulted>(&["5", "6", "7"], "Unrecognized argument: 7");
     }
 
     #[derive(FromArgs, Debug, PartialEq)]
@@ -759,8 +758,7 @@ Options:
         assert_output(&["5"], Parsed { n: 5 });
         assert_error::<Parsed>(
             &["x"],
-            r###"Error parsing positional argument 'n' with value 'x': invalid digit found in string
-"###,
+            "Error parsing positional argument 'n' with value 'x': invalid digit found in string",
         );
     }
 
@@ -961,7 +959,7 @@ mod fuchsia_commandline_tools_rubric {
 
         let e = OneOption::from_args(&["cmdname"], &["--foo=bar"])
             .expect_err("Parsing option value using `=` should fail");
-        assert_eq!(e, EarlyExit::with_err("Unrecognized argument: --foo=bar\n"));
+        assert_eq!(e, EarlyExit::with_err("Unrecognized argument: --foo=bar"));
     }
 
     // Two dashes on their own indicates the end of options.
@@ -1745,7 +1743,7 @@ Options:
 
         assert_eq!(
             Cmd::redact_arg_values(&["program-name"], &["--n"]),
-            Err(EarlyExit::with_err("No value provided for option '--n'.\n")),
+            Err(EarlyExit::with_err("No value provided for option '--n'.")),
         );
     }
 

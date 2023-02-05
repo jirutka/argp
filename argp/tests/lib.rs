@@ -13,7 +13,7 @@
 
 use std::fmt::Debug;
 
-use argp::FromArgs;
+use argp::{CommandInfo, DynamicSubCommand, EarlyExit, FromArgs};
 
 #[test]
 fn basic_example() {
@@ -131,37 +131,37 @@ fn dynamic_subcommand_example() {
         got: String,
     }
 
-    impl argp::DynamicSubCommand for DynamicSubCommandImpl {
-        fn commands() -> &'static [&'static argp::CommandInfo] {
+    impl DynamicSubCommand for DynamicSubCommandImpl {
+        fn commands() -> &'static [&'static CommandInfo] {
             &[
-                &argp::CommandInfo { name: "three", description: "Third command" },
-                &argp::CommandInfo { name: "four", description: "Fourth command" },
-                &argp::CommandInfo { name: "five", description: "Fifth command" },
+                &CommandInfo { name: "three", description: "Third command" },
+                &CommandInfo { name: "four", description: "Fourth command" },
+                &CommandInfo { name: "five", description: "Fifth command" },
             ]
         }
 
         fn try_redact_arg_values(
             _command_name: &[&str],
             _args: &[&str],
-        ) -> Option<Result<Vec<String>, argp::EarlyExit>> {
-            Some(Err(argp::EarlyExit::from("Test should not redact".to_owned())))
+        ) -> Option<Result<Vec<String>, EarlyExit>> {
+            Some(Err(EarlyExit::from("Test should not redact".to_owned())))
         }
 
         fn try_from_args(
             command_name: &[&str],
             args: &[&str],
-        ) -> Option<Result<DynamicSubCommandImpl, argp::EarlyExit>> {
+        ) -> Option<Result<DynamicSubCommandImpl, EarlyExit>> {
             let command_name = match command_name.last() {
                 Some(x) => *x,
-                None => return Some(Err(argp::EarlyExit::from("No command".to_owned()))),
+                None => return Some(Err(EarlyExit::from("No command".to_owned()))),
             };
             let description = Self::commands().iter().find(|x| x.name == command_name)?.description;
             if args.len() > 1 {
-                Some(Err(argp::EarlyExit::from("Too many arguments".to_owned())))
+                Some(Err(EarlyExit::from("Too many arguments".to_owned())))
             } else if let Some(arg) = args.first() {
                 Some(Ok(DynamicSubCommandImpl { got: format!("{} got {:?}", description, arg) }))
             } else {
-                Some(Err(argp::EarlyExit::from("Not enough arguments".to_owned())))
+                Some(Err(EarlyExit::from("Not enough arguments".to_owned())))
             }
         }
     }
@@ -350,7 +350,7 @@ fn assert_error<T: FromArgs + Debug>(args: &[&str], err_msg: &str) {
 mod options {
     use super::*;
 
-    #[derive(argp::FromArgs, Debug, PartialEq)]
+    #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct Parsed {
         #[argp(option, short = 'n')]
@@ -368,7 +368,7 @@ mod options {
         );
     }
 
-    #[derive(argp::FromArgs, Debug, PartialEq)]
+    #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct Repeating {
         #[argp(option, short = 'n')]
@@ -390,7 +390,7 @@ Options:
         );
     }
 
-    #[derive(argp::FromArgs, Debug, PartialEq)]
+    #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct WithArgName {
         #[argp(option, arg_name = "name")]
@@ -750,7 +750,7 @@ Options:
         );
     }
 
-    #[derive(argp::FromArgs, Debug, PartialEq)]
+    #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct Parsed {
         #[argp(positional)]
@@ -1211,26 +1211,26 @@ Options:
         got: String,
     }
 
-    impl argp::DynamicSubCommand for HelpExamplePlugin {
-        fn commands() -> &'static [&'static argp::CommandInfo] {
-            &[&argp::CommandInfo { name: "plugin", description: "Example dynamic command" }]
+    impl DynamicSubCommand for HelpExamplePlugin {
+        fn commands() -> &'static [&'static CommandInfo] {
+            &[&CommandInfo { name: "plugin", description: "Example dynamic command" }]
         }
 
         fn try_redact_arg_values(
             _command_name: &[&str],
             _args: &[&str],
-        ) -> Option<Result<Vec<String>, argp::EarlyExit>> {
-            Some(Err(argp::EarlyExit::from("Test should not redact".to_owned())))
+        ) -> Option<Result<Vec<String>, EarlyExit>> {
+            Some(Err(EarlyExit::from("Test should not redact".to_owned())))
         }
 
         fn try_from_args(
             command_name: &[&str],
             args: &[&str],
-        ) -> Option<Result<HelpExamplePlugin, argp::EarlyExit>> {
+        ) -> Option<Result<HelpExamplePlugin, EarlyExit>> {
             if command_name.last() != Some(&"plugin") {
                 None
             } else if args.len() > 1 {
-                Some(Err(argp::EarlyExit::from("Too many arguments".to_owned())))
+                Some(Err(EarlyExit::from("Too many arguments".to_owned())))
             } else if let Some(arg) = args.first() {
                 Some(Ok(HelpExamplePlugin { got: format!("plugin got {:?}", arg) }))
             } else {
@@ -1313,7 +1313,7 @@ Error codes:
     }
 
     #[allow(dead_code)]
-    #[derive(argp::FromArgs)]
+    #[derive(FromArgs)]
     /// Destroy the contents of <file>.
     struct WithArgName {
         #[argp(positional, arg_name = "name")]
@@ -1565,7 +1565,7 @@ mod redact_arg_values {
         let actual = Cmd::redact_arg_values(&["program-name"], &[]).unwrap_err();
         assert_eq!(
             actual,
-            argp::EarlyExit {
+            EarlyExit {
                 output: "Required positional arguments not provided:\n    speed\n".into(),
                 status: Err(()),
             }
@@ -1718,7 +1718,7 @@ mod redact_arg_values {
 
     #[test]
     fn produces_help() {
-        #[derive(argp::FromArgs, Debug, PartialEq)]
+        #[derive(FromArgs, Debug, PartialEq)]
         /// Woot
         struct Repeating {
             #[argp(option, short = 'n')]
@@ -1728,7 +1728,7 @@ mod redact_arg_values {
 
         assert_eq!(
             Repeating::redact_arg_values(&["program-name"], &["--help"]),
-            Err(argp::EarlyExit {
+            Err(EarlyExit {
                 output: r###"Usage: program-name [-n <n...>]
 
 Woot
@@ -1745,7 +1745,7 @@ Options:
 
     #[test]
     fn produces_errors_with_bad_arguments() {
-        #[derive(argp::FromArgs, Debug, PartialEq)]
+        #[derive(FromArgs, Debug, PartialEq)]
         /// Woot
         struct Cmd {
             #[argp(option, short = 'n')]
@@ -1755,7 +1755,7 @@ Options:
 
         assert_eq!(
             Cmd::redact_arg_values(&["program-name"], &["--n"]),
-            Err(argp::EarlyExit {
+            Err(EarlyExit {
                 output: "No value provided for option '--n'.\n".to_owned(),
                 status: Err(()),
             }),
@@ -1810,32 +1810,32 @@ fn subcommand_does_not_panic() {
     // Passing no subcommand name to an emum
     assert_eq!(
         SubCommandEnum::from_args(&[], &["5"]).unwrap_err(),
-        argp::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+        EarlyExit { output: "no subcommand name".into(), status: Err(()) },
     );
 
     #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommandEnum::redact_arg_values(&[], &["5"]).unwrap_err(),
-        argp::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+        EarlyExit { output: "no subcommand name".into(), status: Err(()) },
     );
 
     // Passing unknown subcommand name to an emum
     assert_eq!(
         SubCommandEnum::from_args(&["fooey"], &["5"]).unwrap_err(),
-        argp::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
+        EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
     );
 
     #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommandEnum::redact_arg_values(&["fooey"], &["5"]).unwrap_err(),
-        argp::EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
+        EarlyExit { output: "no subcommand matched".into(), status: Err(()) },
     );
 
     // Passing unknown subcommand name to a struct
     #[cfg(feature = "redact_arg_values")]
     assert_eq!(
         SubCommand::redact_arg_values(&[], &["5"]).unwrap_err(),
-        argp::EarlyExit { output: "no subcommand name".into(), status: Err(()) },
+        EarlyExit { output: "no subcommand name".into(), status: Err(()) },
     );
 }
 

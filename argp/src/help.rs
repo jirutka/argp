@@ -52,7 +52,7 @@ const WRAP_WIDTH: usize = 80;
 const HELP_OPT: OptionArgInfo = OptionArgInfo {
     usage: "",
     names: "-h, --help",
-    description: "Show this help message and exit",
+    description: "Show this help message and exit.",
     global: true,
 };
 

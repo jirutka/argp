@@ -258,7 +258,7 @@ Short description
 Options:
   --s         a switch with a description that is spread across a number of
               lines of comments.
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 "###,
     );
 }
@@ -405,7 +405,7 @@ Woot
 
 Options:
   -n, --n <n>  fooey
-  -h, --help   Show this help message and exit
+  -h, --help   Show this help message and exit.
 "###,
         );
     }
@@ -427,7 +427,7 @@ Woot
 
 Options:
   --option-name <name>  fooey
-  -h, --help            Show this help message and exit
+  -h, --help            Show this help message and exit.
 "###,
         );
     }
@@ -530,7 +530,7 @@ Top level.
 Options:
   --a <a>     A global option a.
   --x <x>     A local option x.
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 
 Commands:
   one         First subcommand.
@@ -546,7 +546,7 @@ First subcommand.
 Options:
   --a <a>     A global option a.
   --b         A global option b.
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 
 Commands:
   two         Second subcommand.
@@ -563,7 +563,7 @@ Options:
   --a <a>     A global option a.
   --b         A global option b.
   --fooey     Whether to fooey.
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 "###,
         );
     }
@@ -615,7 +615,7 @@ Positional Arguments:
   b           fooey
 
 Options:
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 "###,
         );
     }
@@ -699,7 +699,7 @@ Positional Arguments:
 Options:
   --b         woo
   --c <c>     stuff
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 "###,
         );
     }
@@ -1096,7 +1096,7 @@ mod fuchsia_commandline_tools_rubric {
 A type for testing `--help`/`help`
 
 Options:
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 
 Commands:
   first       First subcommmand for testing `help`.
@@ -1107,7 +1107,7 @@ Commands:
 First subcommmand for testing `help`.
 
 Options:
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 
 Commands:
   second      Second subcommand for testing `help`.
@@ -1118,7 +1118,7 @@ Commands:
 Second subcommand for testing `help`.
 
 Options:
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 "###;
 
     #[test]
@@ -1292,7 +1292,7 @@ Options:
                              documentation
   -s, --scribble <scribble>  write <scribble> repeatedly
   -v, --verbose              say more. Defaults to $BLAST_VERBOSE.
-  -h, --help                 Show this help message and exit
+  -h, --help                 Show this help message and exit.
 
 Commands:
   blow-up                    explosively separate
@@ -1332,7 +1332,7 @@ Positional Arguments:
   name
 
 Options:
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 "###,
         );
     }
@@ -1362,7 +1362,7 @@ Positional Arguments:
   two         this one is real
 
 Options:
-  -h, --help  Show this help message and exit
+  -h, --help  Show this help message and exit.
 "###,
         );
     }
@@ -1733,7 +1733,7 @@ Woot
 
 Options:
   -n, --n <n>  fooey
-  -h, --help   Show this help message and exit
+  -h, --help   Show this help message and exit.
 "###
                 .to_owned()
             )),

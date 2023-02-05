@@ -44,7 +44,7 @@
 //!   -j, --jump        Whether or not to jump.
 //!   --height          How high to go.
 //!   --pilot-nickname  An optional nickname for the pilot.
-//!   --help            Show this help message and exit
+//!   --help            Show this help message and exit.
 //! ```
 //!
 //! The resulting program can then be used in any of these ways:
@@ -428,7 +428,7 @@ pub trait FromArgs: Sized {
     /// Command to manage a classroom.
     ///
     /// Options:
-    ///   -h, --help  Show this help message and exit
+    ///   -h, --help  Show this help message and exit.
     ///
     /// Commands:
     ///   list        List all the classes.
@@ -450,7 +450,7 @@ pub trait FromArgs: Sized {
     ///
     /// Options:
     ///   --teacher-name <name>  List classes for only this teacher.
-    ///   -h, --help             Show this help message and exit
+    ///   -h, --help             Show this help message and exit.
     /// "#.to_owned()),
     /// );
     ///
@@ -586,7 +586,7 @@ pub trait FromArgs: Sized {
     /// Command to manage a classroom.
     ///
     /// Options:
-    ///   -h, --help  Show this help message and exit
+    ///   -h, --help  Show this help message and exit.
     ///
     /// Commands:
     ///   list        List all the classes.

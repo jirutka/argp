@@ -52,7 +52,7 @@ Options:
   -j, --jump               Whether or not to jump.
   --height <meters>        How high to go.
   --pilot-nickname <name>  An optional nickname for the pilot.
-  -h, --help               Show this help message and exit
+  -h, --help               Show this help message and exit.
 ```
 
 The resulting program can then be used in any of these ways:

@@ -104,7 +104,7 @@ impl Help {
             options_and_args.map(|r| r.names).chain(subcommands.iter().map(|r| r.name)),
         );
 
-        write_opts_section(&mut out, "Positional Arguments:", self.positionals.iter(), desc_indent);
+        write_opts_section(&mut out, "Arguments:", self.positionals.iter(), desc_indent);
         write_opts_section(&mut out, "Options:", options, desc_indent);
         write_cmds_section(&mut out, "Commands:", &subcommands, desc_indent);
 

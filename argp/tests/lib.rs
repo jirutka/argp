@@ -610,7 +610,7 @@ mod positional {
 
 Woot
 
-Positional Arguments:
+Arguments:
   a           fooey
   b           fooey
 
@@ -693,7 +693,7 @@ Options:
 
 Woot
 
-Positional Arguments:
+Arguments:
   a           fooey
 
 Options:
@@ -1328,7 +1328,7 @@ Error codes:
 
 Destroy the contents of <file>.
 
-Positional Arguments:
+Arguments:
   name
 
 Options:
@@ -1358,7 +1358,7 @@ Options:
 
 Short description
 
-Positional Arguments:
+Arguments:
   two         this one is real
 
 Options:

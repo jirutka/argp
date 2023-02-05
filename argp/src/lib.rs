@@ -927,14 +927,16 @@ pub fn parse_struct_args(
     help: &Help,
 ) -> Result<(), EarlyExit> {
     let mut help_requested = false;
+    let mut help_cmd = false;
     let mut remaining_args = args;
     let mut positional_index = 0;
     let mut options_ended = false;
 
     'parse_args: while let Some(&next_arg) = remaining_args.first() {
         remaining_args = &remaining_args[1..];
-        if (next_arg == "--help" || next_arg == "help" || next_arg == "-h") && !options_ended {
+        if matches!(next_arg, "--help" | "-h" | "help") && !options_ended {
             help_requested = true;
+            help_cmd = next_arg == "help";
             continue;
         }
 
@@ -944,7 +946,7 @@ pub fn parse_struct_args(
                 continue;
             }
 
-            if help_requested {
+            if help_cmd {
                 return Err(Error::OptionsAfterHelp.into());
             }
 

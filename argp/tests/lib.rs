@@ -1151,9 +1151,11 @@ Options:
         expect_help(&["first", "--help"], FIRST_HELP_STRING);
     }
 
+    // This was modified from testing the '--help' switch to the 'help'
+    // subcommand.
     #[test]
-    fn help_flag_trailing_arguments_are_an_error() {
-        let e = OneOption::from_args(&["cmdname"], &["--help", "--foo", "bar"])
+    fn help_command_trailing_arguments_are_an_error() {
+        let e = OneOption::from_args(&["cmdname"], &["help", "--foo", "bar"])
             .expect_err("should exit early");
         assert_eq!(EarlyExit::Err(Error::OptionsAfterHelp), e);
     }

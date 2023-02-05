@@ -449,8 +449,8 @@ pub trait FromArgs: Sized {
     /// List all the classes.
     ///
     /// Options:
-    ///   --teacher-name <name>  List classes for only this teacher.
-    ///   -h, --help             Show this help message and exit.
+    ///       --teacher-name <name>  List classes for only this teacher.
+    ///   -h, --help                 Show this help message and exit.
     /// "#.to_owned()),
     /// );
     ///

@@ -256,7 +256,7 @@ fn multiline_doc_comment_description() {
 Short description
 
 Options:
-  --s         a switch with a description that is spread across a number of
+      --s     a switch with a description that is spread across a number of
               lines of comments.
   -h, --help  Show this help message and exit.
 "###,
@@ -426,8 +426,8 @@ Options:
 Woot
 
 Options:
-  --option-name <name>  fooey
-  -h, --help            Show this help message and exit.
+      --option-name <name>  fooey
+  -h, --help                Show this help message and exit.
 "###,
         );
     }
@@ -528,12 +528,12 @@ mod global_options {
 Top level.
 
 Options:
-  --a <a>     A global option a.
-  --x <x>     A local option x.
-  -h, --help  Show this help message and exit.
+      --a <a>  A global option a.
+      --x <x>  A local option x.
+  -h, --help   Show this help message and exit.
 
 Commands:
-  one         First subcommand.
+  one          First subcommand.
 "###,
         );
 
@@ -544,12 +544,12 @@ Commands:
 First subcommand.
 
 Options:
-  --a <a>     A global option a.
-  --b         A global option b.
-  -h, --help  Show this help message and exit.
+      --a <a>  A global option a.
+      --b      A global option b.
+  -h, --help   Show this help message and exit.
 
 Commands:
-  two         Second subcommand.
+  two          Second subcommand.
 "###,
         );
 
@@ -560,10 +560,10 @@ Commands:
 Second subcommand.
 
 Options:
-  --a <a>     A global option a.
-  --b         A global option b.
-  --fooey     Whether to fooey.
-  -h, --help  Show this help message and exit.
+      --a <a>  A global option a.
+      --b      A global option b.
+      --fooey  Whether to fooey.
+  -h, --help   Show this help message and exit.
 "###,
         );
     }
@@ -694,12 +694,12 @@ Options:
 Woot
 
 Arguments:
-  a           fooey
+  a            fooey
 
 Options:
-  --b         woo
-  --c <c>     stuff
-  -h, --help  Show this help message and exit.
+      --b      woo
+      --c <c>  stuff
+  -h, --help   Show this help message and exit.
 "###,
         );
     }
@@ -1288,7 +1288,7 @@ Destroy the contents of <file>.
 Options:
   -f, --force                force, ignore minor errors. This description is so
                              long that it wraps to the next line.
-  --really-really-really-long-name-for-pat
+      --really-really-really-long-name-for-pat
                              documentation
   -s, --scribble <scribble>  write <scribble> repeatedly
   -v, --verbose              say more. Defaults to $BLAST_VERBOSE.

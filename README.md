@@ -49,10 +49,10 @@ Usage: cmdname [-j] --height <meters> [--pilot-nickname <name>]
 Reach new heights.
 
 Options:
-  -j, --jump               Whether or not to jump.
-  --height <meters>        How high to go.
-  --pilot-nickname <name>  An optional nickname for the pilot.
-  -h, --help               Show this help message and exit.
+  -j, --jump                   Whether or not to jump.
+      --height <meters>        How high to go.
+      --pilot-nickname <name>  An optional nickname for the pilot.
+  -h, --help                   Show this help message and exit.
 ```
 
 The resulting program can then be used in any of these ways:

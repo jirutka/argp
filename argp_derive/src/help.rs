@@ -197,6 +197,9 @@ fn option_info(errors: &Errors, field: &StructField<'_>) -> TokenStream {
         names.push('-');
         names.push(short);
         names.push_str(", ");
+    } else {
+        //             "-x, "
+        names.push_str("    ");
     }
     names.push_str(long_with_leading_dashes);
 

@@ -13,7 +13,22 @@ Argp is a Derive-based argument parser optimized for code size and flexibility.
 
 The public API of this library consists primarily of the `FromArgs` derive and the `from_env` function, which can be used to produce a top-level `FromArgs` type from the current program's command-line arguments.
 
-Argp is originally a fork of https://github.com/google/argh/[argh].
+
+== Origins
+
+Argp originally started as a fork of https://github.com/google/argh/[argh] to make it less opinionated, more UNIXy and flexible.
+
+Notable changes from argh:
+
+* Support for global options (i.e. options defined at the top level can be used in subcommands).
+* No pedantic requirement for descriptions to start with a lower-case letter.
+* The indentation of descriptions in the help message is dynamically calculated based on the widths of all elements.
+* The `arg_name` attribute can also be used even on positional arguments to customise how the argument is displayed in the help message.
+* Errors are represented using an enum instead of a String and the information used to generate a help message is stored in a partially structured form in a struct; this opens the door to customisation of messages.
+* Specialised `example`, `note`, and `error_code` attributes are replaced by a single `footer` attribute – you can use it for whatever you like.
+* Positional arguments in the Usage string are displayed _after_ options and switches and `<arg_name>` is displayed in descriptions of options.
+* Trailing options are allowed after the `-h, --help` switch, but are not allowed after the `help` subcommand only.
+* `redact_arg_values` is optional – behind the feature flag of the same name.
 
 
 == Basic Example

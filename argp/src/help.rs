@@ -11,6 +11,7 @@
 use std::fmt;
 use std::iter;
 use std::ops::Deref;
+use std::ptr;
 
 const INDENT: &str = "  ";
 const DESC_MIN_INDENT: usize = 8;
@@ -26,13 +27,15 @@ const HELP_OPT: OptionArgInfo = OptionArgInfo {
 };
 
 /// Help message generator.
-pub struct Help<'a> {
-    info: &'a HelpInfo,
-    command_name: &'a [&'a str],
-    global_options: &'a [&'a OptionArgInfo],
+#[derive(Debug)]
+pub struct Help {
+    info: &'static HelpInfo,
+    command_name: String,
+    global_options: Vec<&'static OptionArgInfo>,
 }
 
 /// Information about a specific (sub)command used for generating a help message.
+#[derive(Debug)]
 pub struct HelpInfo {
     pub description: &'static str,
     pub positionals: &'static [OptionArgInfo],
@@ -43,6 +46,7 @@ pub struct HelpInfo {
 
 /// A nested struct in [HelpInfo] used for generating the Commands section in
 /// a help message.
+#[derive(Debug)]
 pub struct CommandsHelpInfo {
     pub usage: &'static str,
     pub subcommands: &'static [&'static CommandInfo],
@@ -51,6 +55,7 @@ pub struct CommandsHelpInfo {
 
 /// Information about a particular command used for generating a help message.
 /// Unlike the other structures in this module, this one is considered stable.
+#[derive(Debug)]
 pub struct CommandInfo {
     /// The name of the command.
     pub name: &'static str,
@@ -60,6 +65,7 @@ pub struct CommandInfo {
 
 /// Information about a specific option or positional argument used for
 /// generating a help message.
+#[derive(Debug)]
 pub struct OptionArgInfo {
     pub usage: &'static str,
     pub names: &'static str,
@@ -69,11 +75,10 @@ pub struct OptionArgInfo {
     pub global: bool,
 }
 
-impl<'a> Help<'a> {
+impl Help {
     /// Generates a help message.
     pub fn generate(&self) -> String {
         let info = self.info;
-        let command_name = self.command_name.join(" ");
 
         let options = self
             .global_options
@@ -84,7 +89,7 @@ impl<'a> Help<'a> {
         let options_and_args = options.clone().chain(info.positionals);
 
         let mut out = String::from("Usage: ");
-        out.push_str(&command_name);
+        out.push_str(&self.command_name);
 
         for usage in options_and_args
             .clone()
@@ -101,7 +106,11 @@ impl<'a> Help<'a> {
         }
 
         out.push_str(SECTION_SEPARATOR);
-        out.push_str(&info.description.replace("{command_name}", &command_name));
+        out.push_str(
+            &info
+                .description
+                .replace("{command_name}", &self.command_name),
+        );
 
         let subcommands = if let Some(cmds) = &info.commands {
             cmds.subcommands
@@ -127,7 +136,7 @@ impl<'a> Help<'a> {
 
         if !info.footer.is_empty() {
             out.push_str(SECTION_SEPARATOR);
-            out.push_str(&info.footer.replace("{command_name}", &command_name));
+            out.push_str(&info.footer.replace("{command_name}", &self.command_name));
         }
 
         out.push('\n');
@@ -136,9 +145,27 @@ impl<'a> Help<'a> {
     }
 }
 
-impl<'a> fmt::Display for Help<'a> {
+impl fmt::Display for Help {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.generate().fmt(f)
+    }
+}
+
+impl PartialEq for Help {
+    fn eq(&self, other: &Self) -> bool {
+        if !ptr::eq(self.info, other.info) {
+            return false;
+        }
+        if self.command_name != other.command_name {
+            return false;
+        }
+        if self.global_options.len() != other.global_options.len() {
+            return false;
+        }
+        self.global_options
+            .iter()
+            .zip(other.global_options.iter())
+            .all(|(a, b)| ptr::eq(*a, *b))
     }
 }
 
@@ -149,11 +176,11 @@ impl HelpInfo {
     /// - `global_options`: Information about additional global options (from
     ///   ancestors) to add to the generated help message.
     #[inline]
-    pub const fn help<'a>(
-        &'a self,
-        command_name: &'a [&'a str],
-        global_options: &'a [&'a OptionArgInfo],
-    ) -> Help<'a> {
+    pub const fn help(
+        &'static self,
+        command_name: String,
+        global_options: Vec<&'static OptionArgInfo>,
+    ) -> Help {
         Help {
             info: self,
             command_name,

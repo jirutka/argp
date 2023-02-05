@@ -347,7 +347,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-use crate::help::HelpInfo;
+use crate::help::{Help, HelpInfo};
 use crate::parser::ParseGlobalOptions;
 
 pub use crate::error::{Error, MissingRequirements};
@@ -369,7 +369,7 @@ pub trait FromArgs: Sized {
     /// # Examples
     ///
     /// ```rust
-    /// # use argp::FromArgs;
+    /// # use argp::{EarlyExit, FromArgs};
     ///
     /// /// Command to manage a classroom.
     /// #[derive(Debug, PartialEq, FromArgs)]
@@ -425,10 +425,10 @@ pub trait FromArgs: Sized {
     ///     &["classroom"],
     ///     &["help"],
     /// ).unwrap_err();
-    /// assert_eq!(
-    ///     early_exit,
-    ///     argp::EarlyExit::Help(
-    ///        r#"Usage: classroom <command> [<args>]
+    /// match early_exit {
+    ///     EarlyExit::Help(help) => assert_eq!(
+    ///         help.generate(),
+    ///         r#"Usage: classroom <command> [<args>]
     ///
     /// Command to manage a classroom.
     ///
@@ -438,26 +438,30 @@ pub trait FromArgs: Sized {
     /// Commands:
     ///   list        List all the classes.
     ///   add         Add students to a class.
-    /// "#.to_owned()),
-    /// );
+    /// "#.to_owned(),
+    ///     ),
+    ///     _ => panic!("expected help"),
+    /// };
     ///
     /// // Help works with subcommands.
     /// let early_exit = ClassroomCmd::from_args(
     ///     &["classroom"],
     ///     &["list", "help"],
     /// ).unwrap_err();
-    /// assert_eq!(
-    ///     early_exit,
-    ///     argp::EarlyExit::Help(
-    ///        r#"Usage: classroom list [--teacher-name <name>]
+    /// match early_exit {
+    ///     EarlyExit::Help(help) => assert_eq!(
+    ///         help.generate(),
+    ///         r#"Usage: classroom list [--teacher-name <name>]
     ///
     /// List all the classes.
     ///
     /// Options:
     ///       --teacher-name <name>  List classes for only this teacher.
     ///   -h, --help                 Show this help message and exit.
-    /// "#.to_owned()),
-    /// );
+    /// "#.to_owned(),
+    ///     ),
+    ///     _ => panic!("expected help"),
+    /// };
     ///
     /// // Incorrect arguments will error out.
     /// let err = ClassroomCmd::from_args(
@@ -611,14 +615,14 @@ pub enum EarlyExit {
     Err(Error),
 
     /// Early exit and display the help message.
-    Help(String),
+    Help(Help),
 }
 
 impl fmt::Display for EarlyExit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EarlyExit::Err(err) => err.fmt(f),
-            EarlyExit::Help(output) => output.fmt(f),
+            EarlyExit::Help(help) => help.fmt(f),
         }
     }
 }
@@ -644,8 +648,8 @@ pub fn from_env<T: TopLevelCommand>() -> T {
 
     T::from_args(&[&cmd], &args[1..]).unwrap_or_else(|early_exit| {
         exit(match early_exit {
-            EarlyExit::Help(output) => {
-                println!("{}", output);
+            EarlyExit::Help(help) => {
+                println!("{}", help.generate());
                 0
             }
             EarlyExit::Err(err) => {
@@ -670,8 +674,8 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
 
     T::from_args(&[&cmd], &args[2..]).unwrap_or_else(|early_exit| {
         exit(match early_exit {
-            EarlyExit::Help(output) => {
-                println!("{}", output);
+            EarlyExit::Help(help) => {
+                println!("{}", help.generate());
                 0
             }
             EarlyExit::Err(err) => {

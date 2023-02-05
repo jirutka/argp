@@ -26,7 +26,7 @@ pub fn parse_struct_args(
     mut parse_options: ParseStructOptions<'_, '_>,
     mut parse_positionals: ParseStructPositionals<'_>,
     mut parse_subcommand: Option<ParseStructSubCommand<'_>>,
-    help: &HelpInfo,
+    help: &'static HelpInfo,
 ) -> Result<(), EarlyExit> {
     let mut help_requested = false;
     let mut help_cmd = false;
@@ -96,7 +96,7 @@ pub fn parse_struct_args(
             .parent
             .map_or_else(Vec::new, |p| p.global_options());
 
-        Err(EarlyExit::Help(help.help(cmd_name, &global_options).generate()))
+        Err(EarlyExit::Help(help.help(cmd_name.join(" "), global_options)))
     } else {
         Ok(())
     }
@@ -182,7 +182,7 @@ pub trait ParseGlobalOptions {
     /// Returns a vector representing global options specified on this instance
     /// and recursively on the parent. This is used for generating a help
     /// message.
-    fn global_options<'a>(&self) -> Vec<&'a OptionArgInfo>;
+    fn global_options(&self) -> Vec<&'static OptionArgInfo>;
 }
 
 impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
@@ -202,7 +202,7 @@ impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
             })
     }
 
-    fn global_options<'b>(&self) -> Vec<&'b OptionArgInfo> {
+    fn global_options(&self) -> Vec<&'static OptionArgInfo> {
         let mut opts = self
             .parent
             .as_ref()

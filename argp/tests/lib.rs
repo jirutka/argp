@@ -386,8 +386,9 @@ fn missing_option_value() {
 fn assert_help_string<T: FromArgs>(help_str: &str) {
     match T::from_args(&["test_arg_0"], &["--help"]) {
         Ok(_) => panic!("help was parsed as args"),
-        Err(e) => {
-            assert_eq!(EarlyExit::Help(help_str.to_owned()), e);
+        Err(EarlyExit::Err(_)) => panic!("expected EarlyExit::Help"),
+        Err(EarlyExit::Help(help)) => {
+            assert_eq!(help.generate(), help_str);
         }
     }
 }
@@ -578,8 +579,12 @@ mod global_options {
     }
 
     fn expect_help(args: &[&str], expected_help_string: &str) {
-        let e = TopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
-        assert_eq!(EarlyExit::Help(expected_help_string.to_owned()), e);
+        let exit_early = TopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
+
+        match exit_early {
+            EarlyExit::Help(help) => assert_eq!(expected_help_string, help.generate()),
+            _ => panic!("expected EarlyExit::Help"),
+        }
     }
 
     #[test]
@@ -1149,8 +1154,13 @@ mod fuchsia_commandline_tools_rubric {
     struct HelpSecondSub {}
 
     fn expect_help(args: &[&str], expected_help_string: &str) {
-        let e = HelpTopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
-        assert_eq!(EarlyExit::Help(expected_help_string.to_owned()), e);
+        let exit_early =
+            HelpTopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
+
+        match exit_early {
+            EarlyExit::Help(help) => assert_eq!(expected_help_string, help.generate()),
+            _ => panic!("expected EarlyExit::Help"),
+        }
     }
 
     const MAIN_HELP_STRING: &str = r###"Usage: cmdname <command> [<args>]
@@ -1851,9 +1861,12 @@ mod parser {
             n: Vec<String>,
         }
 
-        assert_eq!(
-            Repeating::from_args(&["program-name"], &["--help"]),
-            Err(EarlyExit::Help(
+        let early_exit = Repeating::from_args(&["program-name"], &["--help"])
+            .expect_err("unexpectedly succeeded parsing");
+
+        if let EarlyExit::Help(help) = early_exit {
+            assert_eq!(
+                help.generate(),
                 r###"Usage: program-name [-n <n...>]
 
 Woot
@@ -1862,9 +1875,10 @@ Options:
   -n, --n <n>  fooey
   -h, --help   Show this help message and exit.
 "###
-                .to_owned()
-            )),
-        );
+            )
+        } else {
+            panic!("expected EarlyExit::Help");
+        }
     }
 
     #[test]

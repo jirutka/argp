@@ -1,5 +1,7 @@
 **/*.rs.bk
 *.swp
 /Cargo.lock
+/*/README.md
+/README.md
 /*/target/
 /target/

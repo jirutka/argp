@@ -1,23 +1,25 @@
-# Argp
-**Argp is a Derive-based argument parser optimized for code size**
+= Argp
+Jakub Jirutka <https://github.com/jirutka[@jirutka]>
+:proj-name: argp
+:gh-name: jirutka/{proj-name}
 
-[![crates.io](https://img.shields.io/crates/v/argp.svg)](https://crates.io/crates/argp)
-[![license](https://img.shields.io/badge/license-BSD3.0-blue.svg)](https://github.com/jirutka/argp/LICENSE)
-[![docs.rs](https://docs.rs/argp/badge.svg)](https://docs.rs/crate/argp/)
-![CI](https://github.com/jirutka/argp/workflows/CI/badge.svg)
+ifdef::env-github[]
+image:https://img.shields.io/crates/v/{proj-name}.svg[Version on crates.io, link=https://crates.io/crates/{proj-name}]
+image:https://docs.rs/{proj-name}/badge.svg[docs.rs, link=https://docs.rs/crate/{proj-name}/]
+image:https://github.com/{gh-name}/workflows/CI/badge.svg[CI Workflow, link=https://github.com/{gh-name}/actions?query=workflow%3A%22CI%22]
+endif::env-github[]
 
-Derive-based argument parsing optimized for code size and flexibility.
+Argp is a Derive-based argument parser optimized for code size and flexibility.
 
-The public API of this library consists primarily of the `FromArgs`
-derive and the `from_env` function, which can be used to produce
-a top-level `FromArgs` type from the current program's command-line
-arguments.
+The public API of this library consists primarily of the `FromArgs` derive and the `from_env` function, which can be used to produce a top-level `FromArgs` type from the current program's command-line arguments.
 
-Argp is originally a fork of [argh](https://github.com/google/argh/).
+Argp is originally a fork of https://github.com/google/argh/[argh].
 
-## Basic Example
 
-```rust,no_run
+== Basic Example
+
+[source, rust]
+----
 use argp::FromArgs;
 
 /// Reach new heights.
@@ -39,11 +41,11 @@ struct GoUp {
 fn main() {
     let up: GoUp = argp::from_env();
 }
-```
+----
 
 `./some_bin --help` will then output the following:
 
-```
+....
 Usage: cmdname [-j] --height <meters> [--pilot-nickname <name>]
 
 Reach new heights.
@@ -53,22 +55,21 @@ Options:
       --height <meters>        How high to go.
       --pilot-nickname <name>  An optional nickname for the pilot.
   -h, --help                   Show this help message and exit.
-```
+....
 
 The resulting program can then be used in any of these ways:
-- `./some_bin --height 5`
-- `./some_bin -j --height 5`
-- `./some_bin --jump --height 5 --pilot-nickname Wes`
+
+* `./some_bin --height 5`
+* `./some_bin -j --height 5`
+* `./some_bin --jump --height 5 --pilot-nickname Wes`
 
 Switches, like `jump`, are optional and will be set to true if provided.
 
-Options, like `height` and `pilot_nickname`, can be either required,
-optional, or repeating, depending on whether they are contained in an
-`Option` or a `Vec`. Default values can be provided using the
-`#[argp(default = "<your_code_here>")]` attribute, and in this case an
-option is treated as optional.
+Options, like `height` and `pilot_nickname`, can be either required, optional, or repeating, depending on whether they are contained in an `Option` or a `Vec`.
+Default values can be provided using the `#[argp(default = "<your_code_here>")]` attribute, and in this case an option is treated as optional.
 
-```rust
+[source, rust]
+----
 use argp::FromArgs;
 
 fn default_height() -> usize {
@@ -94,14 +95,13 @@ struct GoUp {
 fn main() {
     let up: GoUp = argp::from_env();
 }
-```
+----
 
-Custom option types can be deserialized so long as they implement the
-`FromArgValue` trait (automatically implemented for all `FromStr` types).
-If more customized parsing is required, you can supply a custom
-`fn(&str) -> Result<T, String>` using the `from_str_fn` attribute:
+Custom option types can be deserialized so long as they implement the `FromArgValue` trait (automatically implemented for all `FromStr` types).
+If more customized parsing is required, you can supply a custom `fn(&str) -> Result<T, String>` using the `from_str_fn` attribute:
 
-```rust
+[source, rust]
+----
 use argp::FromArgs;
 
 /// Goofy thing.
@@ -115,13 +115,13 @@ struct FiveStruct {
 fn always_five(_value: &str) -> Result<usize, String> {
     Ok(5)
 }
-```
+----
 
 Positional arguments can be declared using `#[argp(positional)]`.
-These arguments will be parsed in order of their declaration in
-the structure:
+These arguments will be parsed in order of their declaration in the structure:
 
-```rust
+[source, rust]
+----
 use argp::FromArgs;
 
 /// A command with positional arguments.
@@ -130,16 +130,15 @@ struct WithPositional {
     #[argp(positional)]
     first: String,
 }
-```
+----
 
-The last positional argument may include a default, or be wrapped in
-`Option` or `Vec` to indicate an optional or repeating positional argument.
+The last positional argument may include a default, or be wrapped in `Option` or `Vec` to indicate an optional or repeating positional argument.
 
-Subcommands are also supported. To use a subcommand, declare a separate
-`FromArgs` type for each subcommand as well as an enum that cases
-over each command:
+Subcommands are also supported.
+To use a subcommand, declare a separate `FromArgs` type for each subcommand as well as an enum that cases over each command:
 
-```rust
+[source, rust]
+----
 use argp::FromArgs;
 
 /// Top-level command.
@@ -177,16 +176,25 @@ struct SubCommandTwo {
     #[argp(switch)]
     fooey: bool,
 }
-```
+----
 
-## How to debug the expanded derive macro for `argp`
 
-The `argp::FromArgs` derive macro can be debugged with the [cargo-expand](https://crates.io/crates/cargo-expand) crate.
+== How to debug the expanded derive macro for `argp`
 
-### Expand the derive macro in `examples/simple_example.rs`
+The `argp::FromArgs` derive macro can be debugged with the https://crates.io/crates/cargo-expand[cargo-expand] crate.
 
-See [argp/examples/simple_example.rs](./argp/examples/simple_example.rs) for the example struct we wish to expand.
 
-First, install `cargo-expand` by running `cargo install cargo-expand`. Note this requires the nightly build of Rust.
+=== Expand the derive macro in `examples/simple_example.rs`
+
+See link:argp/examples/simple_example.rs[] for the example struct we wish to expand.
+
+First, install `cargo-expand` by running `cargo install cargo-expand`.
+Note this requires the nightly build of Rust.
 
 Once installed, run `cargo expand` with in the `argp` package and you can see the expanded code.
+
+
+== License
+
+This project is licensed under http://opensource.org/licenses/BSD-3-Clause/[BSD-3-Clause license].
+For the full text of the license, see the link:LICENSE[LICENSE] file.

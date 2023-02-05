@@ -85,6 +85,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Install asciidoctor and pandoc
+        run: sudo apt-get install asciidoctor pandoc
+
+      - name: Convert README to Markdown
+        run: |
+          printf '# Argp\n\n' > README.md
+          asciidoctor -b docbook -o - README.adoc \
+              | pandoc -f docbook -t gfm --wrap=preserve --shift-heading-level-by=1 \
+              | tee argp/README.md argp_derive/README.md
+
       - name: Publish to crates.io
         run: |
           cargo publish -p argp_derive --locked --verbose

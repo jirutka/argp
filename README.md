@@ -20,18 +20,18 @@ Argp is originally a fork of [argh](https://github.com/google/argh/).
 ```rust,no_run
 use argp::FromArgs;
 
-#[derive(FromArgs)]
 /// Reach new heights.
+#[derive(FromArgs)]
 struct GoUp {
-    /// whether or not to jump
+    /// Whether or not to jump.
     #[argp(switch, short = 'j')]
     jump: bool,
 
-    /// how high to go
+    /// How high to go.
     #[argp(option, arg_name = "meters")]
     height: usize,
 
-    /// an optional nickname for the pilot
+    /// An optional nickname for the pilot.
     #[argp(option, arg_name = "name")]
     pilot_nickname: Option<String>,
 }
@@ -49,9 +49,9 @@ Usage: cmdname [-j] --height <meters> [--pilot-nickname <name>]
 Reach new heights.
 
 Options:
-  -j, --jump               whether or not to jump
-  --height <meters>        how high to go
-  --pilot-nickname <name>  an optional nickname for the pilot
+  -j, --jump               Whether or not to jump.
+  --height <meters>        How high to go.
+  --pilot-nickname <name>  An optional nickname for the pilot.
   -h, --help               Show this help message and exit
 ```
 
@@ -75,18 +75,18 @@ fn default_height() -> usize {
     5
 }
 
-#[derive(FromArgs)]
 /// Reach new heights.
+#[derive(FromArgs)]
 struct GoUp {
-    /// an optional nickname for the pilot
+    /// An optional nickname for the pilot.
     #[argp(option)]
     pilot_nickname: Option<String>,
 
-    /// an optional height
+    /// An optional height.
     #[argp(option, default = "default_height()")]
     height: usize,
 
-    /// an optional direction which is "up" by default
+    /// An optional direction which is "up" by default.
     #[argp(option, default = "String::from(\"only up\")")]
     direction: String,
 }
@@ -104,10 +104,10 @@ If more customized parsing is required, you can supply a custom
 ```rust
 use argp::FromArgs;
 
-#[derive(FromArgs)]
 /// Goofy thing.
+#[derive(FromArgs)]
 struct FiveStruct {
-    /// always five
+    /// Always five.
     #[argp(option, from_str_fn(always_five))]
     five: usize,
 }
@@ -124,8 +124,8 @@ the structure:
 ```rust
 use argp::FromArgs;
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// A command with positional arguments.
+#[derive(FromArgs, PartialEq, Debug)]
 struct WithPositional {
     #[argp(positional)]
     first: String,
@@ -142,11 +142,11 @@ over each command:
 ```rust
 use argp::FromArgs;
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
+#[derive(FromArgs, PartialEq, Debug)]
 struct TopLevel {
+    /// Be verbose.
     #[argp(switch, short = 'v', global)]
-    /// be verbose
     verbose: bool,
 
     #[argp(subcommand)]
@@ -160,21 +160,21 @@ enum MySubCommandEnum {
     Two(SubCommandTwo),
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// First subcommand.
+#[derive(FromArgs, PartialEq, Debug)]
 #[argp(subcommand, name = "one")]
 struct SubCommandOne {
+    /// How many x.
     #[argp(option)]
-    /// how many x
     x: usize,
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// Second subcommand.
+#[derive(FromArgs, PartialEq, Debug)]
 #[argp(subcommand, name = "two")]
 struct SubCommandTwo {
+    /// Whether to fooey.
     #[argp(switch)]
-    /// whether to fooey
     fooey: bool,
 }
 ```

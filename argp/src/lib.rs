@@ -14,18 +14,18 @@
 //! ```rust,no_run
 //! use argp::FromArgs;
 //!
-//! #[derive(FromArgs)]
 //! /// Reach new heights.
+//! #[derive(FromArgs)]
 //! struct GoUp {
-//!     /// whether or not to jump
+//!     /// Whether or not to jump.
 //!     #[argp(switch, short = 'j')]
 //!     jump: bool,
 //!
-//!     /// how high to go
+//!     /// How high to go.
 //!     #[argp(option)]
 //!     height: usize,
 //!
-//!     /// an optional nickname for the pilot
+//!     /// An optional nickname for the pilot.
 //!     #[argp(option)]
 //!     pilot_nickname: Option<String>,
 //! }
@@ -41,9 +41,9 @@
 //! Reach new heights.
 //!
 //! Options:
-//!   -j, --jump        whether or not to jump
-//!   --height          how high to go
-//!   --pilot-nickname  an optional nickname for the pilot
+//!   -j, --jump        Whether or not to jump.
+//!   --height          How high to go.
+//!   --pilot-nickname  An optional nickname for the pilot.
 //!   --help            Show this help message and exit
 //! ```
 //!
@@ -67,18 +67,18 @@
 //!     5
 //! }
 //!
-//! #[derive(FromArgs)]
 //! /// Reach new heights.
+//! #[derive(FromArgs)]
 //! struct GoUp {
-//!     /// an optional nickname for the pilot
+//!     /// An optional nickname for the pilot.
 //!     #[argp(option)]
 //!     pilot_nickname: Option<String>,
 //!
-//!     /// an optional height
+//!     /// An optional height.
 //!     #[argp(option, default = "default_height()")]
 //!     height: usize,
 //!
-//!     /// an optional direction which is "up" by default
+//!     /// An optional direction which is "up" by default.
 //!     #[argp(option, default = "String::from(\"only up\")")]
 //!     direction: String,
 //! }
@@ -96,10 +96,10 @@
 //! ```
 //! # use argp::FromArgs;
 //!
-//! #[derive(FromArgs)]
 //! /// Goofy thing.
+//! #[derive(FromArgs)]
 //! struct FiveStruct {
-//!     /// always five
+//!     /// Always five.
 //!     #[argp(option, from_str_fn(always_five))]
 //!     five: usize,
 //! }
@@ -114,9 +114,10 @@
 //! the structure:
 //!
 //! ```rust
-//! use argp::FromArgs;
-//! #[derive(FromArgs, PartialEq, Debug)]
+//! # use argp::FromArgs;
+//!
 //! /// A command with positional arguments.
+//! #[derive(FromArgs, PartialEq, Debug)]
 //! struct WithPositional {
 //!     #[argp(positional)]
 //!     first: String,
@@ -131,11 +132,12 @@
 //! match the greedy positional:
 //!
 //! ```rust
-//! use argp::FromArgs;
-//! #[derive(FromArgs, PartialEq, Debug)]
+//! # use argp::FromArgs;
+//!
 //! /// A command with a greedy positional argument at the end.
+//! #[derive(FromArgs, PartialEq, Debug)]
 //! struct WithGreedyPositional {
-//!     /// some stuff
+//!     /// Some stuff.
 //!     #[argp(option)]
 //!     stuff: Option<String>,
 //!     #[argp(positional, greedy)]
@@ -161,15 +163,15 @@
 //! ```rust
 //! # use argp::FromArgs;
 //!
-//! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Top-level command.
+//! #[derive(FromArgs, PartialEq, Debug)]
 //! struct TopLevel {
+//!     /// Be verbose.
 //!     #[argp(switch, short = 'v', global)]
-//!     /// be verbose
 //!     verbose: bool,
 //!
+//!     /// Run locally.
 //!     #[argp(switch)]
-//!     /// run locally
 //!     quiet: bool,
 //!
 //!     #[argp(subcommand)]
@@ -183,21 +185,21 @@
 //!     Two(SubCommandTwo),
 //! }
 //!
-//! #[derive(FromArgs, PartialEq, Debug)]
 //! /// First subcommand.
+//! #[derive(FromArgs, PartialEq, Debug)]
 //! #[argp(subcommand, name = "one")]
 //! struct SubCommandOne {
+//!     /// How many x.
 //!     #[argp(option)]
-//!     /// how many x
 //!     x: usize,
 //! }
 //!
-//! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Second subcommand.
+//! #[derive(FromArgs, PartialEq, Debug)]
 //! #[argp(subcommand, name = "two")]
 //! struct SubCommandTwo {
+//!     /// Whether to fooey.
 //!     #[argp(switch)]
-//!     /// whether to fooey
 //!     fooey: bool,
 //! }
 //! ```
@@ -226,8 +228,8 @@
 //! # use argp::FromArgs;
 //! # use once_cell::sync::OnceCell;
 //!
-//! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Top-level command.
+//! #[derive(FromArgs, PartialEq, Debug)]
 //! struct TopLevel {
 //!     #[argp(subcommand)]
 //!     nested: MySubCommandEnum,
@@ -241,12 +243,12 @@
 //!     Dynamic(Dynamic),
 //! }
 //!
-//! #[derive(FromArgs, PartialEq, Debug)]
 //! /// Normal subcommand.
+//! #[derive(FromArgs, PartialEq, Debug)]
 //! #[argp(subcommand, name = "normal")]
 //! struct NormalSubCommand {
+//!     /// How many x.
 //!     #[argp(option)]
-//!     /// how many x
 //!     x: usize,
 //! }
 //!
@@ -317,14 +319,14 @@
 //! ```rust
 //! # use argp::FromArgs;
 //!
-//! #[derive(FromArgs)]
 //! /// Cargo arguments
+//! #[derive(FromArgs)]
 //! struct CargoArgs {
 //!     // Cargo puts the command name invoked into the first argument,
 //!     // so we don't want this argument to show up in the usage text.
 //!     #[argp(positional, hidden_help)]
 //!     command: String,
-//!     /// an option used for internal debugging
+//!     /// An option used for internal debugging.
 //!     #[argp(option, hidden_help)]
 //!     internal_debugging: String,
 //!     #[argp(positional)]
@@ -378,24 +380,24 @@ pub trait FromArgs: Sized {
     ///     Add(AddCmd),
     /// }
     ///
-    /// /// list all the classes.
+    /// /// List all the classes.
     /// #[derive(Debug, PartialEq, FromArgs)]
     /// #[argp(subcommand, name = "list")]
     /// struct ListCmd {
-    ///     /// list classes for only this teacher.
+    ///     /// List classes for only this teacher.
     ///     #[argp(option, arg_name = "name")]
     ///     teacher_name: Option<String>,
     /// }
     ///
-    /// /// add students to a class.
+    /// /// Add students to a class.
     /// #[derive(Debug, PartialEq, FromArgs)]
     /// #[argp(subcommand, name = "add")]
     /// struct AddCmd {
-    ///     /// the name of the class's teacher.
+    ///     /// The name of the class's teacher.
     ///     #[argp(option)]
     ///     teacher_name: String,
     ///
-    ///     /// the name of the class.
+    ///     /// The name of the class.
     ///     #[argp(positional)]
     ///     class_name: String,
     /// }
@@ -429,8 +431,8 @@ pub trait FromArgs: Sized {
     ///   -h, --help  Show this help message and exit
     ///
     /// Commands:
-    ///   list        list all the classes.
-    ///   add         add students to a class.
+    ///   list        List all the classes.
+    ///   add         Add students to a class.
     /// "#.to_owned()),
     /// );
     ///
@@ -444,10 +446,10 @@ pub trait FromArgs: Sized {
     ///     argp::EarlyExit::Help(
     ///        r#"Usage: classroom list [--teacher-name <name>]
     ///
-    /// list all the classes.
+    /// List all the classes.
     ///
     /// Options:
-    ///   --teacher-name <name>  list classes for only this teacher.
+    ///   --teacher-name <name>  List classes for only this teacher.
     ///   -h, --help             Show this help message and exit
     /// "#.to_owned()),
     /// );
@@ -497,32 +499,32 @@ pub trait FromArgs: Sized {
     ///     Add(AddCmd),
     /// }
     ///
-    /// /// list all the classes.
+    /// /// List all the classes.
     /// #[derive(FromArgs)]
     /// #[argp(subcommand, name = "list")]
     /// struct ListCmd {
-    ///     /// list classes for only this teacher.
+    ///     /// List classes for only this teacher.
     ///     #[argp(option)]
     ///     teacher_name: Option<String>,
     /// }
     ///
-    /// /// add students to a class.
+    /// /// Add students to a class.
     /// #[derive(FromArgs)]
     /// #[argp(subcommand, name = "add")]
     /// struct AddCmd {
-    ///     /// the name of the class's teacher.
+    ///     /// The name of the class's teacher.
     ///     #[argp(option)]
     ///     teacher_name: String,
     ///
-    ///     /// has the class started yet?
+    ///     /// Has the class started yet?
     ///     #[argp(switch)]
     ///     started: bool,
     ///
-    ///     /// the name of the class.
+    ///     /// The name of the class.
     ///     #[argp(positional)]
     ///     class_name: String,
     ///
-    ///     /// the student names.
+    ///     /// The student names.
     ///     #[argp(positional)]
     ///     students: Vec<String>,
     /// }
@@ -587,8 +589,8 @@ pub trait FromArgs: Sized {
     ///   -h, --help  Show this help message and exit
     ///
     /// Commands:
-    ///   list        list all the classes.
-    ///   add         add students to a class.
+    ///   list        List all the classes.
+    ///   add         Add students to a class.
     /// "#.to_string())),
     /// );
     /// ```

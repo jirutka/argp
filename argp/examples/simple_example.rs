@@ -6,11 +6,11 @@ use std::fmt::Debug;
 
 use argp::FromArgs;
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
+#[derive(FromArgs, PartialEq, Debug)]
 struct TopLevel {
+    /// Be verbose.
     #[argp(switch, global)]
-    /// be verbose
     verbose: bool,
 
     #[argp(subcommand)]
@@ -24,21 +24,21 @@ enum MySubCommandEnum {
     Two(SubCommandTwo),
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// First subcommand.
+#[derive(FromArgs, PartialEq, Debug)]
 #[argp(subcommand, name = "one")]
 struct SubCommandOne {
+    /// How many x.
     #[argp(option)]
-    /// how many x
     x: usize,
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// Second subcommand.
+#[derive(FromArgs, PartialEq, Debug)]
 #[argp(subcommand, name = "two")]
 struct SubCommandTwo {
+    /// Whether to fooey.
     #[argp(switch)]
-    /// whether to fooey
     fooey: bool,
 }
 

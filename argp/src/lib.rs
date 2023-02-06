@@ -783,7 +783,10 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
 
 /// Extract the base cmd from a path
 fn cmd<'a>(default: &'a str, path: &'a str) -> &'a str {
-    Path::new(path).file_name().and_then(|s| s.to_str()).unwrap_or(default)
+    Path::new(path)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or(default)
 }
 
 #[cfg(test)]

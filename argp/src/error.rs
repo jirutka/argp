@@ -58,7 +58,11 @@ impl fmt::Display for Error {
                 write!(f, "Trailing options are not allowed after 'help' subcommand.")
             }
             ParseArgument { arg, value, msg } => {
-                let subj = if arg.starts_with('-') { "option" } else { "argument" };
+                let subj = if arg.starts_with('-') {
+                    "option"
+                } else {
+                    "argument"
+                };
                 write!(f, "Error parsing {} '{}' with value '{}': {}.", subj, arg, value, msg)
             }
             UnknownArgument(arg) => write!(f, "Unrecognized argument: {}", arg),

@@ -1,9 +1,6 @@
-# The "Default" setting has a heuristic which splits lines too aggresively.
-# We are willing to revisit this setting in future versions of rustfmt.
-# Bugs:
-#   * https://github.com/rust-lang/rustfmt/issues/3119
-#   * https://github.com/rust-lang/rustfmt/issues/3120
-use_small_heuristics = "Max"
+# Maximum width of the args of a function call before falling back to vertical
+# formatting. Default is 60.
+fn_call_width = 80
 
 # Prevent carriage returns
 newline_style = "Unix"

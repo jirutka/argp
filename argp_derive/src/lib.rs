@@ -168,8 +168,11 @@ impl<'a> StructField<'a> {
             }
             FieldKind::SubCommand => {
                 let inner = ty_inner(&["Option"], &field.ty);
-                optionality =
-                    if inner.is_some() { Optionality::Optional } else { Optionality::None };
+                optionality = if inner.is_some() {
+                    Optionality::Optional
+                } else {
+                    Optionality::None
+                };
                 ty_without_wrapper = inner.unwrap_or(&field.ty);
             }
         }
@@ -178,11 +181,15 @@ impl<'a> StructField<'a> {
         // Defaults to the kebab-case'd field name if `#[argp(long = "...")]` is omitted.
         let long_name = match kind {
             FieldKind::Switch | FieldKind::Option => {
-                let long_name = attrs.long.as_ref().map(syn::LitStr::value).unwrap_or_else(|| {
-                    let kebab_name = to_kebab_case(&name.to_string());
-                    check_long_name(errors, name, &kebab_name);
-                    kebab_name
-                });
+                let long_name = attrs
+                    .long
+                    .as_ref()
+                    .map(syn::LitStr::value)
+                    .unwrap_or_else(|| {
+                        let kebab_name = to_kebab_case(&name.to_string());
+                        check_long_name(errors, name, &kebab_name);
+                        kebab_name
+                    });
                 if long_name == "help" {
                     errors.err(field, "Custom `--help` flags are not supported.");
                 }
@@ -192,7 +199,15 @@ impl<'a> StructField<'a> {
             FieldKind::SubCommand | FieldKind::Positional => None,
         };
 
-        Some(StructField { field, attrs, kind, optionality, ty_without_wrapper, name, long_name })
+        Some(StructField {
+            field,
+            attrs,
+            kind,
+            optionality,
+            ty_without_wrapper,
+            name,
+            long_name,
+        })
     }
 
     pub(crate) fn positional_arg_name(&self) -> String {
@@ -253,7 +268,9 @@ fn impl_from_args_struct(
     ensure_only_one_subcommand(errors, &fields);
     ensure_global_only_when_subcommand(errors, &fields);
 
-    let subcommand = fields.iter().find(|field| field.kind == FieldKind::SubCommand);
+    let subcommand = fields
+        .iter()
+        .find(|field| field.kind == FieldKind::SubCommand);
 
     let impl_span = Span::call_site();
 
@@ -295,8 +312,10 @@ fn impl_from_args_struct_from_args<'a>(
 ) -> TokenStream {
     let init_fields = declare_local_storage_for_from_args_fields(fields);
     let unwrap_fields = unwrap_from_args_fields(fields);
-    let positional_fields: Vec<&StructField<'_>> =
-        fields.iter().filter(|field| field.kind == FieldKind::Positional).collect();
+    let positional_fields: Vec<&StructField<'_>> = fields
+        .iter()
+        .filter(|field| field.kind == FieldKind::Positional)
+        .collect();
     let positional_field_idents = positional_fields.iter().map(|field| &field.field.ident);
     let positional_field_names = positional_fields.iter().map(|field| field.name.to_string());
     let last_positional_is_repeating = positional_fields
@@ -410,8 +429,10 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     let init_fields = declare_local_storage_for_redacted_fields(fields);
     let unwrap_fields = unwrap_redacted_fields(fields);
 
-    let positional_fields: Vec<&StructField<'_>> =
-        fields.iter().filter(|field| field.kind == FieldKind::Positional).collect();
+    let positional_fields: Vec<&StructField<'_>> = fields
+        .iter()
+        .filter(|field| field.kind == FieldKind::Positional)
+        .collect();
     let positional_field_idents = positional_fields.iter().map(|field| &field.field.ident);
     let positional_field_names = positional_fields.iter().map(|field| field.name.to_string());
     let last_positional_is_repeating = positional_fields
@@ -583,8 +604,10 @@ fn ensure_unique_names(errors: &Errors, fields: &[StructField<'_>]) {
 
 /// Ensures that only one field is a `subcommand`.
 fn ensure_only_one_subcommand(errors: &Errors, fields: &[StructField<'_>]) {
-    let mut subcommands_iter =
-        fields.iter().filter(|field| field.kind == FieldKind::SubCommand).fuse();
+    let mut subcommands_iter = fields
+        .iter()
+        .filter(|field| field.kind == FieldKind::SubCommand)
+        .fuse();
 
     let subcommand = subcommands_iter.next();
     for dup_subcommand in subcommands_iter {
@@ -593,7 +616,10 @@ fn ensure_only_one_subcommand(errors: &Errors, fields: &[StructField<'_>]) {
 }
 
 fn ensure_global_only_when_subcommand(errors: &Errors, fields: &[StructField<'_>]) {
-    if !fields.iter().any(|field| field.kind == FieldKind::SubCommand) {
+    if !fields
+        .iter()
+        .any(|field| field.kind == FieldKind::SubCommand)
+    {
         for field in fields.iter().filter(|field| field.attrs.global) {
             errors.err(
                 field.field,
@@ -852,45 +878,51 @@ fn append_missing_requirements<'a>(
     fields: &'a [StructField<'a>],
 ) -> impl Iterator<Item = TokenStream> + 'a {
     let mri = mri.clone();
-    fields.iter().filter(|f| f.optionality.is_required()).map(move |field| {
-        let field_name = field.name;
-        match field.kind {
-            FieldKind::Switch => unreachable!("switches are always optional"),
-            FieldKind::Positional => {
-                let name = field.positional_arg_name();
-                quote! {
-                    if #field_name.slot.is_none() {
-                        #mri.missing_positional_arg(#name);
+    fields
+        .iter()
+        .filter(|f| f.optionality.is_required())
+        .map(move |field| {
+            let field_name = field.name;
+            match field.kind {
+                FieldKind::Switch => unreachable!("switches are always optional"),
+                FieldKind::Positional => {
+                    let name = field.positional_arg_name();
+                    quote! {
+                        if #field_name.slot.is_none() {
+                            #mri.missing_positional_arg(#name);
+                        }
+                    }
+                }
+                FieldKind::Option => {
+                    let name = field
+                        .long_name
+                        .as_ref()
+                        .expect("options always have a long name");
+                    quote! {
+                        if #field_name.slot.is_none() {
+                            #mri.missing_option(#name);
+                        }
+                    }
+                }
+                FieldKind::SubCommand => {
+                    let ty = field.ty_without_wrapper;
+                    quote! {
+                        if #field_name.is_none() {
+                            #mri.missing_subcommands(
+                                <#ty as ::argp::SubCommands>::COMMANDS
+                                    .iter()
+                                    .map(|r| r.name)
+                                    .chain(
+                                        <#ty as ::argp::SubCommands>::dynamic_commands()
+                                            .iter()
+                                            .map(|r| r.name)
+                                    ),
+                            );
+                        }
                     }
                 }
             }
-            FieldKind::Option => {
-                let name = field.long_name.as_ref().expect("options always have a long name");
-                quote! {
-                    if #field_name.slot.is_none() {
-                        #mri.missing_option(#name);
-                    }
-                }
-            }
-            FieldKind::SubCommand => {
-                let ty = field.ty_without_wrapper;
-                quote! {
-                    if #field_name.is_none() {
-                        #mri.missing_subcommands(
-                            <#ty as ::argp::SubCommands>::COMMANDS
-                                .iter()
-                                .map(|r| r.name)
-                                .chain(
-                                    <#ty as ::argp::SubCommands>::dynamic_commands()
-                                        .iter()
-                                        .map(|r| r.name)
-                                ),
-                        );
-                    }
-                }
-            }
-        }
-    })
+        })
 }
 
 /// Require that a type can be a `switch`.
@@ -915,9 +947,11 @@ fn ty_expect_switch(errors: &Errors, ty: &syn::Type) -> bool {
                     }
                 }
             }
-            ["bool", "u8", "u16", "u32", "u64", "u128", "i8", "i16", "i32", "i64", "i128"]
-                .iter()
-                .any(|path| ident == path)
+            [
+                "bool", "u8", "u16", "u32", "u64", "u128", "i8", "i16", "i32", "i64", "i128",
+            ]
+            .iter()
+            .any(|path| ident == path)
         } else {
             false
         }
@@ -979,7 +1013,10 @@ fn impl_from_args_enum(
         .filter_map(|variant| {
             let name = &variant.ident;
             let ty = enum_only_single_field_unnamed_variants(errors, &variant.fields)?;
-            if parse_attrs::VariantAttrs::parse(errors, variant).is_dynamic.is_some() {
+            if parse_attrs::VariantAttrs::parse(errors, variant)
+                .is_dynamic
+                .is_some()
+            {
                 if dynamic_type_and_variant.is_some() {
                     errors.err(variant, "Only one variant can have the `dynamic` attribute");
                 }

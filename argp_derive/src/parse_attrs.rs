@@ -76,7 +76,11 @@ impl FieldAttrs {
             };
 
             for meta in &ml.nested {
-                let meta = if let Some(m) = errors.expect_nested_meta(meta) { m } else { continue };
+                let meta = if let Some(m) = errors.expect_nested_meta(meta) {
+                    m
+                } else {
+                    continue;
+                };
 
                 let name = meta.path();
                 if name.is_ident("arg_name") {
@@ -210,7 +214,10 @@ pub(crate) fn check_long_name(errors: &Errors, spanned: &impl syn::spanned::Span
     if !value.is_ascii() {
         errors.err(spanned, "Long names must be ASCII");
     }
-    if !value.chars().all(|c| c.is_lowercase() || c == '-' || c.is_ascii_digit()) {
+    if !value
+        .chars()
+        .all(|c| c.is_lowercase() || c == '-' || c.is_ascii_digit())
+    {
         errors.err(spanned, "Long names must be lowercase");
     }
 }
@@ -232,7 +239,10 @@ fn parse_attr_fn_name(
 
     // `unwrap` will not fail because of the call above
     let nested = m.nested.first().unwrap();
-    if let Some(path) = errors.expect_nested_meta(nested).and_then(|m| errors.expect_meta_word(m)) {
+    if let Some(path) = errors
+        .expect_nested_meta(nested)
+        .and_then(|m| errors.expect_meta_word(m))
+    {
         *slot = path.get_ident().cloned();
     }
 }
@@ -247,7 +257,10 @@ fn parse_attr_field_type(
         if let Some(first) = slot {
             errors.duplicate_attrs("field kind", &first.ident, path);
         } else if let Some(word) = path.get_ident() {
-            *slot = Some(FieldType { kind, ident: word.clone() });
+            *slot = Some(FieldType {
+                kind,
+                ident: word.clone(),
+            });
         }
     }
 }
@@ -324,7 +337,11 @@ impl TypeAttrs {
             };
 
             for meta in &ml.nested {
-                let meta = if let Some(m) = errors.expect_nested_meta(meta) { m } else { continue };
+                let meta = if let Some(m) = errors.expect_nested_meta(meta) {
+                    m
+                } else {
+                    continue;
+                };
 
                 let name = meta.path();
                 if name.is_ident("description") {
@@ -413,7 +430,11 @@ impl VariantAttrs {
             };
 
             for meta in &ml.nested {
-                let meta = if let Some(m) = errors.expect_nested_meta(meta) { m } else { continue };
+                let meta = if let Some(m) = errors.expect_nested_meta(meta) {
+                    m
+                } else {
+                    continue;
+                };
 
                 let name = meta.path();
                 if name.is_ident("dynamic") {
@@ -475,12 +496,19 @@ fn parse_attr_doc(errors: &Errors, attr: &syn::Attribute, slot: &mut Option<Desc
         } else {
             lit_str.clone()
         };
-        *slot = Some(Description { explicit: false, content: lit_str });
+        *slot = Some(Description {
+            explicit: false,
+            content: lit_str,
+        });
     }
 }
 
 fn parse_attr_description(errors: &Errors, m: &syn::MetaNameValue, slot: &mut Option<Description>) {
-    let lit_str = if let Some(lit_str) = errors.expect_lit_str(&m.lit) { lit_str } else { return };
+    let lit_str = if let Some(lit_str) = errors.expect_lit_str(&m.lit) {
+        lit_str
+    } else {
+        return;
+    };
 
     // Don't allow multiple explicit (non doc-comment) descriptions
     if let Some(description) = slot {
@@ -489,13 +517,21 @@ fn parse_attr_description(errors: &Errors, m: &syn::MetaNameValue, slot: &mut Op
         }
     }
 
-    *slot = Some(Description { explicit: true, content: lit_str.clone() });
+    *slot = Some(Description {
+        explicit: true,
+        content: lit_str.clone(),
+    });
 }
 
 /// Checks that a `#![derive(FromArgs)]` enum has an `#[argp(subcommand)]`
 /// attribute and that it does not have any other type-level `#[argp(...)]` attributes.
 pub fn check_enum_type_attrs(errors: &Errors, type_attrs: &TypeAttrs, type_span: &Span) {
-    let TypeAttrs { is_subcommand, name, description, footer } = type_attrs;
+    let TypeAttrs {
+        is_subcommand,
+        name,
+        description,
+        footer,
+    } = type_attrs;
 
     // Ensure that `#[argp(subcommand)]` is present.
     if is_subcommand.is_none() {

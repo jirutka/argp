@@ -55,7 +55,12 @@ pub(crate) fn inst_help(
     };
 
     let description = require_description(errors, Span::call_site(), &ty_attrs.description, "type");
-    let footer = ty_attrs.footer.iter().map(LitStr::value).collect::<Vec<_>>().join("\n\n");
+    let footer = ty_attrs
+        .footer
+        .iter()
+        .map(LitStr::value)
+        .collect::<Vec<_>>()
+        .join("\n\n");
 
     quote! {
         ::argp::help::Help {
@@ -105,7 +110,11 @@ fn option_usage(field: &StructField<'_>) -> String {
         out.push('[');
     }
 
-    let long_name = field.long_name.as_ref().expect("missing long name for option");
+    let long_name = field
+        .long_name
+        .as_ref()
+        .expect("missing long name for option");
+
     if let Some(short) = field.attrs.short.as_ref() {
         out.push('-');
         out.push(short.value());
@@ -145,17 +154,19 @@ pub fn require_description(
     desc: &Option<Description>,
     kind: &str, // the thing being described ("type" or "field"),
 ) -> String {
-    desc.as_ref().map(|d| d.content.value().trim().to_owned()).unwrap_or_else(|| {
-        errors.err_span(
-            err_span,
-            &format!(
-                "#[derive(FromArgs)] {} with no description.
+    desc.as_ref()
+        .map(|d| d.content.value().trim().to_owned())
+        .unwrap_or_else(|| {
+            errors.err_span(
+                err_span,
+                &format!(
+                    "#[derive(FromArgs)] {} with no description.
 Add a doc comment or an `#[argp(description = \"...\")]` attribute.",
-                kind
-            ),
-        );
-        "".to_string()
-    })
+                    kind
+                ),
+            );
+            "".to_string()
+        })
 }
 
 fn positional_info(field: &StructField<'_>) -> TokenStream {
@@ -187,9 +198,16 @@ fn option_info(errors: &Errors, field: &StructField<'_>) -> TokenStream {
     let usage = option_usage(field);
 
     let short = field.attrs.short.as_ref().map(|s| s.value());
-    let long_with_leading_dashes = field.long_name.as_ref().expect("missing long name for option");
-    let arg_name =
-        if field.kind == FieldKind::Option { Some(field.positional_arg_name()) } else { None };
+    let long_with_leading_dashes = field
+        .long_name
+        .as_ref()
+        .expect("missing long name for option");
+
+    let arg_name = if field.kind == FieldKind::Option {
+        Some(field.positional_arg_name())
+    } else {
+        None
+    };
 
     let mut names = String::new();
 

@@ -88,7 +88,9 @@ pub fn parse_struct_args(
     }
 
     if help_requested {
-        let global_options = parse_options.parent.map_or_else(Vec::new, |p| p.global_options());
+        let global_options = parse_options
+            .parent
+            .map_or_else(Vec::new, |p| p.global_options());
 
         Err(EarlyExit::Help(help.generate(cmd_name, &global_options)))
     } else {
@@ -147,8 +149,9 @@ impl<'a, 'p> ParseStructOptions<'a, 'p> {
         match slot {
             ParseStructOption::Flag(ref mut b) => b.set_flag(arg),
             ParseStructOption::Value(ref mut pvs) => {
-                let value =
-                    remaining_args.first().ok_or_else(|| Error::MissingArgValue(arg.to_owned()))?;
+                let value = remaining_args
+                    .first()
+                    .ok_or_else(|| Error::MissingArgValue(arg.to_owned()))?;
                 *remaining_args = &remaining_args[1..];
                 pvs.fill_slot(arg, value)?;
             }
@@ -188,11 +191,18 @@ impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
             .iter()
             .find(|(name, pos)| *name == arg && self.slots_global[*pos])
             .map(|(_, pos)| Self::fill_slot(&mut self.slots[*pos], arg, remaining_args))
-            .or_else(|| self.parent.as_mut().and_then(|p| p.try_parse_global(arg, remaining_args)))
+            .or_else(|| {
+                self.parent
+                    .as_mut()
+                    .and_then(|p| p.try_parse_global(arg, remaining_args))
+            })
     }
 
     fn global_options<'b>(&self) -> Vec<&'b OptionArgInfo> {
-        let mut opts = self.parent.as_ref().map_or_else(Vec::new, |p| p.global_options());
+        let mut opts = self
+            .parent
+            .as_ref()
+            .map_or_else(Vec::new, |p| p.global_options());
         opts.extend(self.help.options.iter().filter(|o| o.global));
         opts
     }
@@ -290,7 +300,11 @@ impl<'a> ParseStructSubCommand<'a> {
         remaining_args: &[&str],
         parse_global_opts: &mut dyn ParseGlobalOptions,
     ) -> Result<bool, EarlyExit> {
-        for subcommand in self.subcommands.iter().chain(self.dynamic_subcommands.iter()) {
+        for subcommand in self
+            .subcommands
+            .iter()
+            .chain(self.dynamic_subcommands.iter())
+        {
             if subcommand.name == arg {
                 let mut command = cmd_name.to_owned();
                 command.push(subcommand.name);

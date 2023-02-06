@@ -80,7 +80,11 @@ impl Help {
         let mut out = String::from("Usage: ");
         out.push_str(&command_name);
 
-        for usage in options_and_args.clone().map(|r| r.usage).filter(|s| !s.is_empty()) {
+        for usage in options_and_args
+            .clone()
+            .map(|r| r.usage)
+            .filter(|s| !s.is_empty())
+        {
             out.push(' ');
             out.push_str(usage);
         }
@@ -106,7 +110,9 @@ impl Help {
         // Computes the indentation width of the description (right) column based
         // on width of the names/flags in the left column.
         let desc_indent = compute_desc_indent(
-            options_and_args.map(|r| r.names).chain(subcommands.iter().map(|r| r.name)),
+            options_and_args
+                .map(|r| r.names)
+                .chain(subcommands.iter().map(|r| r.name)),
         );
 
         write_opts_section(&mut out, "Arguments:", self.positionals.iter(), desc_indent);

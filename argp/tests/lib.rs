@@ -34,7 +34,14 @@ fn basic_example() {
     }
 
     let up = GoUp::from_args(&["cmdname"], &["--height", "5"]).expect("failed go_up");
-    assert_eq!(up, GoUp { jump: false, height: 5, pilot_nickname: None });
+    assert_eq!(
+        up,
+        GoUp {
+            jump: false,
+            height: 5,
+            pilot_nickname: None
+        }
+    );
 }
 
 #[test]
@@ -62,7 +69,14 @@ fn generic_example() {
     }
 
     let up = GoUp::<String>::from_args(&["cmdname"], &["--height", "5"]).expect("failed go_up");
-    assert_eq!(up, GoUp::<String> { jump: false, height: 5, pilot_nickname: None });
+    assert_eq!(
+        up,
+        GoUp::<String> {
+            jump: false,
+            height: 5,
+            pilot_nickname: None
+        }
+    );
 }
 
 #[test]
@@ -118,10 +132,20 @@ fn subcommand_example() {
     }
 
     let one = TopLevel::from_args(&["cmdname"], &["one", "--x", "2"]).expect("sc 1");
-    assert_eq!(one, TopLevel { nested: MySubCommandEnum::One(SubCommandOne { x: 2 }) },);
+    assert_eq!(
+        one,
+        TopLevel {
+            nested: MySubCommandEnum::One(SubCommandOne { x: 2 })
+        },
+    );
 
     let two = TopLevel::from_args(&["cmdname"], &["two", "--fooey"]).expect("sc 2");
-    assert_eq!(two, TopLevel { nested: MySubCommandEnum::Two(SubCommandTwo { fooey: true }) },);
+    assert_eq!(
+        two,
+        TopLevel {
+            nested: MySubCommandEnum::Two(SubCommandTwo { fooey: true })
+        },
+    );
 }
 
 #[test]
@@ -134,9 +158,18 @@ fn dynamic_subcommand_example() {
     impl DynamicSubCommand for DynamicSubCommandImpl {
         fn commands() -> &'static [&'static CommandInfo] {
             &[
-                &CommandInfo { name: "three", description: "Third command" },
-                &CommandInfo { name: "four", description: "Fourth command" },
-                &CommandInfo { name: "five", description: "Fifth command" },
+                &CommandInfo {
+                    name: "three",
+                    description: "Third command",
+                },
+                &CommandInfo {
+                    name: "four",
+                    description: "Fourth command",
+                },
+                &CommandInfo {
+                    name: "five",
+                    description: "Fifth command",
+                },
             ]
         }
 
@@ -155,11 +188,16 @@ fn dynamic_subcommand_example() {
                 Some(x) => *x,
                 None => return Some(Err(EarlyExit::Err(Error::other("No command")))),
             };
-            let description = Self::commands().iter().find(|x| x.name == command_name)?.description;
+            let description = Self::commands()
+                .iter()
+                .find(|x| x.name == command_name)?
+                .description;
             if args.len() > 1 {
                 Some(Err(EarlyExit::Err(Error::other("Too many arguments"))))
             } else if let Some(arg) = args.first() {
-                Some(Ok(DynamicSubCommandImpl { got: format!("{} got {:?}", description, arg) }))
+                Some(Ok(DynamicSubCommandImpl {
+                    got: format!("{} got {:?}", description, arg),
+                }))
             } else {
                 Some(Err(EarlyExit::Err(Error::other("Not enough arguments"))))
             }
@@ -201,10 +239,20 @@ fn dynamic_subcommand_example() {
     }
 
     let one = TopLevel::from_args(&["cmdname"], &["one", "--x", "2"]).expect("sc 1");
-    assert_eq!(one, TopLevel { nested: MySubCommandEnum::One(SubCommandOne { x: 2 }) },);
+    assert_eq!(
+        one,
+        TopLevel {
+            nested: MySubCommandEnum::One(SubCommandOne { x: 2 })
+        },
+    );
 
     let two = TopLevel::from_args(&["cmdname"], &["two", "--fooey"]).expect("sc 2");
-    assert_eq!(two, TopLevel { nested: MySubCommandEnum::Two(SubCommandTwo { fooey: true }) },);
+    assert_eq!(
+        two,
+        TopLevel {
+            nested: MySubCommandEnum::Two(SubCommandTwo { fooey: true })
+        },
+    );
 
     let three = TopLevel::from_args(&["cmdname"], &["three", "beans"]).expect("sc 3");
     assert_eq!(
@@ -448,8 +496,22 @@ Options:
 
     #[test]
     fn short_combined() {
-        assert_output(&["-qv", "-n", "5"], ShortCombined { n: 5, q: true, v: true });
-        assert_output(&["-qvn", "5"], ShortCombined { n: 5, q: true, v: true });
+        assert_output(
+            &["-qv", "-n", "5"],
+            ShortCombined {
+                n: 5,
+                q: true,
+                v: true,
+            },
+        );
+        assert_output(
+            &["-qvn", "5"],
+            ShortCombined {
+                n: 5,
+                q: true,
+                v: true,
+            },
+        );
         assert_error::<ShortCombined>(&["-nq", "5"], Error::MissingArgValue("-n".to_owned()));
     }
 }
@@ -519,12 +581,18 @@ mod global_options {
                 TopLevel {
                     a: 1,
                     x: 0,
-                    nested: FirstSubCommandEnum::One(SubCommandOne { b: true, nested: None })
+                    nested: FirstSubCommandEnum::One(SubCommandOne {
+                        b: true,
+                        nested: None
+                    })
                 },
             );
         }
 
-        for args in [&["--a", "2", "one", "--b", "two"], &["one", "two", "--a", "2", "--b"]] {
+        for args in [
+            &["--a", "2", "one", "--b", "two"],
+            &["one", "two", "--a", "2", "--b"],
+        ] {
             let two = TopLevel::from_args(&["cmdname"], args).expect("sc 2");
             assert_eq!(
                 two,
@@ -621,10 +689,19 @@ mod positional {
     #[test]
     fn repeating() {
         assert_output(&["5"], LastRepeating { a: 5, b: vec![] });
-        assert_output(&["5", "foo"], LastRepeating { a: 5, b: vec!["foo".into()] });
+        assert_output(
+            &["5", "foo"],
+            LastRepeating {
+                a: 5,
+                b: vec!["foo".into()],
+            },
+        );
         assert_output(
             &["5", "foo", "bar"],
-            LastRepeating { a: 5, b: vec!["foo".into(), "bar".into()] },
+            LastRepeating {
+                a: 5,
+                b: vec!["foo".into(), "bar".into()],
+            },
         );
         assert_help_string::<LastRepeating>(
             r###"Usage: test_arg_0 <a> [<b...>]
@@ -660,18 +737,41 @@ Options:
 
     #[test]
     fn positional_greedy() {
-        assert_output(&["5"], LastRepeatingGreedy { a: 5, b: false, c: None, d: vec![] });
+        assert_output(
+            &["5"],
+            LastRepeatingGreedy {
+                a: 5,
+                b: false,
+                c: None,
+                d: vec![],
+            },
+        );
         assert_output(
             &["5", "foo"],
-            LastRepeatingGreedy { a: 5, b: false, c: None, d: vec!["foo".into()] },
+            LastRepeatingGreedy {
+                a: 5,
+                b: false,
+                c: None,
+                d: vec!["foo".into()],
+            },
         );
         assert_output(
             &["5", "foo", "bar"],
-            LastRepeatingGreedy { a: 5, b: false, c: None, d: vec!["foo".into(), "bar".into()] },
+            LastRepeatingGreedy {
+                a: 5,
+                b: false,
+                c: None,
+                d: vec!["foo".into(), "bar".into()],
+            },
         );
         assert_output(
             &["5", "--b", "foo", "bar"],
-            LastRepeatingGreedy { a: 5, b: true, c: None, d: vec!["foo".into(), "bar".into()] },
+            LastRepeatingGreedy {
+                a: 5,
+                b: true,
+                c: None,
+                d: vec!["foo".into(), "bar".into()],
+            },
         );
         assert_output(
             &["5", "foo", "bar", "--b"],
@@ -739,7 +839,13 @@ Options:
     #[test]
     fn optional() {
         assert_output(&["5"], LastOptional { a: 5, b: None });
-        assert_output(&["5", "6"], LastOptional { a: 5, b: Some("6".into()) });
+        assert_output(
+            &["5", "6"],
+            LastOptional {
+                a: 5,
+                b: Some("6".into()),
+            },
+        );
         assert_error::<LastOptional>(&["5", "6", "7"], Error::UnknownArgument("7".to_owned()));
     }
 
@@ -819,7 +925,13 @@ Options:
 
     #[test]
     fn mixed_with_option() {
-        assert_output(&["first", "--b", "foo"], WithOption { a: "first".into(), b: "foo".into() });
+        assert_output(
+            &["first", "--b", "foo"],
+            WithOption {
+                a: "first".into(),
+                b: "foo".into(),
+            },
+        );
 
         assert_error::<WithOption>(
             &[],
@@ -859,7 +971,10 @@ Options:
             &["first", "a", "a"],
             WithSubcommand {
                 a: "first".into(),
-                b: Subcommand { a: "a".into(), b: vec![] },
+                b: Subcommand {
+                    a: "a".into(),
+                    b: vec![],
+                },
                 c: vec![],
             },
         );
@@ -873,7 +988,10 @@ Options:
             &["1", "2", "3", "a", "b", "c"],
             WithSubcommand {
                 a: "1".into(),
-                b: Subcommand { a: "b".into(), b: vec!["c".into()] },
+                b: Subcommand {
+                    a: "b".into(),
+                    b: vec!["c".into()],
+                },
                 c: vec!["2".into(), "3".into()],
             },
         );
@@ -1016,16 +1134,31 @@ mod fuchsia_commandline_tools_rubric {
 
         assert_output(
             &["--", "a", "-b", "--flag"],
-            StringList { strs: vec!["a".into(), "-b".into(), "--flag".into()], flag: false },
+            StringList {
+                strs: vec!["a".into(), "-b".into(), "--flag".into()],
+                flag: false,
+            },
         );
         assert_output(
             &["--flag", "--", "-a", "b"],
-            StringList { strs: vec!["-a".into(), "b".into()], flag: true },
+            StringList {
+                strs: vec!["-a".into(), "b".into()],
+                flag: true,
+            },
         );
-        assert_output(&["--", "--help"], StringList { strs: vec!["--help".into()], flag: false });
+        assert_output(
+            &["--", "--help"],
+            StringList {
+                strs: vec!["--help".into()],
+                flag: false,
+            },
+        );
         assert_output(
             &["--", "-a", "--help"],
-            StringList { strs: vec!["-a".into(), "--help".into()], flag: false },
+            StringList {
+                strs: vec!["-a".into(), "--help".into()],
+                flag: false,
+            },
         );
     }
 
@@ -1209,7 +1342,11 @@ Options:
     }
 
     #[derive(FromArgs, PartialEq, Debug)]
-    #[argp(subcommand, name = "grind", description = "make smaller by many small cuts")]
+    #[argp(
+        subcommand,
+        name = "grind",
+        description = "make smaller by many small cuts"
+    )]
     struct GrindCommand {
         /// wear a visor while grinding
         #[argp(switch)]
@@ -1223,7 +1360,10 @@ Options:
 
     impl DynamicSubCommand for HelpExamplePlugin {
         fn commands() -> &'static [&'static CommandInfo] {
-            &[&CommandInfo { name: "plugin", description: "Example dynamic command" }]
+            &[&CommandInfo {
+                name: "plugin",
+                description: "Example dynamic command",
+            }]
         }
 
         fn try_redact_arg_values(
@@ -1242,9 +1382,13 @@ Options:
             } else if args.len() > 1 {
                 Some(Err(EarlyExit::Err(Error::other("Too many arguments"))))
             } else if let Some(arg) = args.first() {
-                Some(Ok(HelpExamplePlugin { got: format!("plugin got {:?}", arg) }))
+                Some(Ok(HelpExamplePlugin {
+                    got: format!("plugin got {:?}", arg),
+                }))
             } else {
-                Some(Ok(HelpExamplePlugin { got: "plugin got no argument".to_owned() }))
+                Some(Ok(HelpExamplePlugin {
+                    got: "plugin got no argument".to_owned(),
+                }))
             }
         }
     }

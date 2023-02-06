@@ -431,6 +431,27 @@ Options:
 "###,
         );
     }
+
+    /// Woot
+    #[derive(FromArgs, Debug, PartialEq)]
+    struct ShortCombined {
+        /// fooey
+        #[argp(option, short = 'n')]
+        n: usize,
+        /// quiet
+        #[argp(switch, short = 'q')]
+        q: bool,
+        /// verbose
+        #[argp(switch, short = 'v')]
+        v: bool,
+    }
+
+    #[test]
+    fn short_combined() {
+        assert_output(&["-qv", "-n", "5"], ShortCombined { n: 5, q: true, v: true });
+        assert_output(&["-qvn", "5"], ShortCombined { n: 5, q: true, v: true });
+        assert_error::<ShortCombined>(&["-nq", "5"], Error::MissingArgValue("-n".to_owned()));
+    }
 }
 
 mod global_options {
@@ -937,25 +958,6 @@ mod fuchsia_commandline_tools_rubric {
 
         let off = OneSwitch::from_args(&["cmdname"], &[]).expect("parsing off");
         assert!(!off.switchy);
-    }
-
-    #[derive(FromArgs, Debug)]
-    /// Two Switches
-    struct TwoSwitches {
-        #[argp(switch, short = 'a')]
-        /// a
-        _a: bool,
-        #[argp(switch, short = 'b')]
-        /// b
-        _b: bool,
-    }
-
-    /// Running switches together is not allowed
-    #[test]
-    fn switches_cannot_run_together() {
-        TwoSwitches::from_args(&["cmdname"], &["-a", "-b"])
-            .expect("parsing separate should succeed");
-        TwoSwitches::from_args(&["cmdname"], &["-ab"]).expect_err("parsing together should fail");
     }
 
     #[derive(FromArgs, Debug)]

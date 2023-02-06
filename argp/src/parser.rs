@@ -50,7 +50,22 @@ pub fn parse_struct_args(
                 return Err(Error::OptionsAfterHelp.into());
             }
 
-            parse_options.parse(next_arg, &mut remaining_args)?;
+            // Handle combined short options; `-ab` is parsed as `-a -b`,
+            // `-an 5` as `-a -n 5`, but `-na 5` would fail.
+            if next_arg.len() > 2 && &next_arg[1..2] != "-" {
+                let mut chars = next_arg[1..].chars().peekable();
+
+                while let Some(short) = chars.next() {
+                    // Only the last option can accept a value.
+                    if chars.peek().is_some() {
+                        parse_options.parse(&format!("-{}", short), &mut (&[] as &[&str]))?;
+                    } else {
+                        parse_options.parse(&format!("-{}", short), &mut remaining_args)?;
+                    }
+                }
+            } else {
+                parse_options.parse(next_arg, &mut remaining_args)?;
+            }
 
             continue;
         }

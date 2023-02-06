@@ -21,6 +21,7 @@ Argp originally started as a fork of https://github.com/google/argh/[argh] to ma
 Notable changes from argh:
 
 * Support for global options (i.e. options defined at the top level can be used in subcommands).
+* Support for combined short options (e.g. `-ab` is parsed as `-a -b`, `-an 5` as `-a -n 5`).
 * No pedantic requirement for descriptions to start with a lower-case letter.
 * The indentation of descriptions in the help message is dynamically calculated based on the widths of all elements.
 * The `arg_name` attribute can also be used even on positional arguments to customise how the argument is displayed in the help message.

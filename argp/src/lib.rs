@@ -1179,9 +1179,10 @@ impl<'a> ParseStructSubCommand<'a> {
             if subcommand.name == arg {
                 let mut command = cmd_name.to_owned();
                 command.push(subcommand.name);
+
                 let prepended_help;
                 let remaining_args = if help {
-                    prepended_help = prepend_help(remaining_args);
+                    prepended_help = [&["help"], remaining_args].concat();
                     &prepended_help
                 } else {
                     remaining_args
@@ -1195,12 +1196,6 @@ impl<'a> ParseStructSubCommand<'a> {
 
         Ok(false)
     }
-}
-
-// Prepend `help` to a list of arguments.
-// This is used to pass the `help` argument on to subcommands.
-fn prepend_help<'a>(args: &[&'a str]) -> Vec<&'a str> {
-    [&["help"], args].concat()
 }
 
 #[cfg(test)]

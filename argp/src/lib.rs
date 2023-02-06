@@ -669,6 +669,28 @@ pub trait CommandHelp: FromArgs {
     const HELP: Help;
 }
 
+/// Types which can be constructed from a single command-line value.
+///
+/// Any field type declared in a struct that derives `FromArgs` must implement
+/// this trait. A blanket implementation exists for types implementing
+/// `FromStr<Error: Display>`. Custom types can implement this trait
+/// directly.
+pub trait FromArgValue: Sized {
+    /// Construct the type from a command-line value, returning an error string
+    /// on failure.
+    fn from_arg_value(value: &str) -> Result<Self, String>;
+}
+
+impl<T> FromArgValue for T
+where
+    T: FromStr,
+    T::Err: fmt::Display,
+{
+    fn from_arg_value(value: &str) -> Result<Self, String> {
+        T::from_str(value).map_err(|x| x.to_string())
+    }
+}
+
 /// Information to display to the user about why a `FromArgs` construction exited early.
 ///
 /// This can occur due to either failed parsing or a flag like `--help`.
@@ -694,11 +716,6 @@ impl From<Error> for EarlyExit {
     fn from(value: Error) -> Self {
         Self::Err(value)
     }
-}
-
-/// Extract the base cmd from a path
-fn cmd<'a>(default: &'a str, path: &'a str) -> &'a str {
-    Path::new(path).file_name().and_then(|s| s.to_str()).unwrap_or(default)
 }
 
 /// Create a `FromArgs` type from the current process's `env::args`.
@@ -762,26 +779,9 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
     })
 }
 
-/// Types which can be constructed from a single command-line value.
-///
-/// Any field type declared in a struct that derives `FromArgs` must implement
-/// this trait. A blanket implementation exists for types implementing
-/// `FromStr<Error: Display>`. Custom types can implement this trait
-/// directly.
-pub trait FromArgValue: Sized {
-    /// Construct the type from a command-line value, returning an error string
-    /// on failure.
-    fn from_arg_value(value: &str) -> Result<Self, String>;
-}
-
-impl<T> FromArgValue for T
-where
-    T: FromStr,
-    T::Err: fmt::Display,
-{
-    fn from_arg_value(value: &str) -> Result<Self, String> {
-        T::from_str(value).map_err(|x| x.to_string())
-    }
+/// Extract the base cmd from a path
+fn cmd<'a>(default: &'a str, path: &'a str) -> &'a str {
+    Path::new(path).file_name().and_then(|s| s.to_str()).unwrap_or(default)
 }
 
 #[cfg(test)]

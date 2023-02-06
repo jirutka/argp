@@ -3,9 +3,10 @@
 // SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
-/// Implementation of the `FromArgs` and `argp(...)` derive attributes.
-///
-/// For more thorough documentation, see the `argp` crate itself.
+//! Implementation of the `FromArgs` and `argp(...)` derive attributes.
+//!
+//! For more thorough documentation, see the `argp` crate itself.
+
 mod errors;
 mod help;
 mod parse_attrs;

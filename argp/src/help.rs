@@ -11,6 +11,36 @@
 use std::iter;
 use std::ops::Deref;
 
+const INDENT: &str = "  ";
+const DESC_MIN_INDENT: usize = 8;
+const DESC_MAX_INDENT: usize = 30;
+const SECTION_SEPARATOR: &str = "\n\n";
+const WRAP_WIDTH: usize = 80;
+
+const HELP_OPT: OptionArgInfo = OptionArgInfo {
+    usage: "",
+    names: "-h, --help",
+    description: "Show this help message and exit.",
+    global: true,
+};
+
+/// Information about a specific (sub)command used for generating a help message.
+pub struct Help {
+    pub description: &'static str,
+    pub positionals: &'static [OptionArgInfo],
+    pub options: &'static [OptionArgInfo],
+    pub commands: Option<HelpCommands>,
+    pub footer: &'static str,
+}
+
+/// A nested struct in [Help] used for generating the Commands section in
+/// a help message.
+pub struct HelpCommands {
+    pub usage: &'static str,
+    pub subcommands: &'static [&'static CommandInfo],
+    pub dynamic_subcommands: fn() -> &'static [&'static CommandInfo],
+}
+
 /// Information about a particular command used for generating a help message.
 /// Unlike the other structures in this module, this one is considered stable.
 pub struct CommandInfo {
@@ -30,36 +60,6 @@ pub struct OptionArgInfo {
     /// for options and flags, not for positional arguments.
     pub global: bool,
 }
-
-/// Information about a specific (sub)command used for generating a help message.
-pub struct Help {
-    pub description: &'static str,
-    pub positionals: &'static [OptionArgInfo],
-    pub options: &'static [OptionArgInfo],
-    pub commands: Option<HelpCommands>,
-    pub footer: &'static str,
-}
-
-/// A nested struct in [Help] used for generating the Commands section in
-/// a help message.
-pub struct HelpCommands {
-    pub usage: &'static str,
-    pub subcommands: &'static [&'static CommandInfo],
-    pub dynamic_subcommands: fn() -> &'static [&'static CommandInfo],
-}
-
-const INDENT: &str = "  ";
-const DESC_MIN_INDENT: usize = 8;
-const DESC_MAX_INDENT: usize = 30;
-const SECTION_SEPARATOR: &str = "\n\n";
-const WRAP_WIDTH: usize = 80;
-
-const HELP_OPT: OptionArgInfo = OptionArgInfo {
-    usage: "",
-    names: "-h, --help",
-    description: "Show this help message and exit.",
-    global: true,
-};
 
 impl Help {
     /// Generates a help message.

@@ -311,9 +311,11 @@ fn impl_from_args_struct_from_args<'a>(
         let field_name = &field.field.ident;
         match field.kind {
             FieldKind::Option => {
-                Some(quote! { ::argp::ParseStructOption::Value(&mut #field_name) })
+                Some(quote! { ::argp::parser::ParseStructOption::Value(&mut #field_name) })
             }
-            FieldKind::Switch => Some(quote! { ::argp::ParseStructOption::Flag(&mut #field_name) }),
+            FieldKind::Switch => {
+                Some(quote! { ::argp::parser::ParseStructOption::Flag(&mut #field_name) })
+            }
             FieldKind::SubCommand | FieldKind::Positional => None,
         }
     });
@@ -336,7 +338,7 @@ fn impl_from_args_struct_from_args<'a>(
         let name = subcommand.name;
         let ty = subcommand.ty_without_wrapper;
         quote_spanned! { impl_span =>
-            Some(::argp::ParseStructSubCommand {
+            Some(::argp::parser::ParseStructSubCommand {
                 subcommands: <#ty as ::argp::SubCommands>::COMMANDS,
                 dynamic_subcommands: &<#ty as ::argp::SubCommands>::dynamic_commands(),
                 parse_func: &mut |__command, __remaining_args, __parent| {
@@ -350,29 +352,29 @@ fn impl_from_args_struct_from_args<'a>(
     };
 
     let method_impl = quote_spanned! { impl_span =>
-        fn _from_args(__cmd_name: &[&str], __args: &[&str], __parent: ::std::option::Option<&mut dyn ::argp::ParseGlobalOptions>)
+        fn _from_args(__cmd_name: &[&str], __args: &[&str], __parent: ::std::option::Option<&mut dyn ::argp::parser::ParseGlobalOptions>)
             -> ::std::result::Result<Self, ::argp::EarlyExit>
         {
             #![allow(clippy::unwrap_in_result)]
 
             #( #init_fields )*
 
-            ::argp::parse_struct_args(
+            ::argp::parser::parse_struct_args(
                 __cmd_name,
                 __args,
-                ::argp::ParseStructOptions {
+                ::argp::parser::ParseStructOptions {
                     arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
                     slots: &mut [ #( #flag_output_table, )* ],
                     slots_global: &[ #( #flag_global_table, )* ],
                     help: &<Self as argp::CommandHelp>::HELP,
                     parent: __parent,
                 },
-                ::argp::ParseStructPositionals {
+                ::argp::parser::ParseStructPositionals {
                     positionals: &mut [
                         #(
-                            ::argp::ParseStructPositional {
+                            ::argp::parser::ParseStructPositional {
                                 name: #positional_field_names,
-                                slot: &mut #positional_field_idents as &mut dyn ::argp::ParseValueSlot,
+                                slot: &mut #positional_field_idents as &mut dyn ::argp::parser::ParseValueSlot,
                             },
                         )*
                     ],
@@ -424,9 +426,11 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         let field_name = &field.field.ident;
         match field.kind {
             FieldKind::Option => {
-                Some(quote! { ::argp::ParseStructOption::Value(&mut #field_name) })
+                Some(quote! { ::argp::parser::ParseStructOption::Value(&mut #field_name) })
             }
-            FieldKind::Switch => Some(quote! { ::argp::ParseStructOption::Flag(&mut #field_name) }),
+            FieldKind::Switch => {
+                Some(quote! { ::argp::parser::ParseStructOption::Flag(&mut #field_name) })
+            }
             FieldKind::SubCommand | FieldKind::Positional => None,
         }
     });
@@ -449,7 +453,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         let name = subcommand.name;
         let ty = subcommand.ty_without_wrapper;
         quote_spanned! { impl_span =>
-            ::std::option::Option::Some(::argp::ParseStructSubCommand {
+            ::std::option::Option::Some(::argp::parser::ParseStructSubCommand {
                 subcommands: <#ty as ::argp::SubCommands>::COMMANDS,
                 dynamic_subcommands: &<#ty as ::argp::SubCommands>::dynamic_commands(),
                 parse_func: &mut |__command, __remaining_args, _| {
@@ -472,22 +476,22 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> ::std::result::Result<::std::vec::Vec<::std::string::String>, ::argp::EarlyExit> {
             #( #init_fields )*
 
-            ::argp::parse_struct_args(
+            ::argp::parser::parse_struct_args(
                 __cmd_name,
                 __args,
-                ::argp::ParseStructOptions {
+                ::argp::parser::ParseStructOptions {
                     arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
                     slots: &mut [ #( #flag_output_table, )* ],
                     slots_global: &[ #( #flag_global_table, )* ],
                     help: &<Self as argp::CommandHelp>::HELP,
                     parent: std::option::Option::None,
                 },
-                ::argp::ParseStructPositionals {
+                ::argp::parser::ParseStructPositionals {
                     positionals: &mut [
                         #(
-                            ::argp::ParseStructPositional {
+                            ::argp::parser::ParseStructPositional {
                                 name: #positional_field_names,
-                                slot: &mut #positional_field_idents as &mut dyn ::argp::ParseValueSlot,
+                                slot: &mut #positional_field_idents as &mut dyn ::argp::parser::ParseValueSlot,
                             },
                         )*
                     ],
@@ -664,8 +668,8 @@ fn declare_local_storage_for_from_args_fields<'a>(
                 };
 
                 quote! {
-                    let mut #field_name: ::argp::ParseValueSlotTy<#field_slot_type, #field_type>
-                        = ::argp::ParseValueSlotTy {
+                    let mut #field_name: ::argp::parser::ParseValueSlotTy<#field_slot_type, #field_type>
+                        = ::argp::parser::ParseValueSlotTy {
                             slot: ::std::default::Default::default(),
                             parse_func: |_, value| { #from_str_fn(value) },
                         };
@@ -675,7 +679,7 @@ fn declare_local_storage_for_from_args_fields<'a>(
                 quote! { let mut #field_name: #field_slot_type = ::std::option::Option::None; }
             }
             FieldKind::Switch => {
-                quote! { let mut #field_name: #field_slot_type = ::argp::Flag::default(); }
+                quote! { let mut #field_name: #field_slot_type = ::argp::parser::Flag::default(); }
             }
         }
     })
@@ -726,7 +730,7 @@ fn declare_local_storage_for_redacted_fields<'a>(
         match field.kind {
             FieldKind::Switch => {
                 quote! {
-                    let mut #field_name = ::argp::RedactFlag {
+                    let mut #field_name = ::argp::parser::RedactFlag {
                         slot: ::std::option::Option::None,
                     };
                 }
@@ -742,8 +746,8 @@ fn declare_local_storage_for_redacted_fields<'a>(
                 };
 
                 quote! {
-                    let mut #field_name: ::argp::ParseValueSlotTy::<#field_slot_type, ::std::string::String> =
-                        ::argp::ParseValueSlotTy {
+                    let mut #field_name: ::argp::parser::ParseValueSlotTy::<#field_slot_type, ::std::string::String> =
+                        ::argp::parser::ParseValueSlotTy {
                         slot: ::std::default::Default::default(),
                         parse_func: |arg, _| { ::std::result::Result::Ok(arg.to_owned()) },
                     };
@@ -761,8 +765,8 @@ fn declare_local_storage_for_redacted_fields<'a>(
 
                 let arg_name = field.positional_arg_name();
                 quote! {
-                    let mut #field_name: ::argp::ParseValueSlotTy::<#field_slot_type, ::std::string::String> =
-                        ::argp::ParseValueSlotTy {
+                    let mut #field_name: ::argp::parser::ParseValueSlotTy::<#field_slot_type, ::std::string::String> =
+                        ::argp::parser::ParseValueSlotTy {
                         slot: ::std::default::Default::default(),
                         parse_func: |_, _| { ::std::result::Result::Ok(#arg_name.to_owned()) },
                     };
@@ -1046,7 +1050,7 @@ fn impl_from_args_enum_from_args(
         fn _from_args(
             command_name: &[&str],
             args: &[&str],
-            parent: ::std::option::Option<&mut dyn ::argp::ParseGlobalOptions>,
+            parent: ::std::option::Option<&mut dyn ::argp::parser::ParseGlobalOptions>,
         ) -> ::std::result::Result<Self, ::argp::EarlyExit> {
             let subcommand_name = if let ::std::option::Option::Some(subcommand_name) = command_name.last() {
                 *subcommand_name

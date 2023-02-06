@@ -2,12 +2,17 @@
 // SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
+//! Struct in this module are all used by the generated code. They can be used
+//! outside the library, but without any guarantees - there may be breaking
+//! changes between minor versions.
+
 #![allow(missing_docs)]
 
 use std::iter;
 use std::ops::Deref;
 
 /// Information about a particular command used for generating a help message.
+/// Unlike the other structures in this module, this one is considered stable.
 pub struct CommandInfo {
     /// The name of the command.
     pub name: &'static str,

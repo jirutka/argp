@@ -337,7 +337,7 @@
 #![deny(missing_docs)]
 
 mod error;
-mod help;
+pub mod help;
 pub mod parser;
 
 use std::env;
@@ -346,9 +346,11 @@ use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 
-pub use crate::error::{Error, MissingRequirements};
-pub use crate::help::{CommandInfo, Help, HelpCommands, OptionArgInfo};
+use crate::help::Help;
 use crate::parser::ParseGlobalOptions;
+
+pub use crate::error::{Error, MissingRequirements};
+pub use crate::help::CommandInfo;
 pub use argp_derive::FromArgs;
 
 /// Types which can be constructed from a set of command-line arguments.

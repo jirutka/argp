@@ -10,7 +10,7 @@ use crate::errors::Errors;
 use crate::parse_attrs::{Description, FieldKind, TypeAttrs};
 use crate::{Optionality, StructField};
 
-/// Returns a `TokenStream` generating an `argp::Help` instance.
+/// Returns a `TokenStream` generating an `argp::help::Help` instance.
 ///
 /// Note: `fields` entries with `is_subcommand.is_some()` will be ignored
 /// in favor of the `subcommand` argument.
@@ -44,7 +44,7 @@ pub(crate) fn inst_help(
         usage.push_str(" [<args>]");
 
         quote! {
-            ::std::option::Option::Some(::argp::HelpCommands {
+            ::std::option::Option::Some(::argp::help::HelpCommands {
                 usage: #usage,
                 subcommands: <#subcommand_ty as ::argp::SubCommands>::COMMANDS,
                 dynamic_subcommands: <#subcommand_ty as ::argp::SubCommands>::dynamic_commands,
@@ -58,7 +58,7 @@ pub(crate) fn inst_help(
     let footer = ty_attrs.footer.iter().map(LitStr::value).collect::<Vec<_>>().join("\n\n");
 
     quote! {
-        ::argp::Help {
+        ::argp::help::Help {
             description: #description,
             positionals: &[ #( #positionals, )* ],
             options: &[ #( #options, )* ],
@@ -174,7 +174,7 @@ fn positional_info(field: &StructField<'_>) -> TokenStream {
     }
 
     quote! {
-        ::argp::OptionArgInfo {
+        ::argp::help::OptionArgInfo {
             usage: #usage,
             names: #field_name,
             description: #description,
@@ -215,7 +215,7 @@ fn option_info(errors: &Errors, field: &StructField<'_>) -> TokenStream {
     let global = field.attrs.global;
 
     quote! {
-        ::argp::OptionArgInfo {
+        ::argp::help::OptionArgInfo {
             usage: #usage,
             names: #names,
             description: #description,

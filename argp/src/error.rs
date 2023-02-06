@@ -51,12 +51,15 @@ impl fmt::Display for Error {
         use Error::*;
 
         match &self {
-            DuplicateOption(_) => write!(f, "duplicate values provided"),
-            MissingArgValue(arg) => write!(f, "No value provided for option '{}'.", arg),
+            DuplicateOption(arg) => write!(f, "Option '{}' can only be used once.", arg),
+            MissingArgValue(arg) => write!(f, "Option '{}' requires a value.", arg),
             MissingRequirements(req) => req.fmt(f),
-            OptionsAfterHelp => write!(f, "Trailing options are not allowed after `help`."),
+            OptionsAfterHelp => {
+                write!(f, "Trailing options are not allowed after 'help' subcommand.")
+            }
             ParseArgument { arg, value, msg } => {
-                write!(f, "Error parsing argument '{}' with value '{}': {}", arg, value, msg)
+                let subj = if arg.starts_with('-') { "option" } else { "argument" };
+                write!(f, "Error parsing {} '{}' with value '{}': {}.", subj, arg, value, msg)
             }
             UnknownArgument(arg) => write!(f, "Unrecognized argument: {}", arg),
             Other(msg) => msg.fmt(f),

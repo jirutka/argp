@@ -93,7 +93,7 @@ jobs:
           printf '# Argp\n\n' > README.md
           asciidoctor -b docbook -o - README.adoc \
               | pandoc -f docbook -t gfm --wrap=preserve --shift-heading-level-by=1 \
-              | tee argp/README.md argp_derive/README.md
+              | tee -a argp/README.md argp_derive/README.md
 
       - name: Publish to crates.io
         run: |

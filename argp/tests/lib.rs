@@ -1022,43 +1022,6 @@ Options:
 mod fuchsia_commandline_tools_rubric {
     use super::*;
 
-    /// Tests for the three required command line argument types:
-    /// - exact text
-    /// - arguments
-    /// - options (i.e. switches and keys)
-    #[test]
-    fn three_command_line_argument_types() {
-        // TODO(cramertj) add support for exact text and positional arguments
-    }
-
-    /// A piece of exact text may be required or optional
-    #[test]
-    fn exact_text_required_and_optional() {
-        // TODO(cramertj) add support for exact text
-    }
-
-    /// Arguments are like function parameters or slots for data.
-    /// The order often matters.
-    #[test]
-    fn arguments_ordered() {
-        // TODO(cramertj) add support for ordered positional arguments
-    }
-
-    /// If a single argument is repeated, order may not matter, e.g. `<files>...`
-    #[test]
-    fn arguments_unordered() {
-        // TODO(cramertj) add support for repeated positional arguments
-    }
-
-    // Short argument names must use one dash and a single letter.
-    // TODO(cramertj): this should be a compile-fail test
-
-    // Short argument names are optional, but all choices are required to have a `--` option.
-    // TODO(cramertj): this should be a compile-fail test
-
-    // Numeric options, such as `-1` and `-2`, are not allowed.
-    // TODO(cramertj): this should be a compile-fail test
-
     #[derive(FromArgs)]
     /// One switch.
     struct OneSwitch {
@@ -1105,14 +1068,6 @@ mod fuchsia_commandline_tools_rubric {
     // an error by default.
     //
     // TODO(cramertj) implement some behavior for `--`
-
-    /// Double-dash is treated as an error by default.
-    #[test]
-    fn double_dash_default_error() {}
-
-    /// Double-dash can be ignored for later manual parsing.
-    #[test]
-    fn double_dash_ignore() {}
 
     /// Double-dash should be treated as the end of flags and optional arguments,
     /// and the remainder of the values should be treated purely as positional arguments,
@@ -1161,11 +1116,6 @@ mod fuchsia_commandline_tools_rubric {
             },
         );
     }
-
-    /// Double-dash can be parsed into an optional field using a provided
-    /// `fn(&[&str]) -> Result<T, EarlyExit>`.
-    #[test]
-    fn double_dash_custom() {}
 
     /// Repeating switches may be used to apply more emphasis.
     /// A common example is increasing verbosity by passing more `-v` switches.

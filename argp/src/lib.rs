@@ -339,6 +339,7 @@
 mod error;
 pub mod help;
 pub mod parser;
+pub mod term_size;
 
 use std::borrow::Cow;
 use std::env;

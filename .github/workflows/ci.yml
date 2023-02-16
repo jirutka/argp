@@ -31,7 +31,16 @@ jobs:
       - name: Build
         run: cargo build --workspace --examples --verbose
 
-      - name: Run tests
+      - name: Run tests (Linux)
+        if: matrix.os != 'windows'
+        run: |
+          stty rows 100 cols 80
+          cargo test --workspace --verbose -- --exact --skip ui
+        # This is a workaround to make stty work on CI.
+        shell: script -ec "/bin/sh -e {0}"
+
+      - name: Run tests (Windows)
+        if: matrix.os == 'windows'
         run: cargo test --workspace --verbose -- --exact --skip ui
 
       - name: Run compile tests

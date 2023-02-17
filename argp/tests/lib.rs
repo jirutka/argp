@@ -388,7 +388,7 @@ fn assert_help_string<T: FromArgs>(help_str: &str) {
         Ok(_) => panic!("help was parsed as args"),
         Err(EarlyExit::Err(_)) => panic!("expected EarlyExit::Help"),
         Err(EarlyExit::Help(help)) => {
-            assert_eq!(help.generate(), help_str);
+            assert_eq!(help.generate_default(), help_str);
         }
     }
 }
@@ -582,7 +582,7 @@ mod global_options {
         let exit_early = TopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
 
         match exit_early {
-            EarlyExit::Help(help) => assert_eq!(expected_help_string, help.generate()),
+            EarlyExit::Help(help) => assert_eq!(expected_help_string, help.generate_default()),
             _ => panic!("expected EarlyExit::Help"),
         }
     }
@@ -1158,7 +1158,7 @@ mod fuchsia_commandline_tools_rubric {
             HelpTopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
 
         match exit_early {
-            EarlyExit::Help(help) => assert_eq!(expected_help_string, help.generate()),
+            EarlyExit::Help(help) => assert_eq!(expected_help_string, help.generate_default()),
             _ => panic!("expected EarlyExit::Help"),
         }
     }
@@ -1866,7 +1866,7 @@ mod parser {
 
         if let EarlyExit::Help(help) = early_exit {
             assert_eq!(
-                help.generate(),
+                help.generate_default(),
                 r###"Usage: program-name [-n <n...>]
 
 Woot

@@ -351,7 +351,7 @@ use crate::help::{Help, HelpInfo};
 use crate::parser::ParseGlobalOptions;
 
 pub use crate::error::{Error, MissingRequirements};
-pub use crate::help::CommandInfo;
+pub use crate::help::{CommandInfo, HelpStyle};
 pub use argp_derive::FromArgs;
 
 /// Types which can be constructed from a set of command-line arguments.
@@ -427,7 +427,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// match early_exit {
     ///     EarlyExit::Help(help) => assert_eq!(
-    ///         help.generate(),
+    ///         help.generate_default(),
     ///         r#"Usage: classroom <command> [<args>]
     ///
     /// Command to manage a classroom.
@@ -450,7 +450,7 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// match early_exit {
     ///     EarlyExit::Help(help) => assert_eq!(
-    ///         help.generate(),
+    ///         help.generate_default(),
     ///         r#"Usage: classroom list [--teacher-name <name>]
     ///
     /// List all the classes.
@@ -649,7 +649,7 @@ pub fn from_env<T: TopLevelCommand>() -> T {
     T::from_args(&[&cmd], &args[1..]).unwrap_or_else(|early_exit| {
         exit(match early_exit {
             EarlyExit::Help(help) => {
-                println!("{}", help.generate());
+                println!("{}", help.generate_default());
                 0
             }
             EarlyExit::Err(err) => {
@@ -675,7 +675,7 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
     T::from_args(&[&cmd], &args[2..]).unwrap_or_else(|early_exit| {
         exit(match early_exit {
             EarlyExit::Help(help) => {
-                println!("{}", help.generate());
+                println!("{}", help.generate_default());
                 0
             }
             EarlyExit::Err(err) => {

@@ -75,9 +75,29 @@ pub struct OptionArgInfo {
     pub global: bool,
 }
 
+/// Style preferences for the Help message generator.
+///
+/// **Important**: This struct may be extended with more fields in the future,
+/// so always initialise it using [`Default::default()`], for example:
+///
+/// ```
+/// use argp::help::HelpStyle;
+///
+/// HelpStyle {
+///   ..Default::default()
+/// };
+/// ```
+#[derive(Debug, Default)]
+pub struct HelpStyle {}
+
 impl Help {
+    /// Generates a help message using the default style.
+    pub fn generate_default(&self) -> String {
+        self.generate(&HelpStyle::default())
+    }
+
     /// Generates a help message.
-    pub fn generate(&self) -> String {
+    pub fn generate(&self, _style: &HelpStyle) -> String {
         let info = self.info;
 
         let options = self
@@ -147,7 +167,7 @@ impl Help {
 
 impl fmt::Display for Help {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.generate().fmt(f)
+        self.generate_default().fmt(f)
     }
 }
 

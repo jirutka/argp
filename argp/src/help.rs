@@ -25,17 +25,17 @@ const HELP_OPT: OptionArgInfo = OptionArgInfo {
 };
 
 /// Information about a specific (sub)command used for generating a help message.
-pub struct Help {
+pub struct HelpInfo {
     pub description: &'static str,
     pub positionals: &'static [OptionArgInfo],
     pub options: &'static [OptionArgInfo],
-    pub commands: Option<HelpCommands>,
+    pub commands: Option<CommandsHelpInfo>,
     pub footer: &'static str,
 }
 
-/// A nested struct in [Help] used for generating the Commands section in
+/// A nested struct in [HelpInfo] used for generating the Commands section in
 /// a help message.
-pub struct HelpCommands {
+pub struct CommandsHelpInfo {
     pub usage: &'static str,
     pub subcommands: &'static [&'static CommandInfo],
     pub dynamic_subcommands: fn() -> &'static [&'static CommandInfo],
@@ -61,7 +61,7 @@ pub struct OptionArgInfo {
     pub global: bool,
 }
 
-impl Help {
+impl HelpInfo {
     /// Generates a help message.
     ///
     /// - `command_name`: The identifier for the current command.

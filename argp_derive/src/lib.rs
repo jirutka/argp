@@ -276,7 +276,7 @@ fn impl_from_args_struct(
 
     let from_args_method = impl_from_args_struct_from_args(&fields, subcommand);
 
-    let help_struct = help::inst_help(errors, type_attrs, &fields, subcommand);
+    let help_struct = help::inst_help_info(errors, type_attrs, &fields, subcommand);
 
     let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs, generic_args);
 
@@ -289,7 +289,7 @@ fn impl_from_args_struct(
 
         #[automatically_derived]
         impl #impl_generics ::argp::CommandHelp for #name #ty_generics #where_clause {
-            const HELP: ::argp::help::Help = #help_struct;
+            const HELP: ::argp::help::HelpInfo = #help_struct;
         }
 
         #top_or_sub_cmd_impl

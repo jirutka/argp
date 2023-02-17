@@ -347,7 +347,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
-use crate::help::Help;
+use crate::help::HelpInfo;
 use crate::parser::ParseGlobalOptions;
 
 pub use crate::error::{Error, MissingRequirements};
@@ -521,10 +521,10 @@ pub trait DynamicSubCommand: Sized {
     fn try_from_args(command_name: &[&str], args: &[&OsStr]) -> Option<Result<Self, EarlyExit>>;
 }
 
-/// A `FromArgs` implementation with attached [Help] struct.
+/// A `FromArgs` implementation with attached [HelpInfo] struct.
 pub trait CommandHelp: FromArgs {
     /// Information for generating the help message.
-    const HELP: Help;
+    const HELP: HelpInfo;
 }
 
 /// Types which can be constructed from a single command-line value.

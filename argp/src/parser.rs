@@ -8,7 +8,7 @@
 use std::ffi::{OsStr, OsString};
 
 use crate::error::Error;
-use crate::help::{CommandInfo, Help, OptionArgInfo};
+use crate::help::{CommandInfo, HelpInfo, OptionArgInfo};
 use crate::EarlyExit;
 
 /// This function implements argument parsing for structs.
@@ -26,7 +26,7 @@ pub fn parse_struct_args(
     mut parse_options: ParseStructOptions<'_, '_>,
     mut parse_positionals: ParseStructPositionals<'_>,
     mut parse_subcommand: Option<ParseStructSubCommand<'_>>,
-    help: &Help,
+    help: &HelpInfo,
 ) -> Result<(), EarlyExit> {
     let mut help_requested = false;
     let mut help_cmd = false;
@@ -119,7 +119,7 @@ pub struct ParseStructOptions<'a, 'p> {
 
     /// A reference to the [Help] struct in the associated [FromArgs].
     /// This is used to collect global options for generating a help message.
-    pub help: &'static Help,
+    pub help: &'static HelpInfo,
 
     /// If this struct represents options of a subcommand, then `parent` is an
     /// indirect reference to the previous [ParseStructOptions] in the chain,

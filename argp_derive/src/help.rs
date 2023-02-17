@@ -10,11 +10,11 @@ use crate::errors::Errors;
 use crate::parse_attrs::{Description, FieldKind, TypeAttrs};
 use crate::{Optionality, StructField};
 
-/// Returns a `TokenStream` generating an `argp::help::Help` instance.
+/// Returns a `TokenStream` generating an `argp::help::HelpInfo` instance.
 ///
 /// Note: `fields` entries with `is_subcommand.is_some()` will be ignored
 /// in favor of the `subcommand` argument.
-pub(crate) fn inst_help(
+pub(crate) fn inst_help_info(
     errors: &Errors,
     ty_attrs: &TypeAttrs,
     fields: &[StructField<'_>],
@@ -44,7 +44,7 @@ pub(crate) fn inst_help(
         usage.push_str(" [<args>]");
 
         quote! {
-            ::std::option::Option::Some(::argp::help::HelpCommands {
+            ::std::option::Option::Some(::argp::help::CommandsHelpInfo {
                 usage: #usage,
                 subcommands: <#subcommand_ty as ::argp::SubCommands>::COMMANDS,
                 dynamic_subcommands: <#subcommand_ty as ::argp::SubCommands>::dynamic_commands,
@@ -63,7 +63,7 @@ pub(crate) fn inst_help(
         .join("\n\n");
 
     quote! {
-        ::argp::help::Help {
+        ::argp::help::HelpInfo {
             description: #description,
             positionals: &[ #( #positionals, )* ],
             options: &[ #( #options, )* ],

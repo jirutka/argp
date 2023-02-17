@@ -84,11 +84,16 @@ pub struct OptionArgInfo {
 /// use argp::help::HelpStyle;
 ///
 /// HelpStyle {
-///   ..Default::default()
+///     blank_lines_spacing: 1,
+///     ..Default::default()
 /// };
 /// ```
 #[derive(Debug, Default)]
-pub struct HelpStyle {}
+pub struct HelpStyle {
+    /// Specifies the number of blank lines that will be inserted between
+    /// descriptions of commands and options. Default is `0`.
+    pub blank_lines_spacing: usize,
+}
 
 impl Help {
     /// Generates a help message using the default style.
@@ -97,7 +102,7 @@ impl Help {
     }
 
     /// Generates a help message.
-    pub fn generate(&self, _style: &HelpStyle) -> String {
+    pub fn generate(&self, style: &HelpStyle) -> String {
         let info = self.info;
 
         let options = self
@@ -150,9 +155,9 @@ impl Help {
                 .chain(subcommands.iter().map(|r| r.name)),
         );
 
-        write_opts_section(&mut out, "Arguments:", info.positionals.iter(), desc_indent);
-        write_opts_section(&mut out, "Options:", options, desc_indent);
-        write_cmds_section(&mut out, "Commands:", &subcommands, desc_indent);
+        write_opts_section(&mut out, "Arguments:", info.positionals.iter(), desc_indent, style);
+        write_opts_section(&mut out, "Options:", options, desc_indent, style);
+        write_cmds_section(&mut out, "Commands:", &subcommands, desc_indent, style);
 
         if !info.footer.is_empty() {
             out.push_str(SECTION_SEPARATOR);
@@ -223,6 +228,7 @@ fn write_opts_section<'a>(
     title: &str,
     opts: impl Iterator<Item = &'a OptionArgInfo>,
     desc_indent: usize,
+    style: &HelpStyle,
 ) {
     // NOTE: greedy positional has empty names and description, to be excluded
     // from the Positional Arguments section.
@@ -230,16 +236,28 @@ fn write_opts_section<'a>(
         if i == 0 {
             out.push_str(SECTION_SEPARATOR);
             out.push_str(title);
+        } else {
+            append_blank_lines(out, style.blank_lines_spacing);
         }
         write_description(out, opt.names, opt.description, desc_indent);
     }
 }
 
-fn write_cmds_section(out: &mut String, title: &str, cmds: &[&CommandInfo], desc_indent: usize) {
+fn write_cmds_section(
+    out: &mut String,
+    title: &str,
+    cmds: &[&CommandInfo],
+    desc_indent: usize,
+    style: &HelpStyle,
+) {
     if !cmds.is_empty() {
         out.push_str(SECTION_SEPARATOR);
         out.push_str(title);
-        for cmd in cmds {
+
+        for (i, cmd) in cmds.iter().enumerate() {
+            if i != 0 {
+                append_blank_lines(out, style.blank_lines_spacing);
+            }
             write_description(out, cmd.name, cmd.description, desc_indent);
         }
     }
@@ -303,4 +321,10 @@ fn new_line(current_line: &mut String, out: &mut String) {
     out.push('\n');
     out.push_str(current_line);
     current_line.truncate(0);
+}
+
+fn append_blank_lines(out: &mut String, count: usize) {
+    if count > 0 {
+        out.extend(iter::repeat('\n').take(count))
+    }
 }

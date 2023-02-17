@@ -96,7 +96,7 @@ pub fn parse_struct_args(
             .parent
             .map_or_else(Vec::new, |p| p.global_options());
 
-        Err(EarlyExit::Help(help.generate(cmd_name, &global_options)))
+        Err(EarlyExit::Help(help.help(cmd_name, &global_options).generate()))
     } else {
         Ok(())
     }

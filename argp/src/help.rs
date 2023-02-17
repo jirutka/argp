@@ -8,6 +8,7 @@
 
 #![allow(missing_docs)]
 
+use std::fmt;
 use std::iter;
 use std::ops::Deref;
 
@@ -23,6 +24,13 @@ const HELP_OPT: OptionArgInfo = OptionArgInfo {
     description: "Show this help message and exit.",
     global: true,
 };
+
+/// Help message generator.
+pub struct Help<'a> {
+    info: &'a HelpInfo,
+    command_name: &'a [&'a str],
+    global_options: &'a [&'a OptionArgInfo],
+}
 
 /// Information about a specific (sub)command used for generating a help message.
 pub struct HelpInfo {
@@ -61,21 +69,19 @@ pub struct OptionArgInfo {
     pub global: bool,
 }
 
-impl HelpInfo {
+impl<'a> Help<'a> {
     /// Generates a help message.
-    ///
-    /// - `command_name`: The identifier for the current command.
-    /// - `global_options`: Information about additional global options (from
-    ///   ancestors) to add to the generated help message.
-    pub fn generate(&self, command_name: &[&str], global_options: &[&OptionArgInfo]) -> String {
-        let command_name = command_name.join(" ");
+    pub fn generate(&self) -> String {
+        let info = self.info;
+        let command_name = self.command_name.join(" ");
 
-        let options = global_options
+        let options = self
+            .global_options
             .iter()
             .map(Deref::deref)
-            .chain(self.options)
+            .chain(info.options)
             .chain(iter::once(&HELP_OPT));
-        let options_and_args = options.clone().chain(self.positionals);
+        let options_and_args = options.clone().chain(info.positionals);
 
         let mut out = String::from("Usage: ");
         out.push_str(&command_name);
@@ -89,15 +95,15 @@ impl HelpInfo {
             out.push_str(usage);
         }
 
-        if let Some(cmds) = &self.commands {
+        if let Some(cmds) = &info.commands {
             out.push(' ');
             out.push_str(cmds.usage);
         }
 
         out.push_str(SECTION_SEPARATOR);
-        out.push_str(&self.description.replace("{command_name}", &command_name));
+        out.push_str(&info.description.replace("{command_name}", &command_name));
 
-        let subcommands = if let Some(cmds) = &self.commands {
+        let subcommands = if let Some(cmds) = &info.commands {
             cmds.subcommands
                 .iter()
                 .chain((cmds.dynamic_subcommands)().iter())
@@ -115,18 +121,44 @@ impl HelpInfo {
                 .chain(subcommands.iter().map(|r| r.name)),
         );
 
-        write_opts_section(&mut out, "Arguments:", self.positionals.iter(), desc_indent);
+        write_opts_section(&mut out, "Arguments:", info.positionals.iter(), desc_indent);
         write_opts_section(&mut out, "Options:", options, desc_indent);
         write_cmds_section(&mut out, "Commands:", &subcommands, desc_indent);
 
-        if !self.footer.is_empty() {
+        if !info.footer.is_empty() {
             out.push_str(SECTION_SEPARATOR);
-            out.push_str(&self.footer.replace("{command_name}", &command_name));
+            out.push_str(&info.footer.replace("{command_name}", &command_name));
         }
 
         out.push('\n');
 
         out
+    }
+}
+
+impl<'a> fmt::Display for Help<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.generate().fmt(f)
+    }
+}
+
+impl HelpInfo {
+    /// Creates a new `Help` generator instance.
+    ///
+    /// - `command_name`: The identifier for the current command.
+    /// - `global_options`: Information about additional global options (from
+    ///   ancestors) to add to the generated help message.
+    #[inline]
+    pub const fn help<'a>(
+        &'a self,
+        command_name: &'a [&'a str],
+        global_options: &'a [&'a OptionArgInfo],
+    ) -> Help<'a> {
+        Help {
+            info: self,
+            command_name,
+            global_options,
+        }
     }
 }
 

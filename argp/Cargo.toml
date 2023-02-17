@@ -10,9 +10,6 @@ description = "Derive-based argument parser optimized for code size"
 repository = "https://github.com/jirutka/argp"
 readme = "README.md"
 
-[features]
-redact_arg_values = ["argp_derive/redact_arg_values"]
-
 [dependencies]
 argp_derive = { version = "0.1.0", path = "../argp_derive" }
 

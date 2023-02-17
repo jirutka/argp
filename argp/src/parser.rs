@@ -338,19 +338,6 @@ impl<T: Flag> ParseFlag for T {
     }
 }
 
-#[doc(hidden)]
-#[cfg(feature = "redact_arg_values")]
-pub struct RedactFlag {
-    pub slot: Option<String>,
-}
-
-#[cfg(feature = "redact_arg_values")]
-impl ParseFlag for RedactFlag {
-    fn set_flag(&mut self, arg: &str) {
-        self.slot = Some(arg.to_string());
-    }
-}
-
 // A trait for for slots that reserve space for a value and know how to parse that value
 // from a command-line `&str` argument.
 //

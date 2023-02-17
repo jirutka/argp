@@ -276,12 +276,6 @@ fn impl_from_args_struct(
 
     let from_args_method = impl_from_args_struct_from_args(&fields, subcommand);
 
-    #[cfg(feature = "redact_arg_values")]
-    let redact_arg_values_method =
-        impl_from_args_struct_redact_arg_values(type_attrs, &fields, subcommand);
-    #[cfg(not(feature = "redact_arg_values"))]
-    let redact_arg_values_method = TokenStream::new();
-
     let help_struct = help::inst_help(errors, type_attrs, &fields, subcommand);
 
     let top_or_sub_cmd_impl = top_or_sub_cmd_impl(errors, name, type_attrs, generic_args);
@@ -291,8 +285,6 @@ fn impl_from_args_struct(
         #[automatically_derived]
         impl #impl_generics ::argp::FromArgs for #name #ty_generics #where_clause {
             #from_args_method
-
-            #redact_arg_values_method
         }
 
         #[automatically_derived]
@@ -414,135 +406,6 @@ fn impl_from_args_struct_from_args<'a>(
             ::std::result::Result::Ok(Self {
                 #( #unwrap_fields, )*
             })
-        }
-    };
-
-    method_impl
-}
-
-#[cfg(feature = "redact_arg_values")]
-fn impl_from_args_struct_redact_arg_values<'a>(
-    type_attrs: &TypeAttrs,
-    fields: &'a [StructField<'a>],
-    subcommand: Option<&StructField<'_>>,
-) -> TokenStream {
-    let init_fields = declare_local_storage_for_redacted_fields(fields);
-    let unwrap_fields = unwrap_redacted_fields(fields);
-
-    let positional_fields: Vec<&StructField<'_>> = fields
-        .iter()
-        .filter(|field| field.kind == FieldKind::Positional)
-        .collect();
-    let positional_field_idents = positional_fields.iter().map(|field| &field.field.ident);
-    let positional_field_names = positional_fields.iter().map(|field| field.name.to_string());
-    let last_positional_is_repeating = positional_fields
-        .last()
-        .map(|field| field.optionality == Optionality::Repeating)
-        .unwrap_or(false);
-    let last_positional_is_greedy = positional_fields
-        .last()
-        .map(|field| field.kind == FieldKind::Positional && field.attrs.greedy.is_some())
-        .unwrap_or(false);
-
-    let flag_output_table = fields.iter().filter_map(|field| {
-        let field_name = &field.field.ident;
-        match field.kind {
-            FieldKind::Option => {
-                Some(quote! { ::argp::parser::ParseStructOption::Value(&mut #field_name) })
-            }
-            FieldKind::Switch => {
-                Some(quote! { ::argp::parser::ParseStructOption::Flag(&mut #field_name) })
-            }
-            FieldKind::SubCommand | FieldKind::Positional => None,
-        }
-    });
-
-    let flag_global_table = fields.iter().filter_map(|field| match field.kind {
-        FieldKind::Option | FieldKind::Switch => Some(field.attrs.global),
-        FieldKind::SubCommand | FieldKind::Positional => None,
-    });
-
-    let flag_str_to_output_table_map = flag_str_to_output_table_map_entries(fields);
-
-    let impl_span = Span::call_site();
-
-    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span);
-
-    let append_missing_requirements =
-        append_missing_requirements(&missing_requirements_ident, fields);
-
-    let redact_subcommands = if let Some(subcommand) = subcommand {
-        let name = subcommand.name;
-        let ty = subcommand.ty_without_wrapper;
-        quote_spanned! { impl_span =>
-            ::std::option::Option::Some(::argp::parser::ParseStructSubCommand {
-                subcommands: <#ty as ::argp::SubCommands>::COMMANDS,
-                dynamic_subcommands: &<#ty as ::argp::SubCommands>::dynamic_commands(),
-                parse_func: &mut |__command, __remaining_args, _| {
-                    #name = ::std::option::Option::Some(<#ty as ::argp::FromArgs>::redact_arg_values(__command, __remaining_args)?);
-                    ::std::result::Result::Ok(())
-                },
-            })
-        }
-    } else {
-        quote_spanned! { impl_span => ::std::option::Option::None }
-    };
-
-    let unwrap_cmd_name_err_string = if type_attrs.is_subcommand.is_none() {
-        quote! { "no command name" }
-    } else {
-        quote! { "no subcommand name" }
-    };
-
-    let method_impl = quote_spanned! { impl_span =>
-        fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> ::std::result::Result<::std::vec::Vec<::std::string::String>, ::argp::EarlyExit> {
-            #( #init_fields )*
-
-            ::argp::parser::parse_struct_args(
-                __cmd_name,
-                __args,
-                ::argp::parser::ParseStructOptions {
-                    arg_to_slot: &[ #( #flag_str_to_output_table_map ,)* ],
-                    slots: &mut [ #( #flag_output_table, )* ],
-                    slots_global: &[ #( #flag_global_table, )* ],
-                    help: &<Self as argp::CommandHelp>::HELP,
-                    parent: std::option::Option::None,
-                },
-                ::argp::parser::ParseStructPositionals {
-                    positionals: &mut [
-                        #(
-                            ::argp::parser::ParseStructPositional {
-                                name: #positional_field_names,
-                                slot: &mut #positional_field_idents as &mut dyn ::argp::parser::ParseValueSlot,
-                            },
-                        )*
-                    ],
-                    last_is_repeating: #last_positional_is_repeating,
-                    last_is_greedy: #last_positional_is_greedy,
-                },
-                #redact_subcommands,
-                &<Self as ::argp::CommandHelp>::HELP,
-            )?;
-
-            let mut #missing_requirements_ident = ::argp::MissingRequirements::default();
-            #(
-                #append_missing_requirements
-            )*
-            #missing_requirements_ident.err_on_any()?;
-
-            let mut __redacted = vec![
-                if let ::std::option::Option::Some(cmd_name) = __cmd_name.last() {
-                    (*cmd_name).to_owned()
-                } else {
-                    return ::std::result::Result::Err(
-                        ::argp::EarlyExit::Err(::argp::Error::other(#unwrap_cmd_name_err_string))
-                    );
-                }
-            ];
-
-            #( #unwrap_fields )*
-
-            ::std::result::Result::Ok(__redacted)
         }
     };
 
@@ -742,116 +605,6 @@ fn unwrap_from_args_fields<'a>(
     })
 }
 
-/// Declare a local slots to store each field in during parsing.
-///
-/// Most fields are stored in `Option<FieldType>` locals.
-/// `argp(option)` fields are stored in a `ParseValueSlotTy` along with a
-/// function that knows how to decode the appropriate value.
-#[cfg(feature = "redact_arg_values")]
-fn declare_local_storage_for_redacted_fields<'a>(
-    fields: &'a [StructField<'a>],
-) -> impl Iterator<Item = TokenStream> + 'a {
-    fields.iter().map(|field| {
-        let field_name = &field.field.ident;
-
-        match field.kind {
-            FieldKind::Switch => {
-                quote! {
-                    let mut #field_name = ::argp::parser::RedactFlag {
-                        slot: ::std::option::Option::None,
-                    };
-                }
-            }
-            FieldKind::Option => {
-                let field_slot_type = match field.optionality {
-                    Optionality::Repeating => {
-                        quote! { ::std::vec::Vec<::std::string::String> }
-                    }
-                    Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
-                        quote! { ::std::option::Option<::std::string::String> }
-                    }
-                };
-
-                quote! {
-                    let mut #field_name: ::argp::parser::ParseValueSlotTy::<#field_slot_type, ::std::string::String> =
-                        ::argp::parser::ParseValueSlotTy {
-                        slot: ::std::default::Default::default(),
-                        parse_func: |arg, _| { ::std::result::Result::Ok(arg.to_owned()) },
-                    };
-                }
-            }
-            FieldKind::Positional => {
-                let field_slot_type = match field.optionality {
-                    Optionality::Repeating => {
-                        quote! { ::std::vec::Vec<::std::string::String> }
-                    }
-                    Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
-                        quote! { ::std::option::Option<::std::string::String> }
-                    }
-                };
-
-                let arg_name = field.positional_arg_name();
-                quote! {
-                    let mut #field_name: ::argp::parser::ParseValueSlotTy::<#field_slot_type, ::std::string::String> =
-                        ::argp::parser::ParseValueSlotTy {
-                        slot: ::std::default::Default::default(),
-                        parse_func: |_, _| { ::std::result::Result::Ok(#arg_name.to_owned()) },
-                    };
-                }
-            }
-            FieldKind::SubCommand => {
-                quote! { let mut #field_name: ::std::option::Option<::std::vec::Vec<::std::string::String>> = ::std::option::Option::None; }
-            }
-        }
-    })
-}
-
-/// Unwrap non-optional fields and take options out of their tuple slots.
-#[cfg(feature = "redact_arg_values")]
-fn unwrap_redacted_fields<'a>(
-    fields: &'a [StructField<'a>],
-) -> impl Iterator<Item = TokenStream> + 'a {
-    fields.iter().map(|field| {
-        let field_name = field.name;
-
-        match field.kind {
-            FieldKind::Switch => {
-                quote! {
-                    if let ::std::option::Option::Some(__field_name) = #field_name.slot {
-                        __redacted.push(__field_name);
-                    }
-                }
-            }
-            FieldKind::Option => match field.optionality {
-                Optionality::Repeating => {
-                    quote! {
-                        __redacted.extend(#field_name.slot.into_iter());
-                    }
-                }
-                Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
-                    quote! {
-                        if let ::std::option::Option::Some(__field_name) = #field_name.slot {
-                            __redacted.push(__field_name);
-                        }
-                    }
-                }
-            },
-            FieldKind::Positional => {
-                quote! {
-                    __redacted.extend(#field_name.slot.into_iter());
-                }
-            }
-            FieldKind::SubCommand => {
-                quote! {
-                    if let ::std::option::Option::Some(__subcommand_args) = #field_name {
-                        __redacted.extend(__subcommand_args.into_iter());
-                    }
-                }
-            }
-        }
-    })
-}
-
 /// Entries of tokens like `("--some-flag-key", 5)` that map from a flag key string
 /// to an index in the output table.
 fn flag_str_to_output_table_map_entries<'a>(fields: &'a [StructField<'a>]) -> Vec<TokenStream> {
@@ -1034,12 +787,6 @@ fn impl_from_args_enum(
     let from_args_method =
         impl_from_args_enum_from_args(name, &variant_names, &variant_ty, dynamic_type_and_variant);
 
-    #[cfg(feature = "redact_arg_values")]
-    let redact_arg_values_method =
-        impl_from_args_enum_redact_arg_values(&variant_ty, dynamic_type_and_variant);
-    #[cfg(not(feature = "redact_arg_values"))]
-    let redact_arg_values_method = TokenStream::new();
-
     let dynamic_commands = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
         quote! {
             fn dynamic_commands() -> &'static [&'static ::argp::CommandInfo] {
@@ -1052,8 +799,6 @@ fn impl_from_args_enum(
     quote! {
         impl #impl_generics ::argp::FromArgs for #name #ty_generics #where_clause {
             #from_args_method
-
-            #redact_arg_values_method
         }
 
         impl #impl_generics ::argp::SubCommands for #name #ty_generics #where_clause {
@@ -1107,45 +852,6 @@ fn impl_from_args_enum_from_args(
             )*
 
             #dynamic_from_args
-
-            ::std::result::Result::Err(
-                ::argp::EarlyExit::Err(::argp::Error::other("no subcommand matched"))
-            )
-        }
-    }
-}
-
-#[cfg(feature = "redact_arg_values")]
-fn impl_from_args_enum_redact_arg_values(
-    variant_ty: &[&Type],
-    dynamic_type_and_variant: Option<(&Type, &syn::Ident)>,
-) -> TokenStream {
-    let dynamic_redact_arg_values = dynamic_type_and_variant.as_ref().map(|(dynamic_type, _)| {
-        quote! {
-            if let ::std::option::Option::Some(result) = <#dynamic_type as ::argp::DynamicSubCommand>::try_redact_arg_values(
-                command_name, args) {
-                return result;
-            }
-        }
-    });
-
-    quote! {
-        fn redact_arg_values(command_name: &[&str], args: &[&str]) -> ::std::result::Result<::std::vec::Vec<::std::string::String>, ::argp::EarlyExit> {
-            let subcommand_name = if let Some(subcommand_name) = command_name.last() {
-                *subcommand_name
-            } else {
-                return ::std::result::Result::Err(
-                    ::argp::EarlyExit::Err(::argp::Error::other("no subcommand name"))
-                );
-            };
-
-            #(
-                if subcommand_name == <#variant_ty as ::argp::SubCommand>::COMMAND.name {
-                    return <#variant_ty as ::argp::FromArgs>::redact_arg_values(command_name, args);
-                }
-            )*
-
-            #dynamic_redact_arg_values
 
             ::std::result::Result::Err(
                 ::argp::EarlyExit::Err(::argp::Error::other("no subcommand matched"))

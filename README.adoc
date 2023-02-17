@@ -39,7 +39,7 @@ Notable changes from argh:
 * Specialised `example`, `note`, and `error_code` attributes are replaced by a single `footer` attribute – you can use it for whatever you like.
 * Positional arguments in the Usage string are displayed _after_ options and switches and `<arg_name>` is displayed in descriptions of options.
 * Trailing options are allowed after the `-h, --help` switch, but are not allowed after the `help` subcommand only.
-* `redact_arg_values` is optional – behind the feature flag of the same name.
+* `redact_arg_values` has been removed (if you happen to need it, let me know in Issues).
 
 
 == Basic Example

@@ -173,13 +173,6 @@ fn dynamic_subcommand_example() {
             ]
         }
 
-        fn try_redact_arg_values(
-            _command_name: &[&str],
-            _args: &[&str],
-        ) -> Option<Result<Vec<String>, EarlyExit>> {
-            Some(Err(EarlyExit::Err(Error::other("Test should not redact"))))
-        }
-
         fn try_from_args(
             command_name: &[&str],
             args: &[&str],
@@ -1314,13 +1307,6 @@ Options:
                 name: "plugin",
                 description: "Example dynamic command",
             }]
-        }
-
-        fn try_redact_arg_values(
-            _command_name: &[&str],
-            _args: &[&str],
-        ) -> Option<Result<Vec<String>, EarlyExit>> {
-            Some(Err(EarlyExit::Err(Error::other("Test should not redact"))))
         }
 
         fn try_from_args(

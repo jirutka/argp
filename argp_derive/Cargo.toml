@@ -9,9 +9,6 @@ description = "Derive-based argument parsing optimized for code size"
 repository = "https://github.com/jirutka/argp"
 readme = "README.md"
 
-[features]
-redact_arg_values = []
-
 [lib]
 proc-macro = true
 

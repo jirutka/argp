@@ -280,23 +280,6 @@
 //!         })
 //!     }
 //!
-//!     #[cfg(feature = "redact_arg_values")]
-//!     fn try_redact_arg_values(
-//!         command_name: &[&str],
-//!         args: &[&str],
-//!     ) -> Option<Result<Vec<String>, EarlyExit>> {
-//!         for command in Self::commands() {
-//!             if command_name.last() == Some(&command.name) {
-//!                 // Process arguments and redact values here.
-//!                 if !args.is_empty() {
-//!                     return Some(Err(Error::other("Our example dynamic command never takes arguments!").into()));
-//!                 }
-//!                 return Some(Ok(Vec::new()))
-//!             }
-//!         }
-//!         None
-//!     }
-//!
 //!     fn try_from_args(command_name: &[&str], args: &[&str]) -> Option<Result<Self, EarlyExit>> {
 //!         for command in Self::commands() {
 //!             if command_name.last() == Some(&command.name) {
@@ -472,137 +455,6 @@ pub trait FromArgs: Sized {
         Self::_from_args(command_name, args, None)
     }
 
-    /// Get a String with just the argument names, e.g., options, flags, subcommands, etc, but
-    /// without the values of the options and arguments. This can be useful as a means to capture
-    /// anonymous usage statistics without revealing the content entered by the end user.
-    ///
-    /// The first argument `command_name` is the identifier for the current command. In most cases,
-    /// users should only pass in a single item for the command name, which typically comes from
-    /// the first item from `std::env::args()`. Implementations however should append the
-    /// subcommand name in when recursively calling [FromArgs::from_args] for subcommands. This
-    /// allows `argp` to generate correct subcommand help strings.
-    ///
-    /// The second argument `args` is the rest of the command line arguments.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use argp::FromArgs;
-    ///
-    /// /// Command to manage a classroom.
-    /// #[derive(FromArgs)]
-    /// struct ClassroomCmd {
-    ///     #[argp(subcommand)]
-    ///     subcommands: Subcommands,
-    /// }
-    ///
-    /// #[derive(FromArgs)]
-    /// #[argp(subcommand)]
-    /// enum Subcommands {
-    ///     List(ListCmd),
-    ///     Add(AddCmd),
-    /// }
-    ///
-    /// /// List all the classes.
-    /// #[derive(FromArgs)]
-    /// #[argp(subcommand, name = "list")]
-    /// struct ListCmd {
-    ///     /// List classes for only this teacher.
-    ///     #[argp(option)]
-    ///     teacher_name: Option<String>,
-    /// }
-    ///
-    /// /// Add students to a class.
-    /// #[derive(FromArgs)]
-    /// #[argp(subcommand, name = "add")]
-    /// struct AddCmd {
-    ///     /// The name of the class's teacher.
-    ///     #[argp(option)]
-    ///     teacher_name: String,
-    ///
-    ///     /// Has the class started yet?
-    ///     #[argp(switch)]
-    ///     started: bool,
-    ///
-    ///     /// The name of the class.
-    ///     #[argp(positional)]
-    ///     class_name: String,
-    ///
-    ///     /// The student names.
-    ///     #[argp(positional)]
-    ///     students: Vec<String>,
-    /// }
-    ///
-    /// let args = ClassroomCmd::redact_arg_values(
-    ///     &["classroom"],
-    ///     &["list"],
-    /// ).unwrap();
-    /// assert_eq!(
-    ///     args,
-    ///     &[
-    ///         "classroom",
-    ///         "list",
-    ///     ],
-    /// );
-    ///
-    /// let args = ClassroomCmd::redact_arg_values(
-    ///     &["classroom"],
-    ///     &["list", "--teacher-name", "Smith"],
-    /// ).unwrap();
-    /// assert_eq!(
-    ///    args,
-    ///    &[
-    ///         "classroom",
-    ///         "list",
-    ///         "--teacher-name",
-    ///     ],
-    /// );
-    ///
-    /// let args = ClassroomCmd::redact_arg_values(
-    ///     &["classroom"],
-    ///     &["add", "--teacher-name", "Smith", "--started", "Math", "Abe", "Sung"],
-    /// ).unwrap();
-    /// assert_eq!(
-    ///     args,
-    ///     &[
-    ///         "classroom",
-    ///         "add",
-    ///         "--teacher-name",
-    ///         "--started",
-    ///         "class_name",
-    ///         "students",
-    ///         "students",
-    ///     ],
-    /// );
-    ///
-    /// // `ClassroomCmd::redact_arg_values` will error out if passed invalid arguments.
-    /// assert_eq!(
-    ///     ClassroomCmd::redact_arg_values(&["classroom"], &["add", "--teacher-name"]),
-    ///     Err(argp::EarlyExit::Err(argp::Error::MissingArgValue("--teacher-name".to_owned()))),
-    /// );
-    ///
-    /// // `ClassroomCmd::redact_arg_values` will generate help messages.
-    /// assert_eq!(
-    ///     ClassroomCmd::redact_arg_values(&["classroom"], &["help"]),
-    ///     Err(argp::EarlyExit::Help(
-    ///         r#"Usage: classroom <command> [<args>]
-    ///
-    /// Command to manage a classroom.
-    ///
-    /// Options:
-    ///   -h, --help  Show this help message and exit.
-    ///
-    /// Commands:
-    ///   list        List all the classes.
-    ///   add         Add students to a class.
-    /// "#.to_string())),
-    /// );
-    /// ```
-    #[cfg(feature = "redact_arg_values")]
-    fn redact_arg_values(_command_name: &[&str], _args: &[&str]) -> Result<Vec<String>, EarlyExit> {
-        Ok(vec!["<<REDACTED>>".into()])
-    }
-
     #[doc(hidden)]
     fn _from_args(
         command_name: &[&str],
@@ -639,21 +491,6 @@ impl<T: SubCommand> SubCommands for T {
 pub trait DynamicSubCommand: Sized {
     /// Info about supported subcommands.
     fn commands() -> &'static [&'static CommandInfo];
-
-    /// Perform the function of `FromArgs::redact_arg_values` for this dynamic
-    /// command.
-    ///
-    /// The full list of subcommands, ending with the subcommand that should be
-    /// dynamically recognized, is passed in `command_name`. If the command
-    /// passed is not recognized, this function should return `None`. Otherwise
-    /// it should return `Some`, and the value within the `Some` has the same
-    /// semantics as the return of `FromArgs::redact_arg_values`.
-    fn try_redact_arg_values(
-        _command_name: &[&str],
-        _args: &[&str],
-    ) -> Option<Result<Vec<String>, EarlyExit>> {
-        None
-    }
 
     /// Perform the function of `FromArgs::from_args` for this dynamic command.
     ///

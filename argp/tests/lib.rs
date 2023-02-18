@@ -1007,67 +1007,36 @@ Options:
             Error::MissingRequirements(missing_requirements(&["a"], &[], &[])),
         );
     }
-}
-
-/// Tests derived from
-/// https://fuchsia.dev/fuchsia-src/development/api/cli and
-/// https://fuchsia.dev/fuchsia-src/development/api/cli_help
-mod fuchsia_commandline_tools_rubric {
-    use super::*;
 
     #[derive(FromArgs)]
-    /// One switch.
-    struct OneSwitch {
-        #[argp(switch, short = 's')]
-        /// just a switch
-        switchy: bool,
+    /// Destroy the contents of <file>.
+    struct WithArgName {
+        #[argp(positional, arg_name = "name")]
+        _username: String,
     }
 
-    /// The presence of a switch means the feature it represents is "on",
-    /// while its absence means that it is "off".
     #[test]
-    fn switch_on_when_present() {
-        let on = OneSwitch::from_args(&["cmdname"], &["-s"]).expect("parsing on");
-        assert!(on.switchy);
+    fn with_arg_name() {
+        assert_help_string::<WithArgName>(
+            r###"Usage: test_arg_0 <name>
 
-        let off = OneSwitch::from_args(&["cmdname"], &[]).expect("parsing off");
-        assert!(!off.switchy);
+Destroy the contents of <file>.
+
+Arguments:
+  name
+
+Options:
+  -h, --help  Show this help message and exit.
+"###,
+        );
     }
-
-    #[derive(FromArgs, Debug)]
-    /// One keyed option
-    struct OneOption {
-        #[argp(option)]
-        /// some description
-        _foo: String,
-    }
-
-    /// Do not use an equals punctuation or similar to separate the key and value.
-    #[test]
-    fn keyed_no_equals() {
-        OneOption::from_args(&["cmdname"], &["--foo", "bar"])
-            .expect("Parsing option value as separate arg should succeed");
-
-        let e = OneOption::from_args(&["cmdname"], &["--foo=bar"])
-            .expect_err("Parsing option value using `=` should fail");
-        assert_eq!(e, EarlyExit::Err(Error::UnknownArgument("--foo=bar".to_owned())));
-    }
-
-    // Two dashes on their own indicates the end of options.
-    // Subsequent values are given to the tool as-is.
-    //
-    // It's unclear exactly what "are given to the tool as-is" in means in this
-    // context, so we provide a few options for handling `--`, with it being
-    // an error by default.
-    //
-    // TODO(cramertj) implement some behavior for `--`
 
     /// Double-dash should be treated as the end of flags and optional arguments,
     /// and the remainder of the values should be treated purely as positional arguments,
     /// even when their syntax matches that of options. e.g. `foo -- -e` should be parsed
     /// as passing a single positional argument with the value `-e`.
     #[test]
-    fn double_dash_positional() {
+    fn double_dash() {
         #[derive(FromArgs, Debug, PartialEq)]
         /// Positional arguments list
         struct StringList {
@@ -1109,22 +1078,20 @@ mod fuchsia_commandline_tools_rubric {
             },
         );
     }
+}
 
-    /// Repeating switches may be used to apply more emphasis.
-    /// A common example is increasing verbosity by passing more `-v` switches.
-    #[test]
-    fn switches_repeating() {
-        #[derive(FromArgs, Debug)]
-        /// A type for testing repeating `-v`
-        struct CountVerbose {
-            #[argp(switch, short = 'v')]
-            /// increase the verbosity of the command.
-            verbose: i128,
-        }
+/// Tests derived from
+/// https://fuchsia.dev/fuchsia-src/development/api/cli and
+/// https://fuchsia.dev/fuchsia-src/development/api/cli_help
+mod fuchsia_commandline_tools_rubric {
+    use super::*;
 
-        let cv = CountVerbose::from_args(&["cmdname"], &["-v", "-v", "-v"])
-            .expect("Parsing verbose flags should succeed");
-        assert_eq!(cv.verbose, 3);
+    #[derive(FromArgs, Debug)]
+    /// One keyed option
+    struct OneOption {
+        #[argp(option)]
+        /// some description
+        _foo: String,
     }
 
     // When a tool has many subcommands, it should also have a help subcommand
@@ -1397,30 +1364,6 @@ Error codes:
         );
     }
 
-    #[allow(dead_code)]
-    #[derive(FromArgs)]
-    /// Destroy the contents of <file>.
-    struct WithArgName {
-        #[argp(positional, arg_name = "name")]
-        username: String,
-    }
-
-    #[test]
-    fn with_arg_name() {
-        assert_help_string::<WithArgName>(
-            r###"Usage: test_arg_0 <name>
-
-Destroy the contents of <file>.
-
-Arguments:
-  name
-
-Options:
-  -h, --help  Show this help message and exit.
-"###,
-        );
-    }
-
     #[test]
     fn hidden_help_attribute() {
         #[derive(FromArgs)]
@@ -1619,11 +1562,31 @@ mod parser {
             faster: bool,
         }
 
+        let actual = Cmd::from_args(&["program-name"], &[]).unwrap();
+        assert_eq!(actual, Cmd { faster: false });
+
         let actual = Cmd::from_args(&["program-name"], &["--faster"]).unwrap();
         assert_eq!(actual, Cmd { faster: true });
 
         let actual = Cmd::from_args(&["program-name"], &["-f"]).unwrap();
         assert_eq!(actual, Cmd { faster: true });
+    }
+
+    /// Repeating switches may be used to apply more emphasis.
+    /// A common example is increasing verbosity by passing more `-v` switches.
+    #[test]
+    fn switch_repeating() {
+        #[derive(FromArgs, Debug, PartialEq)]
+        /// Short description
+        struct Cmd {
+            #[argp(switch, short = 'v')]
+            /// increase the verbosity of the command.
+            verbose: i128,
+        }
+
+        let actual = Cmd::from_args(&["cmdname"], &["-v", "-v", "-v"])
+            .expect("Parsing verbose flags should succeed");
+        assert_eq!(actual, Cmd { verbose: 3 });
     }
 
     #[test]

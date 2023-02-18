@@ -17,7 +17,6 @@ const INDENT: &str = "  ";
 const DESC_MIN_INDENT: usize = 8;
 const DESC_MAX_INDENT: usize = 30;
 const SECTION_SEPARATOR: &str = "\n\n";
-const WRAP_WIDTH: usize = 80;
 
 const HELP_OPT: OptionArgInfo = OptionArgInfo {
     usage: "",
@@ -88,11 +87,23 @@ pub struct OptionArgInfo {
 ///     ..Default::default()
 /// };
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct HelpStyle {
     /// Specifies the number of blank lines that will be inserted between
     /// descriptions of commands and options. Default is `0`.
     pub blank_lines_spacing: usize,
+
+    /// Wraps the output to the specified number of characters. Default is `80`.
+    pub wrap_width: usize,
+}
+
+impl Default for HelpStyle {
+    fn default() -> Self {
+        Self {
+            blank_lines_spacing: 0,
+            wrap_width: 80,
+        }
+    }
 }
 
 impl Help {
@@ -239,7 +250,7 @@ fn write_opts_section<'a>(
         } else {
             append_blank_lines(out, style.blank_lines_spacing);
         }
-        write_description(out, opt.names, opt.description, desc_indent);
+        write_description(out, opt.names, opt.description, desc_indent, style);
     }
 }
 
@@ -258,12 +269,18 @@ fn write_cmds_section(
             if i != 0 {
                 append_blank_lines(out, style.blank_lines_spacing);
             }
-            write_description(out, cmd.name, cmd.description, desc_indent);
+            write_description(out, cmd.name, cmd.description, desc_indent, style);
         }
     }
 }
 
-fn write_description(out: &mut String, names: &str, desc: &str, indent_width: usize) {
+fn write_description(
+    out: &mut String,
+    names: &str,
+    desc: &str,
+    indent_width: usize,
+    style: &HelpStyle,
+) {
     let mut current_line = INDENT.to_string();
     current_line.push_str(names);
 
@@ -284,7 +301,7 @@ fn write_description(out: &mut String, names: &str, desc: &str, indent_width: us
         current_line.push_str(first_word);
 
         'inner: while let Some(&word) = words.peek() {
-            if (char_len(&current_line) + char_len(word) + 1) > WRAP_WIDTH {
+            if (char_len(&current_line) + char_len(word) + 1) > style.wrap_width {
                 new_line(&mut current_line, out);
                 break 'inner;
             } else {

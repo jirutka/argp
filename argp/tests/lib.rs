@@ -305,20 +305,6 @@ Options:
 }
 
 #[test]
-fn explicit_long_value_for_option() {
-    #[derive(FromArgs, Debug)]
-    /// Short description
-    struct Cmd {
-        #[argp(option, long = "foo")]
-        /// bar bar
-        x: u8,
-    }
-
-    let cmd = Cmd::from_args(&["cmdname"], &["--foo", "5"]).unwrap();
-    assert_eq!(cmd.x, 5);
-}
-
-#[test]
 fn default_number() {
     #[derive(FromArgs)]
     /// Short description

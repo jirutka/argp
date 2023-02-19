@@ -576,7 +576,7 @@ pub fn from_env<T: TopLevelCommand>() -> T {
         exit(1)
     }
 
-    let cmd = cmd(&strings[0], &strings[0]);
+    let cmd = basename(&strings[0]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     T::from_args(&[cmd], &strs[1..]).unwrap_or_else(|early_exit| {
         exit(match early_exit {
@@ -602,7 +602,7 @@ pub fn from_env<T: TopLevelCommand>() -> T {
 /// to stderr, and `--help` output to stdout.
 pub fn cargo_from_env<T: TopLevelCommand>() -> T {
     let strings: Vec<String> = env::args().collect();
-    let cmd = cmd(&strings[1], &strings[1]);
+    let cmd = basename(&strings[1]);
     let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
     T::from_args(&[cmd], &strs[2..]).unwrap_or_else(|early_exit| {
         exit(match early_exit {
@@ -618,12 +618,12 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
     })
 }
 
-/// Extract the base cmd from a path
-fn cmd<'a>(default: &'a str, path: &'a str) -> &'a str {
+/// Extracts the base command from a path.
+fn basename(path: &str) -> &str {
     Path::new(path)
         .file_name()
         .and_then(|s| s.to_str())
-        .unwrap_or(default)
+        .unwrap_or(path)
 }
 
 #[cfg(test)]
@@ -631,10 +631,10 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_cmd_extraction() {
+    fn test_basename() {
         let expected = "test_cmd";
         let path = format!("/tmp/{}", expected);
-        let cmd = cmd(&path, &path);
+        let cmd = basename(&path);
         assert_eq!(expected, cmd);
     }
 }

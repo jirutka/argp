@@ -156,6 +156,8 @@
 //! before the rest of the arguments can be interpreted, and shouldn't be used
 //! for regular use as it might be confusing.
 //!
+//! ## Subcommands
+//!
 //! Subcommands are also supported. To use a subcommand, declare a separate
 //! `FromArgs` type for each subcommand as well as an enum that cases
 //! over each command:
@@ -293,6 +295,8 @@
 //!     }
 //! }
 //! ```
+//!
+//! ## Help message
 //!
 //! Programs that are run from an environment such as cargo may find it
 //! useful to have positional arguments present in the structure but

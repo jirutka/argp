@@ -85,11 +85,11 @@ impl FieldAttrs {
                 let name = meta.path();
                 if name.is_ident("arg_name") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
-                        this.parse_attr_arg_name(errors, m);
+                        parse_attr_single_string(errors, m, "arg_name", &mut this.arg_name);
                     }
                 } else if name.is_ident("default") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
-                        this.parse_attr_default(errors, m);
+                        parse_attr_single_string(errors, m, "default", &mut this.default);
                     }
                 } else if name.is_ident("description") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
@@ -97,7 +97,7 @@ impl FieldAttrs {
                     }
                 } else if name.is_ident("from_str_fn") {
                     if let Some(m) = errors.expect_meta_list(meta) {
-                        this.parse_attr_from_str_fn(errors, m);
+                        parse_attr_fn_name(errors, m, "from_str_fn", &mut this.from_str_fn);
                     }
                 } else if name.is_ident("long") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
@@ -177,18 +177,6 @@ impl FieldAttrs {
         }
 
         this
-    }
-
-    fn parse_attr_from_str_fn(&mut self, errors: &Errors, m: &syn::MetaList) {
-        parse_attr_fn_name(errors, m, "from_str_fn", &mut self.from_str_fn)
-    }
-
-    fn parse_attr_default(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
-        parse_attr_single_string(errors, m, "default", &mut self.default);
-    }
-
-    fn parse_attr_arg_name(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
-        parse_attr_single_string(errors, m, "arg_name", &mut self.arg_name);
     }
 
     fn parse_attr_long(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
@@ -350,7 +338,7 @@ impl TypeAttrs {
                     }
                 } else if name.is_ident("footer") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
-                        this.parse_attr_footer(errors, m);
+                        parse_attr_multi_string(errors, m, &mut this.footer)
                     }
                 } else if name.is_ident("name") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
@@ -373,10 +361,6 @@ impl TypeAttrs {
         }
 
         this
-    }
-
-    fn parse_attr_footer(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
-        parse_attr_multi_string(errors, m, &mut self.footer)
     }
 
     fn parse_attr_name(&mut self, errors: &Errors, m: &syn::MetaNameValue) {

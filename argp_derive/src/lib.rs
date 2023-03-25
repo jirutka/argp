@@ -364,7 +364,7 @@ fn impl_from_args_struct_from_args<'a>(
     };
 
     let method_impl = quote_spanned! { impl_span =>
-        fn _from_args(__cmd_name: &[&str], __args: &[&str], __parent: ::std::option::Option<&mut dyn ::argp::parser::ParseGlobalOptions>)
+        fn _from_args(__cmd_name: &[&str], __args: &[&::std::ffi::OsStr], __parent: ::std::option::Option<&mut dyn ::argp::parser::ParseGlobalOptions>)
             -> ::std::result::Result<Self, ::argp::EarlyExit>
         {
             #![allow(clippy::unwrap_in_result)]
@@ -548,12 +548,16 @@ fn declare_local_storage_for_from_args_fields<'a>(
 
         match field.kind {
             FieldKind::Option | FieldKind::Positional => {
-                let from_str_fn = match &field.attrs.from_str_fn {
-                    Some(from_str_fn) => from_str_fn.into_token_stream(),
-                    None => {
-                        quote! {
-                            <#field_type as ::argp::FromArgValue>::from_arg_value
+                let parse_func = match &field.attrs.from_str_fn {
+                    Some(from_str_fn) => quote! {
+                        |_, value| {
+                            value.to_str()
+                                .ok_or("not a valid UTF-8 string".to_owned())
+                                .and_then(#from_str_fn)
                         }
+                    },
+                    None => quote! {
+                        |_, value| <#field_type as ::argp::FromArgValue>::from_arg_value(value)
                     }
                 };
 
@@ -561,7 +565,7 @@ fn declare_local_storage_for_from_args_fields<'a>(
                     let mut #field_name: ::argp::parser::ParseValueSlotTy<#field_slot_type, #field_type>
                         = ::argp::parser::ParseValueSlotTy {
                             slot: ::std::default::Default::default(),
-                            parse_func: |_, value| { #from_str_fn(value) },
+                            parse_func: #parse_func,
                         };
                 }
             }
@@ -832,7 +836,7 @@ fn impl_from_args_enum_from_args(
     quote! {
         fn _from_args(
             command_name: &[&str],
-            args: &[&str],
+            args: &[&::std::ffi::OsStr],
             parent: ::std::option::Option<&mut dyn ::argp::parser::ParseGlobalOptions>,
         ) -> ::std::result::Result<Self, ::argp::EarlyExit> {
             let subcommand_name = if let ::std::option::Option::Some(subcommand_name) = command_name.last() {

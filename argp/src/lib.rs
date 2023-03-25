@@ -229,6 +229,7 @@
 //! # use argp::Error;
 //! # use argp::FromArgs;
 //! # use once_cell::sync::OnceCell;
+//! # use std::ffi::OsStr;
 //!
 //! /// Top-level command.
 //! #[derive(FromArgs, PartialEq, Debug)]
@@ -282,7 +283,7 @@
 //!         })
 //!     }
 //!
-//!     fn try_from_args(command_name: &[&str], args: &[&str]) -> Option<Result<Self, EarlyExit>> {
+//!     fn try_from_args(command_name: &[&str], args: &[&OsStr]) -> Option<Result<Self, EarlyExit>> {
 //!         for command in Self::commands() {
 //!             if command_name.last() == Some(&command.name) {
 //!                 if !args.is_empty() {
@@ -327,7 +328,9 @@ mod error;
 pub mod help;
 pub mod parser;
 
+use std::borrow::Cow;
 use std::env;
+use std::ffi::OsStr;
 use std::fmt;
 use std::path::Path;
 use std::process::exit;
@@ -452,17 +455,18 @@ pub trait FromArgs: Sized {
     /// ).unwrap_err();
     /// assert_eq!(
     ///    err,
-    ///    argp::EarlyExit::Err(argp::Error::UnknownArgument("lisp".to_owned())),
+    ///    argp::EarlyExit::Err(argp::Error::UnknownArgument("lisp".into())),
     /// );
     /// ```
-    fn from_args(command_name: &[&str], args: &[&str]) -> Result<Self, EarlyExit> {
-        Self::_from_args(command_name, args, None)
+    fn from_args<S: AsRef<OsStr>>(command_name: &[&str], args: &[S]) -> Result<Self, EarlyExit> {
+        let args: Vec<_> = args.iter().map(AsRef::as_ref).collect();
+        Self::_from_args(command_name, &args, None)
     }
 
     #[doc(hidden)]
     fn _from_args(
         command_name: &[&str],
-        args: &[&str],
+        args: &[&OsStr],
         parent: Option<&mut dyn ParseGlobalOptions>,
     ) -> Result<Self, EarlyExit>;
 }
@@ -503,7 +507,7 @@ pub trait DynamicSubCommand: Sized {
     /// passed is not recognized, this function should return `None`. Otherwise
     /// it should return `Some`, and the value within the `Some` has the same
     /// semantics as the return of `FromArgs::from_args`.
-    fn try_from_args(command_name: &[&str], args: &[&str]) -> Option<Result<Self, EarlyExit>>;
+    fn try_from_args(command_name: &[&str], args: &[&OsStr]) -> Option<Result<Self, EarlyExit>>;
 }
 
 /// A `FromArgs` implementation with attached [Help] struct.
@@ -521,16 +525,20 @@ pub trait CommandHelp: FromArgs {
 pub trait FromArgValue: Sized {
     /// Construct the type from a command-line value, returning an error string
     /// on failure.
-    fn from_arg_value(value: &str) -> Result<Self, String>;
+    fn from_arg_value(value: &OsStr) -> Result<Self, String>;
 }
 
+// TODO: rework
 impl<T> FromArgValue for T
 where
     T: FromStr,
     T::Err: fmt::Display,
 {
-    fn from_arg_value(value: &str) -> Result<Self, String> {
-        T::from_str(value).map_err(|x| x.to_string())
+    fn from_arg_value(value: &OsStr) -> Result<Self, String> {
+        value
+            .to_str()
+            .ok_or("not a valid UTF-8 string".to_owned())
+            .and_then(|s| T::from_str(s).map_err(|e| e.to_string()))
     }
 }
 
@@ -567,22 +575,14 @@ impl From<Error> for EarlyExit {
 /// was unsuccessful or if information like `--help` was requested. Error messages will be printed
 /// to stderr, and `--help` output to stdout.
 pub fn from_env<T: TopLevelCommand>() -> T {
-    let strings: Vec<String> = env::args_os()
-        .map(|s| s.into_string())
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap_or_else(|arg| {
-            eprintln!("Invalid utf8: {}", arg.to_string_lossy());
-            exit(1)
-        });
-
-    if strings.is_empty() {
+    let args: Vec<_> = env::args_os().collect();
+    if args.is_empty() {
         eprintln!("No program name, argv is empty");
         exit(1)
     }
+    let cmd = basename(&args[0]);
 
-    let cmd = basename(&strings[0]);
-    let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
-    T::from_args(&[cmd], &strs[1..]).unwrap_or_else(|early_exit| {
+    T::from_args(&[&cmd], &args[1..]).unwrap_or_else(|early_exit| {
         exit(match early_exit {
             EarlyExit::Help(output) => {
                 println!("{}", output);
@@ -605,10 +605,10 @@ pub fn from_env<T: TopLevelCommand>() -> T {
 /// was unsuccessful or if information like `--help` was requested. Error messages will be printed
 /// to stderr, and `--help` output to stdout.
 pub fn cargo_from_env<T: TopLevelCommand>() -> T {
-    let strings: Vec<String> = env::args().collect();
-    let cmd = basename(&strings[1]);
-    let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
-    T::from_args(&[cmd], &strs[2..]).unwrap_or_else(|early_exit| {
+    let args: Vec<_> = env::args_os().collect();
+    let cmd = basename(&args[1]);
+
+    T::from_args(&[&cmd], &args[2..]).unwrap_or_else(|early_exit| {
         exit(match early_exit {
             EarlyExit::Help(output) => {
                 println!("{}", output);
@@ -623,21 +623,23 @@ pub fn cargo_from_env<T: TopLevelCommand>() -> T {
 }
 
 /// Extracts the base command from a path.
-fn basename(path: &str) -> &str {
+fn basename(path: &OsStr) -> Cow<'_, str> {
     Path::new(path)
         .file_name()
         .and_then(|s| s.to_str())
-        .unwrap_or(path)
+        .map(Cow::from)
+        .unwrap_or_else(|| path.to_string_lossy())
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::ffi::OsString;
 
     #[test]
     fn test_basename() {
         let expected = "test_cmd";
-        let path = format!("/tmp/{}", expected);
+        let path = OsString::from(format!("/tmp/{}", expected));
         let cmd = basename(&path);
         assert_eq!(expected, cmd);
     }

@@ -5,6 +5,8 @@
 //! Items in this module are all used by the generated code, and should not be
 //! considered part of this library's public API surface.
 
+use std::ffi::{OsStr, OsString};
+
 use crate::error::Error;
 use crate::help::{CommandInfo, Help, OptionArgInfo};
 use crate::EarlyExit;
@@ -20,7 +22,7 @@ use crate::EarlyExit;
 #[doc(hidden)]
 pub fn parse_struct_args(
     cmd_name: &[&str],
-    args: &[&str],
+    args: &[&OsStr],
     mut parse_options: ParseStructOptions<'_, '_>,
     mut parse_positionals: ParseStructPositionals<'_>,
     mut parse_subcommand: Option<ParseStructSubCommand<'_>>,
@@ -32,16 +34,18 @@ pub fn parse_struct_args(
     let mut positional_index = 0;
     let mut options_ended = false;
 
-    'parse_args: while let Some(&next_arg) = remaining_args.first() {
+    'parse_args: while let Some(&next_arg_os) = remaining_args.first() {
         remaining_args = &remaining_args[1..];
+        let next_arg = next_arg_os.to_str().unwrap_or("");
+
         if matches!(next_arg, "--help" | "-h" | "help") && !options_ended {
             help_requested = true;
-            help_cmd = next_arg == "help";
+            help_cmd = next_arg_os == "help";
             continue;
         }
 
         if next_arg.starts_with('-') && !options_ended {
-            if next_arg == "--" {
+            if next_arg_os == "--" {
                 options_ended = true;
                 continue;
             }
@@ -58,7 +62,7 @@ pub fn parse_struct_args(
                 while let Some(short) = chars.next() {
                     // Only the last option can accept a value.
                     if chars.peek().is_some() {
-                        parse_options.parse(&format!("-{}", short), &mut (&[] as &[&str]))?;
+                        parse_options.parse(&format!("-{}", short), &mut (&[] as &[&OsStr]))?;
                     } else {
                         parse_options.parse(&format!("-{}", short), &mut remaining_args)?;
                     }
@@ -84,7 +88,7 @@ pub fn parse_struct_args(
             }
         }
 
-        options_ended |= parse_positionals.parse(&mut positional_index, next_arg)?;
+        options_ended |= parse_positionals.parse(&mut positional_index, next_arg_os)?;
     }
 
     if help_requested {
@@ -132,19 +136,19 @@ impl<'a, 'p> ParseStructOptions<'a, 'p> {
     /// - `arg`: The current option argument being parsed (e.g. `--foo`).
     /// - `remaining_args`: The remaining command line arguments. This slice
     ///    will be advanced forwards if the option takes a value argument.
-    fn parse(&mut self, arg: &str, remaining_args: &mut &[&str]) -> Result<(), Error> {
+    fn parse(&mut self, arg: &str, remaining_args: &mut &[&OsStr]) -> Result<(), Error> {
         match self.arg_to_slot.iter().find(|(name, _)| *name == arg) {
             Some((_, pos)) => Self::fill_slot(&mut self.slots[*pos], arg, remaining_args),
             None => self
                 .try_parse_global(arg, remaining_args)
-                .unwrap_or_else(|| Err(Error::UnknownArgument(arg.to_owned()))),
+                .unwrap_or_else(|| Err(Error::UnknownArgument(OsString::from(arg)))),
         }
     }
 
     fn fill_slot(
         slot: &mut ParseStructOption<'a>,
         arg: &str,
-        remaining_args: &mut &[&str],
+        remaining_args: &mut &[&OsStr],
     ) -> Result<(), Error> {
         match slot {
             ParseStructOption::Flag(ref mut b) => b.set_flag(arg),
@@ -172,7 +176,7 @@ pub trait ParseGlobalOptions {
     fn try_parse_global(
         &mut self,
         arg: &str,
-        remaining_args: &mut &[&str],
+        remaining_args: &mut &[&OsStr],
     ) -> Option<Result<(), Error>>;
 
     /// Returns a vector representing global options specified on this instance
@@ -185,7 +189,7 @@ impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
     fn try_parse_global(
         &mut self,
         arg: &str,
-        remaining_args: &mut &[&str],
+        remaining_args: &mut &[&OsStr],
     ) -> Option<Result<(), Error>> {
         self.arg_to_slot
             .iter()
@@ -232,7 +236,7 @@ impl<'a> ParseStructPositionals<'a> {
     ///
     /// Returns true if non-positional argument parsing should stop
     /// after this one.
-    fn parse(&mut self, index: &mut usize, arg: &str) -> Result<bool, Error> {
+    fn parse(&mut self, index: &mut usize, arg: &OsStr) -> Result<bool, Error> {
         if *index < self.positionals.len() {
             self.positionals[*index].parse(arg)?;
 
@@ -266,7 +270,7 @@ impl<'a> ParseStructPositional<'a> {
     /// Parse a positional argument.
     ///
     /// `arg`: the argument supplied by the user.
-    fn parse(&mut self, arg: &str) -> Result<(), Error> {
+    fn parse(&mut self, arg: &OsStr) -> Result<(), Error> {
         self.slot.fill_slot(self.name, arg)
     }
 }
@@ -286,7 +290,7 @@ pub struct ParseStructSubCommand<'a> {
     #[allow(clippy::type_complexity)]
     pub parse_func: &'a mut dyn FnMut(
         &[&str],
-        &[&str],
+        &[&OsStr],
         Option<&mut dyn ParseGlobalOptions>,
     ) -> Result<(), EarlyExit>,
 }
@@ -297,7 +301,7 @@ impl<'a> ParseStructSubCommand<'a> {
         help: bool,
         cmd_name: &[&str],
         arg: &str,
-        remaining_args: &[&str],
+        remaining_args: &[&OsStr],
         parse_global_opts: &mut dyn ParseGlobalOptions,
     ) -> Result<bool, EarlyExit> {
         for subcommand in self
@@ -311,7 +315,7 @@ impl<'a> ParseStructSubCommand<'a> {
 
                 let prepended_help;
                 let remaining_args = if help {
-                    prepended_help = [&["help"], remaining_args].concat();
+                    prepended_help = [&[OsStr::new("help")], remaining_args].concat();
                     &prepended_help
                 } else {
                     remaining_args
@@ -339,14 +343,14 @@ impl<T: Flag> ParseFlag for T {
 }
 
 // A trait for for slots that reserve space for a value and know how to parse that value
-// from a command-line `&str` argument.
+// from a command-line `&OsStr` argument.
 //
 // This trait is only implemented for the type `ParseValueSlotTy`. This indirection is
 // necessary to allow abstracting over `ParseValueSlotTy` instances with different
 // generic parameters.
 #[doc(hidden)]
 pub trait ParseValueSlot {
-    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), Error>;
+    fn fill_slot(&mut self, arg: &str, value: &OsStr) -> Result<(), Error>;
 }
 
 // The concrete type implementing the `ParseValueSlot` trait.
@@ -358,13 +362,13 @@ pub struct ParseValueSlotTy<Slot, T> {
     // The slot for a parsed value.
     pub slot: Slot,
     // The function to parse the value from a string
-    pub parse_func: fn(&str, &str) -> Result<T, String>,
+    pub parse_func: fn(&str, &OsStr) -> Result<T, String>,
 }
 
 // `ParseValueSlotTy<Option<T>, T>` is used as the slot for all non-repeating
 // arguments, both optional and required.
 impl<T> ParseValueSlot for ParseValueSlotTy<Option<T>, T> {
-    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), Error> {
+    fn fill_slot(&mut self, arg: &str, value: &OsStr) -> Result<(), Error> {
         if self.slot.is_some() {
             return Err(Error::DuplicateOption(arg.to_owned()));
         }
@@ -380,7 +384,7 @@ impl<T> ParseValueSlot for ParseValueSlotTy<Option<T>, T> {
 
 // `ParseValueSlotTy<Vec<T>, T>` is used as the slot for repeating arguments.
 impl<T> ParseValueSlot for ParseValueSlotTy<Vec<T>, T> {
-    fn fill_slot(&mut self, arg: &str, value: &str) -> Result<(), Error> {
+    fn fill_slot(&mut self, arg: &str, value: &OsStr) -> Result<(), Error> {
         let parsed = (self.parse_func)(arg, value).map_err(|e| Error::ParseArgument {
             arg: arg.to_owned(),
             value: value.to_owned(),

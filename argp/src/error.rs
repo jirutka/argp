@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 
+use std::ffi::OsString;
 use std::fmt::{self, Write as _};
 
 /// The error type for the argp parser.
@@ -24,13 +25,13 @@ pub enum Error {
         /// The positional argument or option.
         arg: String,
         /// The given value that failed to be parsed.
-        value: String,
+        value: OsString,
         /// The error message from the value parser.
         msg: String,
     },
 
     /// Unknown argument.
-    UnknownArgument(String),
+    UnknownArgument(OsString),
 
     /// Any other error.
     Other(String),
@@ -63,9 +64,9 @@ impl fmt::Display for Error {
                 } else {
                     "argument"
                 };
-                write!(f, "Error parsing {} '{}' with value '{}': {}.", subj, arg, value, msg)
+                write!(f, "Error parsing {} '{}' with value '{:?}': {}.", subj, arg, value, msg)
             }
-            UnknownArgument(arg) => write!(f, "Unrecognized argument: {}", arg),
+            UnknownArgument(arg) => write!(f, "Unrecognized argument: {}", arg.to_string_lossy()),
             Other(msg) => msg.fmt(f),
         }
     }

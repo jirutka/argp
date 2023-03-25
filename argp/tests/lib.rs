@@ -11,9 +11,12 @@
     clippy::unwrap_in_result
 )]
 
+use std::ffi::OsStr;
 use std::fmt::Debug;
 
 use argp::{CommandInfo, DynamicSubCommand, EarlyExit, Error, FromArgs, MissingRequirements};
+
+const EMPTY_ARGS: &[&OsStr] = &[];
 
 #[test]
 fn basic_example() {
@@ -33,7 +36,8 @@ fn basic_example() {
         pilot_nickname: Option<String>,
     }
 
-    let up = GoUp::from_args(&["cmdname"], &["--height", "5"]).expect("failed go_up");
+    let up = GoUp::from_args(&["cmdname"], &[OsStr::new("--height"), OsStr::new("5")])
+        .expect("failed go_up");
     assert_eq!(
         up,
         GoUp {
@@ -68,7 +72,8 @@ fn generic_example() {
         pilot_nickname: Option<S>,
     }
 
-    let up = GoUp::<String>::from_args(&["cmdname"], &["--height", "5"]).expect("failed go_up");
+    let up = GoUp::<String>::from_args(&["cmdname"], &[OsStr::new("--height"), OsStr::new("5")])
+        .expect("failed go_up");
     assert_eq!(
         up,
         GoUp::<String> {
@@ -175,7 +180,7 @@ fn dynamic_subcommand_example() {
 
         fn try_from_args(
             command_name: &[&str],
-            args: &[&str],
+            args: &[&OsStr],
         ) -> Option<Result<DynamicSubCommandImpl, EarlyExit>> {
             let command_name = match command_name.last() {
                 Some(x) => *x,
@@ -314,7 +319,7 @@ fn default_number() {
         x: u8,
     }
 
-    let cmd = Cmd::from_args(&["cmdname"], &[]).unwrap();
+    let cmd = Cmd::from_args(&["cmdname"], EMPTY_ARGS).unwrap();
     assert_eq!(cmd.x, 5);
 }
 
@@ -333,7 +338,7 @@ fn default_function() {
         msg: String,
     }
 
-    let cmd = Cmd::from_args(&["cmdname"], &[]).unwrap();
+    let cmd = Cmd::from_args(&["cmdname"], EMPTY_ARGS).unwrap();
     assert_eq!(cmd.msg, MSG);
 }
 
@@ -409,7 +414,7 @@ mod options {
             &["-n", "x"],
             Error::ParseArgument {
                 arg: "-n".to_owned(),
-                value: "x".to_owned(),
+                value: "x".into(),
                 msg: "invalid digit found in string".to_owned(),
             },
         );
@@ -825,7 +830,7 @@ Options:
                 b: Some("6".into()),
             },
         );
-        assert_error::<LastOptional>(&["5", "6", "7"], Error::UnknownArgument("7".to_owned()));
+        assert_error::<LastOptional>(&["5", "6", "7"], Error::UnknownArgument("7".into()));
     }
 
     #[derive(FromArgs, Debug, PartialEq)]
@@ -843,7 +848,7 @@ Options:
     fn defaulted() {
         assert_output(&["5"], LastDefaulted { a: 5, b: 5 });
         assert_output(&["5", "6"], LastDefaulted { a: 5, b: 6 });
-        assert_error::<LastDefaulted>(&["5", "6", "7"], Error::UnknownArgument("7".to_owned()));
+        assert_error::<LastDefaulted>(&["5", "6", "7"], Error::UnknownArgument("7".into()));
     }
 
     #[derive(FromArgs, Debug, PartialEq)]
@@ -885,7 +890,7 @@ Options:
             &["x"],
             Error::ParseArgument {
                 arg: "n".to_owned(),
-                value: "x".to_owned(),
+                value: "x".into(),
                 msg: "invalid digit found in string".to_owned(),
             },
         );
@@ -1264,7 +1269,7 @@ Options:
 
         fn try_from_args(
             command_name: &[&str],
-            args: &[&str],
+            args: &[&OsStr],
         ) -> Option<Result<HelpExamplePlugin, EarlyExit>> {
             if command_name.last() != Some(&"plugin") {
                 None
@@ -1304,7 +1309,7 @@ Options:
 
     #[test]
     fn example_errors_on_missing_required_option_and_missing_required_subcommand() {
-        let exit = HelpExample::from_args(&["program-name"], &[]).unwrap_err();
+        let exit = HelpExample::from_args(&["program-name"], EMPTY_ARGS).unwrap_err();
         assert_eq!(
             exit,
             EarlyExit::Err(Error::MissingRequirements(missing_requirements(
@@ -1394,7 +1399,7 @@ mod parser {
             msg: Option<String>,
         }
 
-        let actual = Cmd::from_args(&["program-name"], &[]).unwrap();
+        let actual = Cmd::from_args(&["program-name"], EMPTY_ARGS).unwrap();
         assert_eq!(actual, Cmd { msg: None });
     }
 
@@ -1526,7 +1531,7 @@ mod parser {
             msg: Vec<String>,
         }
 
-        let actual = Cmd::from_args(&["program-name"], &[]).unwrap();
+        let actual = Cmd::from_args(&["program-name"], EMPTY_ARGS).unwrap();
         assert_eq!(actual, Cmd { msg: vec![] });
 
         let actual = Cmd::from_args(&["program-name"], &["--msg", "abc", "--msg", "xyz"]).unwrap();
@@ -1548,7 +1553,7 @@ mod parser {
             faster: bool,
         }
 
-        let actual = Cmd::from_args(&["program-name"], &[]).unwrap();
+        let actual = Cmd::from_args(&["program-name"], EMPTY_ARGS).unwrap();
         assert_eq!(actual, Cmd { faster: false });
 
         let actual = Cmd::from_args(&["program-name"], &["--faster"]).unwrap();
@@ -1628,7 +1633,7 @@ mod parser {
             speed: u8,
         }
 
-        let actual = Cmd::from_args(&["program-name"], &[]).unwrap_err();
+        let actual = Cmd::from_args(&["program-name"], EMPTY_ARGS).unwrap_err();
         assert_eq!(
             actual,
             EarlyExit::Err(Error::MissingRequirements(missing_requirements(&["speed"], &[], &[])))

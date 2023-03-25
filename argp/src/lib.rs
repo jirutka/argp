@@ -342,9 +342,9 @@ pub mod parser;
 
 use std::borrow::Cow;
 use std::env;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 
 use crate::help::Help;
@@ -535,6 +535,8 @@ pub trait CommandHelp: FromArgs {
 /// * `bool`
 /// * `char`
 /// * `String`
+/// * `std::ffi::OsString`
+/// * `std::path::PathBuf`
 /// * `std::net::IpAddr` and its variants
 /// * `std::net::SocketAddr` and its variants
 ///
@@ -543,6 +545,18 @@ pub trait FromArgValue: Sized {
     /// Construct the type from a command-line value, returning an error string
     /// on failure.
     fn from_arg_value(value: &OsStr) -> Result<Self, String>;
+}
+
+impl FromArgValue for OsString {
+    fn from_arg_value(value: &OsStr) -> Result<Self, String> {
+        Ok(value.to_os_string())
+    }
+}
+
+impl FromArgValue for PathBuf {
+    fn from_arg_value(value: &OsStr) -> Result<Self, String> {
+        Ok(PathBuf::from(value))
+    }
 }
 
 // XXX: This is a workaround needed until [RFC 1210](https://rust-lang.github.io/rfcs/1210-impl-specialization.html)

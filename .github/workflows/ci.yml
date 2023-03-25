@@ -5,8 +5,8 @@ on:
 
 jobs:
   test:
-    name: Run tests on Rust ${{ matrix.toolchain }}
-    runs-on: ubuntu-latest
+    name: Run tests on Rust ${{ matrix.toolchain }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
@@ -14,6 +14,9 @@ jobs:
           - stable
           - '1.56'
           - nightly
+        os:
+          - ubuntu
+          - windows
     steps:
       - uses: actions/checkout@v3
 
@@ -39,6 +42,7 @@ jobs:
         run: cargo run --package argp --example simple_example two --fooey
 
       - name: Compile simple_example in release mode
+        if: matrix.os != 'windows'
         run: |
           cargo build --package argp --example simple_example --release
           strip target/release/examples/simple_example

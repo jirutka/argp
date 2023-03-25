@@ -103,6 +103,27 @@ fn custom_from_str_example() {
 }
 
 #[test]
+fn custom_from_os_str_example() {
+    use std::path::PathBuf;
+
+    #[derive(FromArgs)]
+    /// Goofy thing.
+    struct PathStruct {
+        /// file path
+        #[argp(option, from_os_str_fn(convert_path))]
+        path: PathBuf,
+    }
+
+    fn convert_path(value: &OsStr) -> Result<PathBuf, String> {
+        Ok(PathBuf::from(value))
+    }
+
+    let s = PathStruct::from_args(&["cmdname"], &[&OsStr::new("--path"), &OsStr::new("/foo/bar")])
+        .expect("failed to parse");
+    assert_eq!(s.path, PathBuf::from("/foo/bar"));
+}
+
+#[test]
 fn subcommand_example() {
     #[derive(FromArgs, PartialEq, Debug)]
     /// Top-level command.
@@ -1870,6 +1891,55 @@ Options:
 
         let cmd = Cmd::from_args(&["program-name"], &["5"]).unwrap();
         assert_eq!(cmd.speed, 5);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn handles_args_with_invalid_utf8() {
+        use std::os::unix::prelude::OsStrExt;
+        use std::path::PathBuf;
+
+        #[derive(FromArgs)]
+        /// Goofy thing.
+        struct PathStruct {
+            /// file path
+            #[argp(positional, from_os_str_fn(convert_path))]
+            path: PathBuf,
+        }
+
+        fn convert_path(value: &OsStr) -> Result<PathBuf, String> {
+            Ok(PathBuf::from(value))
+        }
+
+        let path = OsStr::from_bytes(&[b'f', b'o', 0x80, b'o']);
+
+        let s = PathStruct::from_args(&["cmdname"], &[path]).expect("failed to parse");
+        assert_eq!(s.path, PathBuf::from(path));
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn handles_args_with_invalid_utf8() {
+        use std::ffi::OsString;
+        use std::os::windows::ffi::OsStringExt;
+        use std::path::PathBuf;
+
+        #[derive(FromArgs)]
+        /// Goofy thing.
+        struct PathStruct {
+            /// file path
+            #[argp(positional, from_os_str_fn(convert_path))]
+            path: PathBuf,
+        }
+
+        fn convert_path(value: &OsStr) -> Result<PathBuf, String> {
+            Ok(PathBuf::from(value))
+        }
+
+        let path = OsString::from_wide(&[0x0066, 0x006F, 0xD800, 0x006F]);
+
+        let s = PathStruct::from_args(&["cmdname"], &[&path]).expect("failed to parse");
+        assert_eq!(s.path, PathBuf::from(path));
     }
 }
 

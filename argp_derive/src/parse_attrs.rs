@@ -12,6 +12,7 @@ pub struct FieldAttrs {
     pub default: Option<syn::LitStr>,
     pub description: Option<Description>,
     pub from_str_fn: Option<syn::Ident>,
+    pub from_os_str_fn: Option<syn::Ident>,
     pub field_type: Option<FieldType>,
     pub long: Option<syn::LitStr>,
     pub short: Option<syn::LitChar>,
@@ -99,6 +100,10 @@ impl FieldAttrs {
                     if let Some(m) = errors.expect_meta_list(meta) {
                         parse_attr_fn_name(errors, m, "from_str_fn", &mut this.from_str_fn);
                     }
+                } else if name.is_ident("from_os_str_fn") {
+                    if let Some(m) = errors.expect_meta_list(meta) {
+                        parse_attr_fn_name(errors, m, "from_os_str_fn", &mut this.from_os_str_fn);
+                    }
                 } else if name.is_ident("long") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
                         this.parse_attr_long(errors, m);
@@ -136,8 +141,9 @@ impl FieldAttrs {
                         &meta,
                         concat!(
                             "Invalid field-level `argp` attribute\n",
-                            "Expected one of: `arg_name`, `default`, `description`, `from_str_fn`, `global`, ",
-                            "`greedy`, `long`, `option`, `short`, `subcommand`, `switch`, `hidden_help`",
+                            "Expected one of: `arg_name`, `default`, `description`, `from_os_str_fn`, ",
+                            "`from_str_fn`, `global`, `greedy`, `long`, `option`, `short`, `subcommand`, ",
+                            "`switch`, `hidden_help`",
                         ),
                     );
                 }
@@ -174,6 +180,10 @@ impl FieldAttrs {
                      or `#[argp(switch)]` fields",
                 ),
             }
+        }
+
+        if let (Some(from_str_fn), Some(_)) = (&this.from_str_fn, &this.from_os_str_fn) {
+            errors.err(&from_str_fn, "`from_str_fn` and `from_os_str_fn` are mutually exclusive")
         }
 
         this

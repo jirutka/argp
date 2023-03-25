@@ -548,16 +548,19 @@ fn declare_local_storage_for_from_args_fields<'a>(
 
         match field.kind {
             FieldKind::Option | FieldKind::Positional => {
-                let parse_func = match &field.attrs.from_str_fn {
-                    Some(from_str_fn) => quote! {
+                let parse_func = match (&field.attrs.from_os_str_fn, &field.attrs.from_str_fn) {
+                    (Some(from_os_str_fn), _) => quote! {
+                        |_, value| { #from_os_str_fn(value) }
+                    },
+                    (_, Some(from_str_fn)) => quote! {
                         |_, value| {
                             value.to_str()
-                                .ok_or("not a valid UTF-8 string".to_owned())
-                                .and_then(#from_str_fn)
+                                 .ok_or("not a valid UTF-8 string".to_owned())
+                                 .and_then(#from_str_fn)
                         }
                     },
-                    None => quote! {
-                        |_, value| <#field_type as ::argp::FromArgValue>::from_arg_value(value)
+                    (None, None) => quote! {
+                        |_, value| { <#field_type as ::argp::FromArgValue>::from_arg_value(value) }
                     }
                 };
 

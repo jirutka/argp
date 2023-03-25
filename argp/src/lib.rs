@@ -91,21 +91,32 @@
 //! Custom option types can be deserialized so long as they implement the
 //! `FromArgValue` trait (automatically implemented for all `FromStr` types).
 //! If more customized parsing is required, you can supply a custom
-//! `fn(&str) -> Result<T, String>` using the `from_str_fn` attribute:
+//! `fn(&str) -> Result<T, String>` using the `from_str_fn` attribute, or
+//! `fn(&OsStr) -> Result<T, String>` using the `from_os_str_fn` attribute:
 //!
 //! ```
 //! # use argp::FromArgs;
+//! # use std::ffi::OsStr;
+//! # use std::path::PathBuf;
 //!
 //! /// Goofy thing.
 //! #[derive(FromArgs)]
-//! struct FiveStruct {
+//! struct FineStruct {
 //!     /// Always five.
 //!     #[argp(option, from_str_fn(always_five))]
 //!     five: usize,
+//!
+//!     /// File path.
+//!     #[argp(option, from_os_str_fn(convert_path))]
+//!     path: PathBuf,
 //! }
 //!
 //! fn always_five(_value: &str) -> Result<usize, String> {
 //!     Ok(5)
+//! }
+//!
+//! fn convert_path(value: &OsStr) -> Result<PathBuf, String> {
+//!     Ok(PathBuf::from("/tmp").join(value))
 //! }
 //! ```
 //!

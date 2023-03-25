@@ -50,15 +50,9 @@ fn basic_example() {
 
 #[test]
 fn generic_example() {
-    use std::fmt::Display;
-    use std::str::FromStr;
-
     #[derive(FromArgs, PartialEq, Debug)]
     /// Reach new heights.
-    struct GoUp<S: FromStr>
-    where
-        <S as FromStr>::Err: Display,
-    {
+    struct GoUp<S: argp::FromArgValue> {
         /// whether or not to jump
         #[argp(switch, short = 'j')]
         jump: bool,

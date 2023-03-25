@@ -89,10 +89,11 @@
 //! ```
 //!
 //! Custom option types can be deserialized so long as they implement the
-//! `FromArgValue` trait (automatically implemented for all `FromStr` types).
-//! If more customized parsing is required, you can supply a custom
-//! `fn(&str) -> Result<T, String>` using the `from_str_fn` attribute, or
-//! `fn(&OsStr) -> Result<T, String>` using the `from_os_str_fn` attribute:
+//! [FromArgValue] trait (already implemented for most types in std for which
+//! the `FromStr` trait is implemented). If more customized parsing is required,
+//! you can supply a custom `fn(&str) -> Result<T, String>` using the
+//! `from_str_fn` attribute, or `fn(&OsStr) -> Result<T, String>` using the
+//! `from_os_str_fn` attribute:
 //!
 //! ```
 //! # use argp::FromArgs;
@@ -345,7 +346,6 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::path::Path;
 use std::process::exit;
-use std::str::FromStr;
 
 use crate::help::Help;
 use crate::parser::ParseGlobalOptions;
@@ -530,28 +530,63 @@ pub trait CommandHelp: FromArgs {
 /// Types which can be constructed from a single command-line value.
 ///
 /// Any field type declared in a struct that derives `FromArgs` must implement
-/// this trait. A blanket implementation exists for types implementing
-/// `FromStr<Error: Display>`. Custom types can implement this trait
-/// directly.
+/// this trait. Argp implements it for:
+/// * all built-in number types
+/// * `bool`
+/// * `char`
+/// * `String`
+/// * `std::net::IpAddr` and its variants
+/// * `std::net::SocketAddr` and its variants
+///
+/// Custom types should implement this trait directly.
 pub trait FromArgValue: Sized {
     /// Construct the type from a command-line value, returning an error string
     /// on failure.
     fn from_arg_value(value: &OsStr) -> Result<Self, String>;
 }
 
-// TODO: rework
-impl<T> FromArgValue for T
-where
-    T: FromStr,
-    T::Err: fmt::Display,
-{
-    fn from_arg_value(value: &OsStr) -> Result<Self, String> {
-        value
-            .to_str()
-            .ok_or("not a valid UTF-8 string".to_owned())
-            .and_then(|s| T::from_str(s).map_err(|e| e.to_string()))
+// XXX: This is a workaround needed until [RFC 1210](https://rust-lang.github.io/rfcs/1210-impl-specialization.html)
+// is stabilized.
+macro_rules! impl_from_arg_value_from_str {
+    ($($ty:ty,)*) => {
+        $(
+            impl FromArgValue for $ty {
+                fn from_arg_value(value: &OsStr) -> Result<Self, String> {
+                    use std::str::FromStr;
+                    value
+                        .to_str()
+                        .ok_or("not a valid UTF-8 string".to_owned())
+                        .and_then(|s| <$ty>::from_str(s).map_err(|e| e.to_string()))
+                }
+            }
+        )*
     }
 }
+impl_from_arg_value_from_str![
+    bool,
+    char,
+    String,
+    f32,
+    f64,
+    i128,
+    i16,
+    i32,
+    i64,
+    i8,
+    isize,
+    u128,
+    u16,
+    u32,
+    u64,
+    u8,
+    usize,
+    std::net::IpAddr,
+    std::net::Ipv4Addr,
+    std::net::Ipv6Addr,
+    std::net::SocketAddr,
+    std::net::SocketAddrV4,
+    std::net::SocketAddrV6,
+];
 
 /// Information to display to the user about why a `FromArgs` construction exited early.
 ///

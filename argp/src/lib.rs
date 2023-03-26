@@ -91,9 +91,9 @@
 //! Custom option types can be deserialized so long as they implement the
 //! [FromArgValue] trait (already implemented for most types in std for which
 //! the `FromStr` trait is implemented). If more customized parsing is required,
-//! you can supply a custom `fn(&str) -> Result<T, String>` using the
-//! `from_str_fn` attribute, or `fn(&OsStr) -> Result<T, String>` using the
-//! `from_os_str_fn` attribute:
+//! you can supply a custom `fn(&str) -> Result<T, E>` using the `from_str_fn`
+//! attribute, or `fn(&OsStr) -> Result<T, E>` using the `from_os_str_fn`
+//! attribute, where `E` implements `ToString`:
 //!
 //! ```
 //! # use argp::FromArgs;

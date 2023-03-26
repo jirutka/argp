@@ -33,7 +33,7 @@ Notable changes from argh:
 * Support for global options (i.e. options defined at the top level can be used in subcommands).
 * Support for combined short options (e.g. `-ab` is parsed as `-a -b`, `-an 5` as `-a -n 5`).
 * Support for non-UTF8 arguments (OsStr).
-* The `from_str_fn` attribute can also contain a function path, not just a single identifier.
+* The `from_str_fn` attribute can also contain a function path, not just a single identifier, and can return any `Err` type which implements `ToString`.
 * No pedantic requirement for descriptions to start with a lower-case letter.
 * The indentation of descriptions in the help message is dynamically calculated based on the widths of all elements.
 * The `arg_name` attribute can also be used even on positional arguments to customise how the argument is displayed in the help message.
@@ -126,7 +126,7 @@ fn main() {
 ----
 
 Custom option types can be deserialized so long as they implement the `FromArgValue` trait (already implemented for most types in std for which the `FromStr` trait is implemented).
-If more customized parsing is required, you can supply a custom `fn(&str) -> Result<T, String>` using the `from_str_fn` attribute, or `fn(&OsStr) -> Result<T, String>` using the `from_os_str_fn` attribute:
+If more customized parsing is required, you can supply a custom `fn(&str) -> Result<T, E>` using the `from_str_fn` attribute, or `fn(&OsStr) -> Result<T, E>` using the `from_os_str_fn` attribute, where `E` implements `ToString`:
 
 [source, rust]
 ----

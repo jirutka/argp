@@ -1,6 +1,6 @@
 [package]
 name = "argp_derive"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jakub Jirutka <jakub@jirutka.cz>"]
 edition = "2021"
 rust-version = "1.56.0"

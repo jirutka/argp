@@ -80,20 +80,31 @@ fn generic_example() {
 
 #[test]
 fn custom_from_str_example() {
+    mod submod {
+        pub fn capitalize(value: &str) -> Result<String, String> {
+            Ok(value.to_uppercase())
+        }
+    }
+
     #[derive(FromArgs)]
     /// Goofy thing.
     struct FiveStruct {
         /// always five
         #[argp(option, from_str_fn(always_five))]
         five: usize,
+
+        #[argp(positional, from_str_fn(submod::capitalize))]
+        msg: String,
     }
 
     fn always_five(_value: &str) -> Result<usize, String> {
         Ok(5)
     }
 
-    let f = FiveStruct::from_args(&["cmdname"], &["--five", "woot"]).expect("failed to five");
-    assert_eq!(f.five, 5);
+    let s =
+        FiveStruct::from_args(&["cmdname"], &["--five", "woot", "hello"]).expect("failed to five");
+    assert_eq!(s.five, 5);
+    assert_eq!(s.msg, "HELLO");
 }
 
 #[test]

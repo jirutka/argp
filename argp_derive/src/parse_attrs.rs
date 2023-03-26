@@ -11,8 +11,8 @@ use crate::errors::Errors;
 pub struct FieldAttrs {
     pub default: Option<syn::LitStr>,
     pub description: Option<Description>,
-    pub from_str_fn: Option<syn::Ident>,
-    pub from_os_str_fn: Option<syn::Ident>,
+    pub from_str_fn: Option<syn::Path>,
+    pub from_os_str_fn: Option<syn::Path>,
     pub field_type: Option<FieldType>,
     pub long: Option<syn::LitStr>,
     pub short: Option<syn::LitChar>,
@@ -98,11 +98,11 @@ impl FieldAttrs {
                     }
                 } else if name.is_ident("from_str_fn") {
                     if let Some(m) = errors.expect_meta_list(meta) {
-                        parse_attr_fn_name(errors, m, "from_str_fn", &mut this.from_str_fn);
+                        parse_attr_fn_path(errors, m, "from_str_fn", &mut this.from_str_fn);
                     }
                 } else if name.is_ident("from_os_str_fn") {
                     if let Some(m) = errors.expect_meta_list(meta) {
-                        parse_attr_fn_name(errors, m, "from_os_str_fn", &mut this.from_os_str_fn);
+                        parse_attr_fn_path(errors, m, "from_os_str_fn", &mut this.from_os_str_fn);
                     }
                 } else if name.is_ident("long") {
                     if let Some(m) = errors.expect_meta_name_value(meta) {
@@ -220,11 +220,11 @@ pub(crate) fn check_long_name(errors: &Errors, spanned: &impl syn::spanned::Span
     }
 }
 
-fn parse_attr_fn_name(
+fn parse_attr_fn_path(
     errors: &Errors,
     m: &syn::MetaList,
     attr_name: &str,
-    slot: &mut Option<syn::Ident>,
+    slot: &mut Option<syn::Path>,
 ) {
     if let Some(first) = slot {
         errors.duplicate_attrs(attr_name, first, m);
@@ -237,12 +237,10 @@ fn parse_attr_fn_name(
 
     // `unwrap` will not fail because of the call above
     let nested = m.nested.first().unwrap();
-    if let Some(path) = errors
+    *slot = errors
         .expect_nested_meta(nested)
         .and_then(|m| errors.expect_meta_word(m))
-    {
-        *slot = path.get_ident().cloned();
-    }
+        .cloned();
 }
 
 fn parse_attr_field_type(

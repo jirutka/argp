@@ -41,16 +41,10 @@ jobs:
       - name: Run simple_example
         run: cargo run --package argp --example simple_example two --fooey
 
-      - name: Compile simple_example in release mode
-        if: matrix.os != 'windows'
-        run: |
-          cargo build --package argp --example simple_example --release
-          strip target/release/examples/simple_example
-          ls -lah target/release/examples/simple_example
-        env:
-          CARGO_PROFILE_RELEASE_OPT_LEVEL: s
-          CARGO_PROFILE_RELEASE_PANIC: abort
-          CARGO_INCREMENTAL: '0'
+      - name: Report size overhead
+        # 1.56 doesn't support -C strip.
+        if: matrix.os != 'windows' && matrix.toolchain != '1.56'
+        run: ./scripts/report-size-overhead
 
   lint:
     name: Run linters

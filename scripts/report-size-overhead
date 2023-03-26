@@ -1,0 +1,64 @@
+#!/bin/sh
+set -eu
+
+OUT_DIR='target/release/examples'
+
+cd "$(dirname "$0")/.."
+
+diff_kb() {
+	echo "$(( ( $1 - $2 ) / 1024 ))"
+}
+
+cargo_build_opts() {
+	local var val
+	while [ $# -ne 0 ]; do
+		var="$(echo "${1%%=*}" | tr 'a-z-' 'A-Z_')"
+		val="${1#*=}"
+		eval "export CARGO_PROFILE_RELEASE_$var=$val"
+		shift
+	done
+}
+
+build_and_report() (
+	export CARGO_BUILD_RUSTFLAGS="-C strip=symbols"
+	export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+
+	cargo_build_opts "$@"
+
+	echo "Building with $@"
+
+	cargo build --release --example argparse_rosetta_null
+	size0=$(stat -c'%s' "$OUT_DIR/argparse_rosetta_null")
+	rm "$OUT_DIR/argparse_rosetta_null"
+
+	cargo build --release --example argparse_rosetta_argp
+	size1=$(stat -c'%s' "$OUT_DIR/argparse_rosetta_argp")
+	rm "$OUT_DIR/argparse_rosetta_argp"
+
+	cargo build --release --example simple_example
+	size2=$(stat -c'%s' "$OUT_DIR/simple_example")
+	rm "$OUT_DIR/simple_example"
+
+	echo "| $(diff_kb $size0 0) kiB  | +$(diff_kb $size1 $size0) kiB | +$(diff_kb $size2 $size0) kiB | $*" >> "$REPORT_OUT"
+)
+
+REPORT_OUT="$(mktemp)"
+
+cat > "$REPORT_OUT" <<EOF
+argp size overhead:
+
+| baseline | rosetta | simple  | build options
+|----------|---------|---------|--------------
+EOF
+
+build_and_report opt-level=2
+build_and_report opt-level=2 panic=abort
+build_and_report opt-level=2 lto=fat
+build_and_report opt-level=2 lto=fat panic=abort
+build_and_report opt-level=s panic=abort
+build_and_report opt-level=s lto=fat
+build_and_report opt-level=s lto=fat panic=abort
+
+echo ''
+cat "$REPORT_OUT"
+rm -f "$REPORT_OUT"

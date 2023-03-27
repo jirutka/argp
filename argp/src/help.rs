@@ -166,9 +166,14 @@ impl Help {
                 .chain(subcommands.iter().map(|r| r.name)),
         );
 
-        write_opts_section(&mut out, "Arguments:", info.positionals.iter(), desc_indent, style);
-        write_opts_section(&mut out, "Options:", options, desc_indent, style);
-        write_cmds_section(&mut out, "Commands:", &subcommands, desc_indent, style);
+        let mut sw = SectionsWriter {
+            out: &mut out,
+            desc_indent,
+            style,
+        };
+        sw.write_opts_section("Arguments:", info.positionals.iter());
+        sw.write_opts_section("Options:", options);
+        sw.write_cmds_section("Commands:", &subcommands);
 
         if !info.footer.is_empty() {
             out.push_str(SECTION_SEPARATOR);
@@ -225,6 +230,106 @@ impl HelpInfo {
     }
 }
 
+struct SectionsWriter<'a> {
+    desc_indent: usize,
+    out: &'a mut String,
+    style: &'a HelpStyle,
+}
+
+impl<'a> SectionsWriter<'_> {
+    fn write_opts_section(&mut self, title: &str, opts: impl Iterator<Item = &'a OptionArgInfo>) {
+        // NOTE: greedy positional has empty names and description, to be excluded
+        // from the Positional Arguments section.
+        for (i, opt) in opts.filter(|r| !r.names.is_empty()).enumerate() {
+            if i == 0 {
+                self.out.push_str(SECTION_SEPARATOR);
+                self.out.push_str(title);
+            } else {
+                self.append_blank_lines();
+            }
+            self.write_description(opt.names, opt.description);
+        }
+    }
+
+    fn write_cmds_section(&mut self, title: &str, cmds: &[&CommandInfo]) {
+        if !cmds.is_empty() {
+            self.out.push_str(SECTION_SEPARATOR);
+            self.out.push_str(title);
+
+            for (i, cmd) in cmds.iter().enumerate() {
+                if i != 0 {
+                    self.append_blank_lines();
+                }
+                self.write_description(cmd.name, cmd.description);
+            }
+        }
+    }
+
+    fn write_description(&mut self, names: &str, desc: &str) {
+        let mut current_line = INDENT.to_string();
+        current_line.push_str(names);
+
+        if desc.is_empty() {
+            self.new_line(&mut current_line);
+            return;
+        }
+
+        if !self.indent_description(&mut current_line) {
+            // Start the description on a new line if the flag names already
+            // add up to more than `indent`.
+            self.new_line(&mut current_line);
+        }
+
+        let mut words = desc.split(' ').peekable();
+        while let Some(first_word) = words.next() {
+            self.indent_description(&mut current_line);
+            current_line.push_str(first_word);
+
+            'inner: while let Some(&word) = words.peek() {
+                if (char_len(&current_line) + char_len(word) + 1) > self.style.wrap_width {
+                    self.new_line(&mut current_line);
+                    break 'inner;
+                } else {
+                    // advance the iterator
+                    let _ = words.next();
+                    current_line.push(' ');
+                    current_line.push_str(word);
+                }
+            }
+        }
+        self.new_line(&mut current_line);
+    }
+
+    /// Indents the current line in to the `width` chars.
+    /// Returns a boolean indicating whether or not spacing was added.
+    fn indent_description(&self, line: &mut String) -> bool {
+        let cur_len = char_len(line);
+
+        if cur_len < self.desc_indent {
+            let num_spaces = self.desc_indent - cur_len;
+            line.extend(iter::repeat(' ').take(num_spaces));
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Appends a newline and the current line to the output,
+    /// clearing the current line.
+    fn new_line(&mut self, current_line: &mut String) {
+        self.out.push('\n');
+        self.out.push_str(current_line);
+        current_line.truncate(0);
+    }
+
+    fn append_blank_lines(&mut self) {
+        let count = self.style.blank_lines_spacing;
+        if count > 0 {
+            self.out.extend(iter::repeat('\n').take(count))
+        }
+    }
+}
+
 fn compute_desc_indent<'a>(names: impl Iterator<Item = &'a str>) -> usize {
     names
         .map(|name| INDENT.len() + char_len(name) + 2)
@@ -234,114 +339,6 @@ fn compute_desc_indent<'a>(names: impl Iterator<Item = &'a str>) -> usize {
         .max(DESC_MIN_INDENT)
 }
 
-fn write_opts_section<'a>(
-    out: &mut String,
-    title: &str,
-    opts: impl Iterator<Item = &'a OptionArgInfo>,
-    desc_indent: usize,
-    style: &HelpStyle,
-) {
-    // NOTE: greedy positional has empty names and description, to be excluded
-    // from the Positional Arguments section.
-    for (i, opt) in opts.filter(|r| !r.names.is_empty()).enumerate() {
-        if i == 0 {
-            out.push_str(SECTION_SEPARATOR);
-            out.push_str(title);
-        } else {
-            append_blank_lines(out, style.blank_lines_spacing);
-        }
-        write_description(out, opt.names, opt.description, desc_indent, style);
-    }
-}
-
-fn write_cmds_section(
-    out: &mut String,
-    title: &str,
-    cmds: &[&CommandInfo],
-    desc_indent: usize,
-    style: &HelpStyle,
-) {
-    if !cmds.is_empty() {
-        out.push_str(SECTION_SEPARATOR);
-        out.push_str(title);
-
-        for (i, cmd) in cmds.iter().enumerate() {
-            if i != 0 {
-                append_blank_lines(out, style.blank_lines_spacing);
-            }
-            write_description(out, cmd.name, cmd.description, desc_indent, style);
-        }
-    }
-}
-
-fn write_description(
-    out: &mut String,
-    names: &str,
-    desc: &str,
-    indent_width: usize,
-    style: &HelpStyle,
-) {
-    let mut current_line = INDENT.to_string();
-    current_line.push_str(names);
-
-    if desc.is_empty() {
-        new_line(&mut current_line, out);
-        return;
-    }
-
-    if !indent_description(&mut current_line, indent_width) {
-        // Start the description on a new line if the flag names already
-        // add up to more than `indent`.
-        new_line(&mut current_line, out);
-    }
-
-    let mut words = desc.split(' ').peekable();
-    while let Some(first_word) = words.next() {
-        indent_description(&mut current_line, indent_width);
-        current_line.push_str(first_word);
-
-        'inner: while let Some(&word) = words.peek() {
-            if (char_len(&current_line) + char_len(word) + 1) > style.wrap_width {
-                new_line(&mut current_line, out);
-                break 'inner;
-            } else {
-                // advance the iterator
-                let _ = words.next();
-                current_line.push(' ');
-                current_line.push_str(word);
-            }
-        }
-    }
-    new_line(&mut current_line, out);
-}
-
-// Indent the current line in to the `width` chars.
-// Returns a boolean indicating whether or not spacing was added.
-fn indent_description(line: &mut String, width: usize) -> bool {
-    let cur_len = char_len(line);
-    if cur_len < width {
-        let num_spaces = width - cur_len;
-        line.extend(iter::repeat(' ').take(num_spaces));
-        true
-    } else {
-        false
-    }
-}
-
 fn char_len(s: &str) -> usize {
     s.chars().count()
-}
-
-// Append a newline and the current line to the output,
-// clearing the current line.
-fn new_line(current_line: &mut String, out: &mut String) {
-    out.push('\n');
-    out.push_str(current_line);
-    current_line.truncate(0);
-}
-
-fn append_blank_lines(out: &mut String, count: usize) {
-    if count > 0 {
-        out.extend(iter::repeat('\n').take(count))
-    }
 }

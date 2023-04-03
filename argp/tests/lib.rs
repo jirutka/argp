@@ -14,9 +14,16 @@
 use std::ffi::OsStr;
 use std::fmt::Debug;
 
-use argp::{CommandInfo, DynamicSubCommand, EarlyExit, Error, FromArgs, MissingRequirements};
+use argp::{
+    CommandInfo, DynamicSubCommand, EarlyExit, Error, FromArgs, HelpStyle, MissingRequirements,
+};
 
 const EMPTY_ARGS: &[&OsStr] = &[];
+
+const FIXED_HELP_STYLE: HelpStyle = HelpStyle {
+    blank_lines_spacing: 0,
+    wrap_width_range: 80..80,
+};
 
 #[test]
 fn basic_example() {
@@ -388,7 +395,7 @@ fn assert_help_string<T: FromArgs>(help_str: &str) {
         Ok(_) => panic!("help was parsed as args"),
         Err(EarlyExit::Err(_)) => panic!("expected EarlyExit::Help"),
         Err(EarlyExit::Help(help)) => {
-            assert_eq!(help.generate_default(), help_str);
+            assert_eq!(help.generate(&FIXED_HELP_STYLE), help_str);
         }
     }
 }
@@ -582,7 +589,9 @@ mod global_options {
         let exit_early = TopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
 
         match exit_early {
-            EarlyExit::Help(help) => assert_eq!(expected_help_string, help.generate_default()),
+            EarlyExit::Help(help) => {
+                assert_eq!(expected_help_string, help.generate(&FIXED_HELP_STYLE))
+            }
             _ => panic!("expected EarlyExit::Help"),
         }
     }
@@ -1158,7 +1167,9 @@ mod fuchsia_commandline_tools_rubric {
             HelpTopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
 
         match exit_early {
-            EarlyExit::Help(help) => assert_eq!(expected_help_string, help.generate_default()),
+            EarlyExit::Help(help) => {
+                assert_eq!(expected_help_string, help.generate(&FIXED_HELP_STYLE))
+            }
             _ => panic!("expected EarlyExit::Help"),
         }
     }
@@ -1866,7 +1877,7 @@ mod parser {
 
         if let EarlyExit::Help(help) = early_exit {
             assert_eq!(
-                help.generate_default(),
+                help.generate(&FIXED_HELP_STYLE),
                 r###"Usage: program-name [-n <n...>]
 
 Woot

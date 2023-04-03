@@ -21,7 +21,7 @@ The public API of this library consists primarily of the `FromArgs` derive and t
 * Derive-based API – you define structs and enums for the parsed values, use attributes to specify how they should be parsed and a procedural derive macro will generate the parser at compile-time.
 * Context-sensitive parsing.
 * Support for subcommands.
-* Help message generation.
+* Help message generator with dynamic wrapping based on terminal width.
 
 
 == Origins
@@ -35,6 +35,7 @@ Notable changes from argh:
 * Support for non-UTF8 arguments (OsStr).
 * The `from_str_fn` attribute can also contain a function path, not just a single identifier, and can return any `Err` type which implements `ToString`.
 * No pedantic requirement for descriptions to start with a lower-case letter.
+* Help message is dynamically wrapped based on terminal width (on unix systems).
 * The indentation of descriptions in the help message is dynamically calculated based on the widths of all elements.
 * The `arg_name` attribute can also be used even on positional arguments to customise how the argument is displayed in the help message.
 * Errors are represented using an enum instead of a String and the information used to generate a help message is stored in a partially structured form in a struct; this opens the door to customisation of messages.

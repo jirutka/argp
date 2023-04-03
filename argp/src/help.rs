@@ -10,8 +10,10 @@
 
 use std::fmt;
 use std::iter;
-use std::ops::Deref;
+use std::ops::{Deref, Range};
 use std::ptr;
+
+use crate::term_size;
 
 const INDENT: &str = "  ";
 const DESC_MIN_INDENT: usize = 8;
@@ -93,15 +95,32 @@ pub struct HelpStyle {
     /// descriptions of commands and options. Default is `0`.
     pub blank_lines_spacing: usize,
 
-    /// Wraps the output to the specified number of characters. Default is `80`.
-    pub wrap_width: usize,
+    /// Specifies the minimum and maximum number of characters to wrap the help
+    /// output. If the terminal size is not available (see [`term_size`]), the
+    /// output is wrapped to the lower bound of this range.
+    /// Default is `80..120`.
+    pub wrap_width_range: Range<usize>,
 }
 
 impl Default for HelpStyle {
     fn default() -> Self {
         Self {
             blank_lines_spacing: 0,
-            wrap_width: 80,
+            wrap_width_range: 80..120,
+        }
+    }
+}
+
+impl HelpStyle {
+    fn wrap_width(&self) -> usize {
+        let Range { start, end } = self.wrap_width_range;
+
+        if start == end {
+            start
+        } else {
+            term_size::term_cols()
+                .map(|cols| cols.clamp(start, end))
+                .unwrap_or(start)
         }
     }
 }
@@ -170,6 +189,7 @@ impl Help {
             out: &mut out,
             desc_indent,
             style,
+            wrap_width: style.wrap_width(),
         };
         sw.write_opts_section("Arguments:", info.positionals.iter());
         sw.write_opts_section("Options:", options);
@@ -234,6 +254,7 @@ struct SectionsWriter<'a> {
     desc_indent: usize,
     out: &'a mut String,
     style: &'a HelpStyle,
+    wrap_width: usize,
 }
 
 impl<'a> SectionsWriter<'_> {
@@ -286,7 +307,7 @@ impl<'a> SectionsWriter<'_> {
             current_line.push_str(first_word);
 
             'inner: while let Some(&word) = words.peek() {
-                if (char_len(&current_line) + char_len(word) + 1) > self.style.wrap_width {
+                if (char_len(&current_line) + char_len(word) + 1) > self.wrap_width {
                     self.new_line(&mut current_line);
                     break 'inner;
                 } else {

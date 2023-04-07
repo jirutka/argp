@@ -1,0 +1,16 @@
+#!/bin/sh -e
+# This is a workaround to make stty work on CI.
+
+case "$(uname -s)" in
+	Linux) exec script -ec '/bin/sh -e' <<-EOF
+		stty rows 100 cols 80
+		$*
+	EOF
+	;;
+	Darwin) exec script out.log /bin/sh -e <<-EOF
+		stty rows 100 cols 80
+		$*
+	EOF
+	;;
+	*) echo "Unsupported OS: $(uname -s)" >&2; exit 1;;
+esac

@@ -16,6 +16,7 @@ jobs:
           - nightly
         os:
           - ubuntu
+          - macos
           - windows
     steps:
       - uses: actions/checkout@v3
@@ -31,13 +32,9 @@ jobs:
       - name: Build
         run: cargo build --workspace --examples --verbose
 
-      - name: Run tests (Linux)
+      - name: Run tests (unix)
         if: matrix.os != 'windows'
-        run: |
-          stty rows 100 cols 80
-          cargo test --workspace --verbose -- --exact --skip ui
-        # This is a workaround to make stty work on CI.
-        shell: script -ec "/bin/sh -e {0}"
+        run: ./scripts/faketty cargo test --workspace --verbose -- --exact --skip ui
 
       - name: Run tests (Windows)
         if: matrix.os == 'windows'

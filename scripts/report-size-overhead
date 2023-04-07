@@ -2,8 +2,16 @@
 set -eu
 
 OUT_DIR='target/release/examples'
+HOST_OS="$(uname -s)"
 
 cd "$(dirname "$0")/.."
+
+file_size() {
+	case "$HOST_OS" in
+		Darwin) stat -f '%z' "$@";;
+		*) stat -c '%s' "$@";;
+	esac
+}
 
 diff_kb() {
 	echo "$(( ( $1 - $2 ) / 1024 ))"
@@ -28,15 +36,15 @@ build_and_report() (
 	echo "Building with $@"
 
 	cargo build --release --example argparse_rosetta_null
-	size0=$(stat -c'%s' "$OUT_DIR/argparse_rosetta_null")
+	size0=$(file_size "$OUT_DIR/argparse_rosetta_null")
 	rm "$OUT_DIR/argparse_rosetta_null"
 
 	cargo build --release --example argparse_rosetta_argp
-	size1=$(stat -c'%s' "$OUT_DIR/argparse_rosetta_argp")
+	size1=$(file_size "$OUT_DIR/argparse_rosetta_argp")
 	rm "$OUT_DIR/argparse_rosetta_argp"
 
 	cargo build --release --example simple_example
-	size2=$(stat -c'%s' "$OUT_DIR/simple_example")
+	size2=$(file_size "$OUT_DIR/simple_example")
 	rm "$OUT_DIR/simple_example"
 
 	echo "| $(diff_kb $size0 0) kiB  | +$(diff_kb $size1 $size0) kiB | +$(diff_kb $size2 $size0) kiB | $*" >> "$REPORT_OUT"

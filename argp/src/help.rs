@@ -18,7 +18,7 @@ use crate::term_size;
 const INDENT: &str = "  ";
 const DESC_MIN_INDENT: usize = 8;
 const DESC_MAX_INDENT: usize = 30;
-const SECTION_SEPARATOR: &str = "\n\n";
+const SECTION_SEPARATOR: &str = "\n";
 
 const HELP_OPT: OptionArgInfo = OptionArgInfo {
     usage: "",
@@ -156,77 +156,69 @@ impl Help {
     pub fn generate(&self, style: &HelpStyle) -> String {
         let info = self.info;
 
-        let options = self
-            .global_options
-            .iter()
-            .map(Deref::deref)
-            .chain(info.options)
-            .chain(iter::once(&HELP_OPT));
+        let options = self.options();
         let options_and_args = options.clone().chain(info.positionals);
-
-        let mut out = String::from("Usage: ");
-        out.push_str(&self.command_name);
-
-        for usage in options_and_args
-            .clone()
-            .map(|r| r.usage)
-            .filter(|s| !s.is_empty())
-        {
-            out.push(' ');
-            out.push_str(usage);
-        }
-
-        if let Some(cmds) = &info.commands {
-            out.push(' ');
-            out.push_str(cmds.usage);
-        }
-
-        out.push_str(SECTION_SEPARATOR);
-        out.push_str(
-            &info
-                .description
-                .replace("{command_name}", &self.command_name),
-        );
-
-        let subcommands = if let Some(cmds) = &info.commands {
-            cmds.subcommands
-                .iter()
-                .chain((cmds.dynamic_subcommands)().iter())
-                .map(Deref::deref)
-                .collect()
-        } else {
-            Vec::new()
-        };
+        let subcommands = self.subcommands();
 
         // Computes the indentation width of the description (right) column based
         // on width of the names/flags in the left column.
         let desc_indent = compute_desc_indent(
             options_and_args
+                .clone()
                 .map(|r| r.description.0)
                 .chain(subcommands.iter().map(|r| r.name)),
         );
 
-        let mut sw = SectionsWriter {
-            out: &mut out,
+        let mut w = HelpWriter {
+            blank_lines_spacing: &"\n".repeat(style.blank_lines_spacing),
+            buf: String::new(),
+            command_name: &self.command_name,
             desc_indent,
-            style,
             wrap_width: style.wrap_width(),
         };
-        sw.write_section("Arguments:", info.positionals.iter().map(|r| r.description));
-        sw.write_section("Options:", options.map(|r| r.description));
+
+        w.write_usage(
+            options_and_args
+                .map(|r| r.usage)
+                .chain(iter::once(info.commands.as_ref().map_or("", |r| r.usage))),
+        );
+        w.write_paragraph(info.description);
+
+        if !info.positionals.is_empty() {
+            w.write_section("Arguments:", info.positionals.iter().map(|r| r.description));
+        }
+        w.write_section("Options:", options.map(|r| r.description));
 
         if !subcommands.is_empty() {
-            sw.write_section("Commands:", subcommands.iter().map(|r| (r.name, r.description)));
+            w.write_section("Commands:", subcommands.iter().map(|r| (r.name, r.description)));
         }
-
         if !info.footer.is_empty() {
-            out.push_str(SECTION_SEPARATOR);
-            out.push_str(&info.footer.replace("{command_name}", &self.command_name));
+            w.write_paragraph(info.footer);
         }
 
-        out.push('\n');
+        w.into_string()
+    }
 
-        out
+    /// Returns global options, local options and the help option chained
+    /// together.
+    fn options(&self) -> impl Iterator<Item = &OptionArgInfo> + Clone {
+        self.global_options
+            .iter()
+            .map(Deref::deref)
+            .chain(self.info.options)
+            .chain(iter::once(&HELP_OPT))
+    }
+
+    /// Returns static and dynamic subcommands chained together, or an empty
+    /// vector if no subcommands are defined.
+    fn subcommands(&self) -> Vec<&CommandInfo> {
+        if let Some(cmds) = &self.info.commands {
+            let mut vec = cmds.subcommands.to_vec();
+            vec.extend((cmds.dynamic_subcommands)());
+            vec
+        } else {
+            Vec::new()
+        }
     }
 }
 
@@ -274,102 +266,131 @@ impl HelpInfo {
     }
 }
 
-struct SectionsWriter<'a> {
+struct HelpWriter<'a> {
+    blank_lines_spacing: &'a str,
+    buf: String,
+    command_name: &'a str,
     desc_indent: usize,
-    out: &'a mut String,
-    style: &'a HelpStyle,
     wrap_width: usize,
 }
 
-impl<'a> SectionsWriter<'_> {
+impl<'a> HelpWriter<'_> {
+    fn write_usage(&mut self, usage: impl Iterator<Item = &'a str>) {
+        self.write_str("Usage: ");
+        self.write_str(self.command_name);
+
+        for word in usage.filter(|s| !s.is_empty()) {
+            self.write_str(" ");
+            self.write_str(word);
+        }
+        self.write_str("\n");
+    }
+
+    fn write_paragraph(&mut self, text: &str) {
+        self.write_str(SECTION_SEPARATOR);
+        self.write_line(&text.replace("{command_name}", self.command_name));
+    }
+
     fn write_section(&mut self, title: &str, descs: impl Iterator<Item = (&'a str, &'a str)>) {
         // NOTE: greedy positional has empty names and description, to be excluded
         // from the Positional Arguments section.
-        for (i, desc) in descs.filter(|desc| !desc.0.is_empty()).enumerate() {
-            if i == 0 {
-                self.out.push_str(SECTION_SEPARATOR);
-                self.out.push_str(title);
+        let mut first = true;
+        for desc in descs.filter(|desc| !desc.0.is_empty()) {
+            if first {
+                self.write_str(SECTION_SEPARATOR);
+                self.write_line(title);
+                first = false;
             } else {
-                self.append_blank_lines();
+                self.write_str(self.blank_lines_spacing);
             }
             self.write_description(desc);
         }
     }
 
-    fn write_description(&mut self, (left, right): (&str, &str)) {
-        let mut current_line = INDENT.to_string();
-        current_line.push_str(left);
+    #[inline]
+    fn into_string(self) -> String {
+        self.buf
+    }
 
-        if right.is_empty() {
-            self.new_line(&mut current_line);
+    fn write_description(&mut self, (left_col, right_col): (&str, &str)) {
+        let mut line = INDENT.to_string();
+        line.push_str(left_col);
+
+        if right_col.is_empty() {
+            self.write_line_mut(&mut line);
             return;
         }
 
-        if !self.indent_description(&mut current_line) {
+        if !pad_string(&mut line, self.desc_indent) {
             // Start the description on a new line if the flag names already
             // add up to more than `indent`.
-            self.new_line(&mut current_line);
+            self.write_line_mut(&mut line);
         }
 
-        let mut words = right.split(' ').peekable();
+        self.write_wrapped(&mut line, right_col, self.desc_indent);
+    }
+
+    fn write_wrapped(&mut self, line: &mut String, text: &str, padding: usize) {
+        let mut words = text.split(' ').peekable();
+
         while let Some(first_word) = words.next() {
-            self.indent_description(&mut current_line);
-            current_line.push_str(first_word);
+            if padding > 0 && line.is_empty() {
+                pad_string(line, padding);
+            }
+            line.push_str(first_word);
 
             'inner: while let Some(&word) = words.peek() {
-                if (char_len(&current_line) + char_len(word) + 1) > self.wrap_width {
-                    self.new_line(&mut current_line);
+                if (chars_count(line) + chars_count(word) + 1) > self.wrap_width {
+                    self.write_line_mut(line);
                     break 'inner;
                 } else {
                     // advance the iterator
                     let _ = words.next();
-                    current_line.push(' ');
-                    current_line.push_str(word);
+                    line.push(' ');
+                    line.push_str(word);
                 }
             }
         }
-        self.new_line(&mut current_line);
+        self.write_line_mut(line);
     }
 
-    /// Indents the current line in to the `width` chars.
-    /// Returns a boolean indicating whether or not spacing was added.
-    fn indent_description(&self, line: &mut String) -> bool {
-        let cur_len = char_len(line);
-
-        if cur_len < self.desc_indent {
-            let num_spaces = self.desc_indent - cur_len;
-            line.extend(iter::repeat(' ').take(num_spaces));
-            true
-        } else {
-            false
-        }
+    fn write_line_mut(&mut self, line: &mut String) {
+        self.write_line(line);
+        line.truncate(0);
     }
 
-    /// Appends a newline and the current line to the output,
-    /// clearing the current line.
-    fn new_line(&mut self, current_line: &mut String) {
-        self.out.push('\n');
-        self.out.push_str(current_line);
-        current_line.truncate(0);
+    fn write_line(&mut self, line: &str) {
+        self.write_str(line);
+        self.write_str("\n");
     }
 
-    fn append_blank_lines(&mut self) {
-        let count = self.style.blank_lines_spacing;
-        if count > 0 {
-            self.out.extend(iter::repeat('\n').take(count))
-        }
+    #[inline]
+    fn write_str(&mut self, s: &str) {
+        self.buf.push_str(s);
     }
 }
 
 fn compute_desc_indent<'a>(names: impl Iterator<Item = &'a str>) -> usize {
     names
-        .map(|name| INDENT.len() + char_len(name) + 2)
+        .map(|name| INDENT.len() + chars_count(name) + 2)
         .filter(|width| *width <= DESC_MAX_INDENT)
         .max()
         .unwrap_or(0)
         .max(DESC_MIN_INDENT)
 }
 
-fn char_len(s: &str) -> usize {
+fn chars_count(s: &str) -> usize {
     s.chars().count()
+}
+
+/// Pads the given string with spaces until it reaches the given width.
+fn pad_string(s: &mut String, width: usize) -> bool {
+    let len = chars_count(s);
+
+    if len < width {
+        s.extend(iter::repeat(' ').take(width - len));
+        true
+    } else {
+        false
+    }
 }

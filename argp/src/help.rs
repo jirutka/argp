@@ -22,8 +22,7 @@ const SECTION_SEPARATOR: &str = "\n\n";
 
 const HELP_OPT: OptionArgInfo = OptionArgInfo {
     usage: "",
-    names: "-h, --help",
-    description: "Show this help message and exit.",
+    description: ("-h, --help", "Show this help message and exit."),
     global: true,
 };
 
@@ -77,17 +76,14 @@ pub struct OptionArgInfo {
     /// `argp_derive::help`.
     pub usage: &'static str,
 
-    /// The usage string that will printed in the left column of the **Options**
-    /// or **Arguments** section. If this is an option, it contains the short
-    /// option (if defined), the long option and the argument name if it has one
-    /// (e.g. `-f, --foo`, `-f, --foo <arg>`, `'    --foo'`). If this is a
-    /// positional argument, it contains the argument name (e.g. `arg`). This
-    /// string is generated in `argp_derive::help`.
-    pub names: &'static str,
-
-    /// The description of the option/argument to be printed in the right
-    /// column of the **Options** or **Arguments** section.
-    pub description: &'static str,
+    /// The option/argument description to be printed in the **Options** and
+    /// **Arguments** section, respectively, in two columns. If this is an
+    /// option, then the left string contains the short option (if defined), the
+    /// long option and the argument name if it has one (e.g. `-f, --foo`, `-f,
+    /// --foo <arg>`, `'    --foo'`). If this is a positional argument, it
+    /// contains the argument name (e.g. `arg`). This value is generated in
+    /// `argp_derive::help`.
+    pub description: (&'static str, &'static str),
 
     /// Whether to propagate this option down to subcommands. This is valid only
     /// for options and switches, not for positional arguments.
@@ -206,7 +202,7 @@ impl Help {
         // on width of the names/flags in the left column.
         let desc_indent = compute_desc_indent(
             options_and_args
-                .map(|r| r.names)
+                .map(|r| r.description.0)
                 .chain(subcommands.iter().map(|r| r.name)),
         );
 
@@ -286,14 +282,14 @@ impl<'a> SectionsWriter<'_> {
     fn write_opts_section(&mut self, title: &str, opts: impl Iterator<Item = &'a OptionArgInfo>) {
         // NOTE: greedy positional has empty names and description, to be excluded
         // from the Positional Arguments section.
-        for (i, opt) in opts.filter(|r| !r.names.is_empty()).enumerate() {
+        for (i, opt) in opts.filter(|r| !r.description.0.is_empty()).enumerate() {
             if i == 0 {
                 self.out.push_str(SECTION_SEPARATOR);
                 self.out.push_str(title);
             } else {
                 self.append_blank_lines();
             }
-            self.write_description(opt.names, opt.description);
+            self.write_description(opt.description);
         }
     }
 
@@ -306,16 +302,16 @@ impl<'a> SectionsWriter<'_> {
                 if i != 0 {
                     self.append_blank_lines();
                 }
-                self.write_description(cmd.name, cmd.description);
+                self.write_description((cmd.name, cmd.description));
             }
         }
     }
 
-    fn write_description(&mut self, names: &str, desc: &str) {
+    fn write_description(&mut self, (left, right): (&str, &str)) {
         let mut current_line = INDENT.to_string();
-        current_line.push_str(names);
+        current_line.push_str(left);
 
-        if desc.is_empty() {
+        if right.is_empty() {
             self.new_line(&mut current_line);
             return;
         }
@@ -326,7 +322,7 @@ impl<'a> SectionsWriter<'_> {
             self.new_line(&mut current_line);
         }
 
-        let mut words = desc.split(' ').peekable();
+        let mut words = right.split(' ').peekable();
         while let Some(first_word) = words.next() {
             self.indent_description(&mut current_line);
             current_line.push_str(first_word);

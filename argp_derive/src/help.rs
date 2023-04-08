@@ -187,8 +187,7 @@ fn positional_info(field: &StructField<'_>) -> TokenStream {
     quote! {
         ::argp::help::OptionArgInfo {
             usage: #usage,
-            names: #field_name,
-            description: #description,
+            description: (#field_name, #description),
             global: false,
         }
     }
@@ -209,22 +208,22 @@ fn option_info(errors: &Errors, field: &StructField<'_>) -> TokenStream {
         None
     };
 
-    let mut names = String::new();
+    let mut flags = String::new();
 
     if let Some(short) = short {
-        names.push('-');
-        names.push(short);
-        names.push_str(", ");
+        flags.push('-');
+        flags.push(short);
+        flags.push_str(", ");
     } else {
         //             "-x, "
-        names.push_str("    ");
+        flags.push_str("    ");
     }
-    names.push_str(long_with_leading_dashes);
+    flags.push_str(long_with_leading_dashes);
 
     if let Some(arg_name) = arg_name {
-        names.push_str(" <");
-        names.push_str(&arg_name);
-        names.push('>');
+        flags.push_str(" <");
+        flags.push_str(&arg_name);
+        flags.push('>');
     }
 
     let description =
@@ -235,8 +234,7 @@ fn option_info(errors: &Errors, field: &StructField<'_>) -> TokenStream {
     quote! {
         ::argp::help::OptionArgInfo {
             usage: #usage,
-            names: #names,
-            description: #description,
+            description: (#flags, #description),
             global: #global,
         }
     }

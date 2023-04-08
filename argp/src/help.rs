@@ -212,9 +212,12 @@ impl Help {
             style,
             wrap_width: style.wrap_width(),
         };
-        sw.write_opts_section("Arguments:", info.positionals.iter());
-        sw.write_opts_section("Options:", options);
-        sw.write_cmds_section("Commands:", &subcommands);
+        sw.write_section("Arguments:", info.positionals.iter().map(|r| r.description));
+        sw.write_section("Options:", options.map(|r| r.description));
+
+        if !subcommands.is_empty() {
+            sw.write_section("Commands:", subcommands.iter().map(|r| (r.name, r.description)));
+        }
 
         if !info.footer.is_empty() {
             out.push_str(SECTION_SEPARATOR);
@@ -279,31 +282,17 @@ struct SectionsWriter<'a> {
 }
 
 impl<'a> SectionsWriter<'_> {
-    fn write_opts_section(&mut self, title: &str, opts: impl Iterator<Item = &'a OptionArgInfo>) {
+    fn write_section(&mut self, title: &str, descs: impl Iterator<Item = (&'a str, &'a str)>) {
         // NOTE: greedy positional has empty names and description, to be excluded
         // from the Positional Arguments section.
-        for (i, opt) in opts.filter(|r| !r.description.0.is_empty()).enumerate() {
+        for (i, desc) in descs.filter(|desc| !desc.0.is_empty()).enumerate() {
             if i == 0 {
                 self.out.push_str(SECTION_SEPARATOR);
                 self.out.push_str(title);
             } else {
                 self.append_blank_lines();
             }
-            self.write_description(opt.description);
-        }
-    }
-
-    fn write_cmds_section(&mut self, title: &str, cmds: &[&CommandInfo]) {
-        if !cmds.is_empty() {
-            self.out.push_str(SECTION_SEPARATOR);
-            self.out.push_str(title);
-
-            for (i, cmd) in cmds.iter().enumerate() {
-                if i != 0 {
-                    self.append_blank_lines();
-                }
-                self.write_description((cmd.name, cmd.description));
-            }
+            self.write_description(desc);
         }
     }
 

@@ -49,8 +49,12 @@ pub struct HelpInfo {
 /// a help message.
 #[derive(Debug)]
 pub struct CommandsHelpInfo {
+    /// The usage words to be printed in the **Usage** pattern
+    /// (`<command> [<args>]` or `[<command>] [<args>]`, literally).
     pub usage: &'static str,
+    /// A list of subcommands info.
     pub subcommands: &'static [&'static CommandInfo],
+    /// A function that returns a list of subcommands discovered at runtime.
     pub dynamic_subcommands: fn() -> &'static [&'static CommandInfo],
 }
 
@@ -68,11 +72,25 @@ pub struct CommandInfo {
 /// generating a help message.
 #[derive(Debug)]
 pub struct OptionArgInfo {
+    /// The usage word to be printed in the **Usage** pattern (e.g. `[--foo]`,
+    /// `[-f <arg>]`, `[<arg>...]`, `<arg>`, ...). This string is generated in
+    /// `argp_derive::help`.
     pub usage: &'static str,
+
+    /// The usage string that will printed in the left column of the **Options**
+    /// or **Arguments** section. If this is an option, it contains the short
+    /// option (if defined), the long option and the argument name if it has one
+    /// (e.g. `-f, --foo`, `-f, --foo <arg>`, `'    --foo'`). If this is a
+    /// positional argument, it contains the argument name (e.g. `arg`). This
+    /// string is generated in `argp_derive::help`.
     pub names: &'static str,
+
+    /// The description of the option/argument to be printed in the right
+    /// column of the **Options** or **Arguments** section.
     pub description: &'static str,
+
     /// Whether to propagate this option down to subcommands. This is valid only
-    /// for options and flags, not for positional arguments.
+    /// for options and switches, not for positional arguments.
     pub global: bool,
 }
 

@@ -178,9 +178,11 @@ impl Help {
         };
 
         w.write_usage(
-            options_and_args
-                .map(|r| r.usage)
-                .chain(iter::once(info.commands.as_ref().map_or("", |r| r.usage))),
+            "Usage:",
+            iter::once(self.command_name.as_str())
+                .chain(options_and_args.map(|r| r.usage))
+                .chain(iter::once(info.commands.as_ref().map_or("", |r| r.usage)))
+                .filter(|s| !s.is_empty()),
         );
         w.write_paragraph(info.description);
 
@@ -275,15 +277,11 @@ struct HelpWriter<'a> {
 }
 
 impl<'a> HelpWriter<'_> {
-    fn write_usage(&mut self, usage: impl Iterator<Item = &'a str>) {
-        self.write_str("Usage: ");
-        self.write_str(self.command_name);
+    #[inline]
+    fn write_usage(&'a mut self, title: &str, usage: impl Iterator<Item = &'a str>) {
+        let mut line = title.to_string() + " ";
 
-        for word in usage.filter(|s| !s.is_empty()) {
-            self.write_str(" ");
-            self.write_str(word);
-        }
-        self.write_str("\n");
+        self.write_wrapped(&mut line, usage, title.len() + self.command_name.len() + 2);
     }
 
     fn write_paragraph(&mut self, text: &str) {
@@ -327,11 +325,16 @@ impl<'a> HelpWriter<'_> {
             self.write_line_mut(&mut line);
         }
 
-        self.write_wrapped(&mut line, right_col, self.desc_indent);
+        self.write_wrapped(&mut line, right_col.split(' '), self.desc_indent);
     }
 
-    fn write_wrapped(&mut self, line: &mut String, text: &str, padding: usize) {
-        let mut words = text.split(' ').peekable();
+    fn write_wrapped<'b>(
+        &mut self,
+        line: &mut String,
+        words: impl Iterator<Item = &'b str>,
+        padding: usize,
+    ) {
+        let mut words = words.peekable();
 
         while let Some(first_word) = words.next() {
             if padding > 0 && line.is_empty() {

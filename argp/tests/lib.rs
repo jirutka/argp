@@ -1370,7 +1370,8 @@ Options:
     #[test]
     fn help_example() {
         assert_help_string::<HelpExample>(
-            r###"Usage: test_arg_0 [-f] [--really-really-really-long-name-for-pat] -s <scribble> [-v] <command> [<args>]
+            r###"Usage: test_arg_0 [-f] [--really-really-really-long-name-for-pat] -s <scribble>
+                  [-v] <command> [<args>]
 
 Destroy the contents of <file>.
 

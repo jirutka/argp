@@ -184,7 +184,7 @@ impl Help {
                 .chain(iter::once(info.commands.as_ref().map_or("", |r| r.usage)))
                 .filter(|s| !s.is_empty()),
         );
-        w.write_paragraph(info.description);
+        w.write_paragraphs(info.description);
 
         if !info.positionals.is_empty() {
             w.write_section("Arguments:", info.positionals.iter().map(|r| r.description));
@@ -195,7 +195,7 @@ impl Help {
             w.write_section("Commands:", subcommands.iter().map(|r| (r.name, r.description)));
         }
         if !info.footer.is_empty() {
-            w.write_paragraph(info.footer);
+            w.write_paragraphs(info.footer);
         }
 
         w.into_string()
@@ -284,9 +284,15 @@ impl<'a> HelpWriter<'_> {
         self.write_wrapped(&mut line, usage, title.len() + self.command_name.len() + 2);
     }
 
-    fn write_paragraph(&mut self, text: &str) {
+    fn write_paragraphs(&mut self, text: &str) {
+        let text = &text.replace("{command_name}", self.command_name);
+        let mut buf = String::new();
+
         self.write_str(SECTION_SEPARATOR);
-        self.write_line(&text.replace("{command_name}", self.command_name));
+
+        for line in text.split('\n') {
+            self.write_wrapped(&mut buf, line.split(' '), 0);
+        }
     }
 
     fn write_section(&mut self, title: &str, descs: impl Iterator<Item = (&'a str, &'a str)>) {

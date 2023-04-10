@@ -373,8 +373,11 @@ impl<'a> HelpWriter<'_> {
             }
             line.push_str(first_word);
 
+            let mut line_len = chars_count(line);
             'inner: while let Some(&word) = words.peek() {
-                if (chars_count(line) + chars_count(word) + 1) > self.wrap_width {
+                let word_len = chars_count(word);
+
+                if (line_len + word_len + 1) > self.wrap_width {
                     self.write_line_mut(line);
                     break 'inner;
                 } else {
@@ -382,6 +385,7 @@ impl<'a> HelpWriter<'_> {
                     let _ = words.next();
                     line.push(' ');
                     line.push_str(word);
+                    line_len += word_len + 1;
                 }
             }
         }

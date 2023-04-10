@@ -21,8 +21,8 @@ use argp::{
 const EMPTY_ARGS: &[&OsStr] = &[];
 
 const FIXED_HELP_STYLE: HelpStyle = HelpStyle {
-    blank_lines_spacing: 0,
     wrap_width_range: 80..80,
+    ..HelpStyle::default()
 };
 
 #[test]

@@ -79,14 +79,15 @@ pub struct OptionArgInfo {
 /// Style preferences for the Help message generator.
 ///
 /// **Important**: This struct may be extended with more fields in the future,
-/// so always initialise it using [`Default::default()`], for example:
+/// so always initialise it using [`HelpStyle::default()`] (or
+/// [`Default::default()`]), for example:
 ///
 /// ```
 /// use argp::help::HelpStyle;
 ///
 /// HelpStyle {
 ///     blank_lines_spacing: 1,
-///     ..Default::default()
+///     ..HelpStyle::default()
 /// };
 /// ```
 #[derive(Debug)]
@@ -102,16 +103,16 @@ pub struct HelpStyle {
     pub wrap_width_range: Range<usize>,
 }
 
-impl Default for HelpStyle {
-    fn default() -> Self {
+impl HelpStyle {
+    /// Returns the default help style. Unlike the [`Default`] implementation,
+    /// this function is `const`.
+    pub const fn default() -> Self {
         Self {
             blank_lines_spacing: 0,
             wrap_width_range: 80..120,
         }
     }
-}
 
-impl HelpStyle {
     fn wrap_width(&self) -> usize {
         let Range { start, end } = self.wrap_width_range;
 
@@ -122,6 +123,12 @@ impl HelpStyle {
                 .map(|cols| cols.clamp(start, end))
                 .unwrap_or(start)
         }
+    }
+}
+
+impl Default for HelpStyle {
+    fn default() -> Self {
+        HelpStyle::default()
     }
 }
 

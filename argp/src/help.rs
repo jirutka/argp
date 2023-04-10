@@ -16,8 +16,6 @@ use std::ptr;
 use crate::term_size;
 
 const INDENT: &str = "  ";
-const DESC_MIN_INDENT: usize = 8;
-const DESC_MAX_INDENT: usize = 30;
 const SECTION_SEPARATOR: &str = "\n";
 
 const HELP_OPT: OptionArgInfo = OptionArgInfo {
@@ -110,6 +108,18 @@ pub struct HelpStyle {
     /// descriptions of commands and options. Default is `0`.
     pub blank_lines_spacing: usize,
 
+    /// Specifies the indentation of the descriptions of arguments, options and
+    /// commands (the right column). Positive numbers are interpreted as a
+    /// *fixed* number of characters from the left, negative numbers as the
+    /// *maximum* indentation of the descriptions as a percentage of the wrap
+    /// width.
+    ///
+    /// If the argument/option flags/command (the left column) is wider than the
+    /// (calculated) indentation, its description starts on the next line.
+    ///
+    /// Default is `-40` (i.e. max 40 % of the wrap width)
+    pub description_indent: i8,
+
     /// Specifies the minimum and maximum number of characters to wrap the help
     /// output. If the terminal size is not available (see [`term_size`]), the
     /// output is wrapped to the lower bound of this range.
@@ -123,6 +133,7 @@ impl HelpStyle {
     pub const fn default() -> Self {
         Self {
             blank_lines_spacing: 0,
+            description_indent: -40,
             wrap_width_range: 80..120,
         }
     }
@@ -160,21 +171,35 @@ impl Help {
         let options_and_args = options.clone().chain(info.positionals);
         let subcommands = self.subcommands();
 
-        // Computes the indentation width of the description (right) column based
-        // on width of the names/flags in the left column.
-        let desc_indent = compute_desc_indent(
-            options_and_args
+        let wrap_width = style.wrap_width();
+
+        let description_indent = if style.description_indent < 0 {
+            let percent = style.description_indent.unsigned_abs() as f32;
+            let max_indent = (wrap_width as f32 / 100.0 * percent) as usize;
+
+            let left_column = options_and_args
                 .clone()
                 .map(|r| r.description.0)
-                .chain(subcommands.iter().map(|r| r.name)),
-        );
+                .chain(subcommands.iter().map(|r| r.name));
+
+            // Calculates the maximum width of the content of the left column
+            // that is below the max_indent threshold.
+            left_column
+                .map(|s| INDENT.len() + chars_count(s) + 2)
+                .filter(|width| *width <= max_indent)
+                .max()
+                .unwrap_or(8)
+                .min(wrap_width)
+        } else {
+            (style.description_indent as usize).min(wrap_width)
+        };
 
         let mut w = HelpWriter {
             blank_lines_spacing: &"\n".repeat(style.blank_lines_spacing),
             buf: String::new(),
             command_name: &self.command_name,
-            desc_indent,
-            wrap_width: style.wrap_width(),
+            description_indent,
+            wrap_width,
         };
 
         w.write_usage(
@@ -272,7 +297,7 @@ struct HelpWriter<'a> {
     blank_lines_spacing: &'a str,
     buf: String,
     command_name: &'a str,
-    desc_indent: usize,
+    description_indent: usize,
     wrap_width: usize,
 }
 
@@ -325,13 +350,13 @@ impl<'a> HelpWriter<'_> {
             return;
         }
 
-        if !pad_string(&mut line, self.desc_indent) {
+        if !pad_string(&mut line, self.description_indent) {
             // Start the description on a new line if the flag names already
             // add up to more than `indent`.
             self.write_line_mut(&mut line);
         }
 
-        self.write_wrapped(&mut line, right_col.split(' '), self.desc_indent);
+        self.write_wrapped(&mut line, right_col.split(' '), self.description_indent);
     }
 
     fn write_wrapped<'b>(
@@ -377,15 +402,6 @@ impl<'a> HelpWriter<'_> {
     fn write_str(&mut self, s: &str) {
         self.buf.push_str(s);
     }
-}
-
-fn compute_desc_indent<'a>(names: impl Iterator<Item = &'a str>) -> usize {
-    names
-        .map(|name| INDENT.len() + chars_count(name) + 2)
-        .filter(|width| *width <= DESC_MAX_INDENT)
-        .max()
-        .unwrap_or(0)
-        .max(DESC_MIN_INDENT)
 }
 
 fn chars_count(s: &str) -> usize {

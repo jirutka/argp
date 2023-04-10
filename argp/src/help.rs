@@ -408,11 +408,13 @@ impl<'a> HelpWriter<'_> {
     }
 }
 
+#[inline(never)]
 fn chars_count(s: &str) -> usize {
     s.chars().count()
 }
 
 /// Pads the given string with spaces until it reaches the given width.
+#[inline(never)]
 fn pad_string(s: &mut String, width: usize) -> bool {
     let len = chars_count(s);
 

@@ -4,10 +4,9 @@
 
 //! Derive-based argument parsing optimized for code size and flexibility.
 //!
-//! The public API of this library consists primarily of the `FromArgs`
-//! derive and the `from_env` function, which can be used to produce
-//! a top-level `FromArgs` type from the current program's command-line
-//! arguments.
+//! The public API of this library consists primarily of the [`FromArgs`] derive
+//! and the [`parse_args_or_exit`] function, which can be used to produce a
+//! top-level `FromArgs` type from the current program's command-line arguments.
 //!
 //! ## Basic Example
 //!
@@ -30,7 +29,7 @@
 //!     pilot_nickname: Option<String>,
 //! }
 //!
-//! let up: GoUp = argp::from_env();
+//! let up: GoUp = argp::parse_args_or_exit();
 //! ```
 //!
 //! `./some_bin --help` will then output the following:
@@ -84,7 +83,7 @@
 //! }
 //!
 //! fn main() {
-//!     let up: GoUp = argp::from_env();
+//!     let up: GoUp = argp::parse_args_or_exit();
 //! }
 //! ```
 //!
@@ -634,12 +633,12 @@ impl From<Error> for EarlyExit {
     }
 }
 
-/// Create a `FromArgs` type from the current process's `env::args`.
+/// Create a [`FromArgs`] type from the current process's [`env::args_os()`].
 ///
 /// This function will exit early from the current process if argument parsing
-/// was unsuccessful or if information like `--help` was requested. Error messages will be printed
-/// to stderr, and `--help` output to stdout.
-pub fn from_env<T: TopLevelCommand>() -> T {
+/// was unsuccessful or if information like `--help` was requested. Error
+/// messages will be printed to stderr, and `--help` output to stdout.
+pub fn parse_args_or_exit<T: TopLevelCommand>() -> T {
     let args: Vec<_> = env::args_os().collect();
     if args.is_empty() {
         eprintln!("No program name, argv is empty");
@@ -661,15 +660,21 @@ pub fn from_env<T: TopLevelCommand>() -> T {
     })
 }
 
-/// Create a `FromArgs` type from the current process's `env::args`.
+/// Deprecated alias for [`parse_args_or_exit`].
+#[deprecated]
+pub fn from_env<T: TopLevelCommand>() -> T {
+    parse_args_or_exit()
+}
+
+/// Create a [`FromArgs`] type from the current process's [`env::args_os()`].
 ///
-/// This special cases usages where argp is being used in an environment where cargo is
-/// driving the build. We skip the second env variable.
+/// This special cases usages where argp is being used in an environment where
+/// cargo is driving the build. We skip the second env variable.
 ///
 /// This function will exit early from the current process if argument parsing
-/// was unsuccessful or if information like `--help` was requested. Error messages will be printed
-/// to stderr, and `--help` output to stdout.
-pub fn cargo_from_env<T: TopLevelCommand>() -> T {
+/// was unsuccessful or if information like `--help` was requested. Error
+/// messages will be printed to stderr, and `--help` output to stdout.
+pub fn cargo_parse_args_or_exit<T: TopLevelCommand>() -> T {
     let args: Vec<_> = env::args_os().collect();
     let cmd = basename(&args[1]);
 

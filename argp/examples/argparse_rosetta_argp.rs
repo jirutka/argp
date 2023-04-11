@@ -33,7 +33,7 @@ fn parse_width(s: &str) -> Result<u32, String> {
 }
 
 fn main() {
-    let args: AppArgs = argp::from_env();
+    let args: AppArgs = argp::parse_args_or_exit();
     println!("{:#?}", args.number);
     println!("{:#?}", args.opt_number);
     println!("{:#?}", args.width);

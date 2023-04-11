@@ -11,7 +11,7 @@ endif::env-github[]
 
 Argp is a Derive-based argument parser optimized for code size and flexibility.
 
-The public API of this library consists primarily of the `FromArgs` derive and the `from_env` function, which can be used to produce a top-level `FromArgs` type from the current program's command-line arguments.
+The public API of this library consists primarily of the `FromArgs` derive and the `parse_args_or_exit` function, which can be used to produce a top-level `FromArgs` type from the current program's command-line arguments.
 
 
 == Features
@@ -42,6 +42,7 @@ Notable changes from argh:
 * Specialised `example`, `note`, and `error_code` attributes are replaced by a single `footer` attribute – you can use it for whatever you like.
 * Positional arguments in the Usage string are displayed _after_ options and switches and `<arg_name>` is displayed in descriptions of options.
 * Trailing options are allowed after the `-h, --help` switch, but are not allowed after the `help` subcommand only.
+* The `from_env` function has been renamed to `parse_args_or_exit`, `cargo_from_env` to `cargo_parse_args_or_exit`.
 * `redact_arg_values` has been removed (if you happen to need it, let me know in Issues).
 
 
@@ -68,7 +69,7 @@ struct GoUp {
 }
 
 fn main() {
-    let up: GoUp = argp::from_env();
+    let up: GoUp = argp::parse_args_or_exit();
 }
 ----
 
@@ -122,7 +123,7 @@ struct GoUp {
 }
 
 fn main() {
-    let up: GoUp = argp::from_env();
+    let up: GoUp = argp::parse_args_or_exit();
 }
 ----
 

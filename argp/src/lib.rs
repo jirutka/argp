@@ -310,6 +310,31 @@
 //!
 //! ## Help message
 //!
+//! The formatting of the help message can be customized using the [`HelpStyle`]
+//! passed as an argument to [`parse_args_or_exit`]:
+//!
+//! ```rust
+//! # use argp::{FromArgs, HelpStyle};
+//! #
+//! # /// A command.
+//! # #[derive(FromArgs)]
+//! # struct Args {
+//! #     /// Be verbose.
+//! #     #[argp(switch)]
+//! #     verbose: bool,
+//! # }
+//!
+//! let args: Args = argp::parse_args_or_exit(&HelpStyle {
+//!     blank_lines_spacing: 1,
+//!     description_indent: 8,
+//!     ..HelpStyle::default()
+//! });
+//! ```
+//!
+//! Note that the [`HelpStyle`] struct may be extended with more fields in the
+//! future, so always initialise it using [`HelpStyle::default()`] as shown
+//! above.
+//!
 //! Programs that are run from an environment such as cargo may find it
 //! useful to have positional arguments present in the structure but
 //! omitted from the usage output. This can be accomplished by adding

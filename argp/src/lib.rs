@@ -29,7 +29,7 @@
 //!     pilot_nickname: Option<String>,
 //! }
 //!
-//! let up: GoUp = argp::parse_args_or_exit();
+//! let up: GoUp = argp::parse_args_or_exit(argp::DEFAULT);
 //! ```
 //!
 //! `./some_bin --help` will then output the following:
@@ -83,7 +83,7 @@
 //! }
 //!
 //! fn main() {
-//!     let up: GoUp = argp::parse_args_or_exit();
+//!     let up: GoUp = argp::parse_args_or_exit(argp::DEFAULT);
 //! }
 //! ```
 //!
@@ -636,12 +636,14 @@ impl From<Error> for EarlyExit {
     }
 }
 
-/// Create a [`FromArgs`] type from the current process's [`env::args_os()`].
+/// Create a [`FromArgs`] type from the current process's [`env::args_os()`]
+/// with the given [`HelpStyle`]. For the default help style `argp::DEFAULT` can
+/// be used.
 ///
 /// This function will exit early from the current process if argument parsing
 /// was unsuccessful or if information like `--help` was requested. Error
 /// messages will be printed to stderr, and `--help` output to stdout.
-pub fn parse_args_or_exit<T: TopLevelCommand>() -> T {
+pub fn parse_args_or_exit<T: TopLevelCommand>(help_style: &HelpStyle) -> T {
     let args: Vec<_> = env::args_os().collect();
     if args.is_empty() {
         eprintln!("No program name, argv is empty");
@@ -652,7 +654,7 @@ pub fn parse_args_or_exit<T: TopLevelCommand>() -> T {
     T::from_args(&[&cmd], &args[1..]).unwrap_or_else(|early_exit| {
         exit(match early_exit {
             EarlyExit::Help(help) => {
-                println!("{}", help.generate_default());
+                println!("{}", help.generate(help_style));
                 0
             }
             EarlyExit::Err(err) => {
@@ -666,7 +668,7 @@ pub fn parse_args_or_exit<T: TopLevelCommand>() -> T {
 /// Deprecated alias for [`parse_args_or_exit`].
 #[deprecated]
 pub fn from_env<T: TopLevelCommand>() -> T {
-    parse_args_or_exit()
+    parse_args_or_exit(DEFAULT)
 }
 
 /// Create a [`FromArgs`] type from the current process's [`env::args_os()`].

@@ -43,6 +43,6 @@ struct SubCommandTwo {
 }
 
 fn main() {
-    let toplevel: TopLevel = argp::parse_args_or_exit();
+    let toplevel: TopLevel = argp::parse_args_or_exit(argp::DEFAULT);
     println!("{:#?}", toplevel);
 }

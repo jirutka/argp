@@ -354,6 +354,9 @@ pub use crate::error::{Error, MissingRequirements};
 pub use crate::help::{CommandInfo, HelpStyle};
 pub use argp_derive::FromArgs;
 
+/// A convenient shortcut for [`HelpStyle::default`].
+pub const DEFAULT: &HelpStyle = &HelpStyle::default();
+
 /// Types which can be constructed from a set of command-line arguments.
 pub trait FromArgs: Sized {
     /// Construct the type from an input set of arguments.

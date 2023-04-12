@@ -39,8 +39,8 @@ extern "C" {
     fn ioctl(fd: c_int, request: c_ulong, ...) -> c_int;
 }
 
-/// Runs the ioctl command. Returns (0, 0) if the output is not to a terminal, or
-/// there is an error. (0, 0) is an invalid size to have anyway, which is why
+/// Runs the ioctl command. Returns (0, 0) if the output is not to a terminal,
+/// or there is an error. (0, 0) is an invalid size to have anyway, which is why
 /// it can be used as a nil value.
 unsafe fn get_dimensions() -> winsize {
     let mut window: winsize = zeroed();
@@ -52,8 +52,8 @@ unsafe fn get_dimensions() -> winsize {
     zeroed()
 }
 
-/// Returns width of the terminal based on the current processes' stdout, if
-/// the stdout stream is actually a tty. If it is not a tty, returns `None`.
+/// Returns width of the terminal based on the current processes' stdout, if the
+/// stdout stream is actually a tty. If it is not a tty, returns `None`.
 pub fn term_cols() -> Option<usize> {
     let winsize { ws_col, .. } = unsafe { get_dimensions() };
 

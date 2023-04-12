@@ -13,12 +13,12 @@ use crate::EarlyExit;
 
 /// This function implements argument parsing for structs.
 ///
-/// `cmd_name`: The identifier for the current command.
-/// `args`: The command line arguments.
-/// `parse_options`: Helper to parse optional arguments.
-/// `parse_positionals`: Helper to parse positional arguments.
-/// `parse_subcommand`: Helper to parse a subcommand.
-/// `help`: The [Help] instance for generating a help message.
+/// - `cmd_name`: The identifier for the current command.
+/// - `args`: The command line arguments.
+/// - `parse_options`: Helper to parse optional arguments.
+/// - `parse_positionals`: Helper to parse positional arguments.
+/// - `parse_subcommand`: Helper to parse a subcommand.
+/// - `help`: The [`Help`] instance for generating a help message.
 #[doc(hidden)]
 pub fn parse_struct_args(
     cmd_name: &[&str],
@@ -104,10 +104,10 @@ pub fn parse_struct_args(
 
 #[doc(hidden)]
 pub struct ParseStructOptions<'a, 'p> {
-    /// A mapping from option string literals to the entry
-    /// in the output table. This may contain multiple entries mapping to
-    /// the same location in the table if both a short and long version
-    /// of the option exist (`-z` and `--zoo`).
+    /// A mapping from option string literals to the entry in the output table.
+    /// This may contain multiple entries mapping to the same location in the
+    /// table if both a short and long version of the option exist (`-z` and
+    /// `--zoo`).
     pub arg_to_slot: &'static [(&'static str, usize)],
 
     /// The storage for argument output data.
@@ -117,12 +117,12 @@ pub struct ParseStructOptions<'a, 'p> {
     /// whether the option(s) associated with the slot is a global option.
     pub slots_global: &'static [bool],
 
-    /// A reference to the [Help] struct in the associated [FromArgs].
-    /// This is used to collect global options for generating a help message.
+    /// A reference to the [`Help`] struct in the associated [`FromArgs`]. This
+    /// is used to collect global options for generating a help message.
     pub help: &'static HelpInfo,
 
     /// If this struct represents options of a subcommand, then `parent` is an
-    /// indirect reference to the previous [ParseStructOptions] in the chain,
+    /// indirect reference to the previous [`ParseStructOptions`] in the chain,
     /// used for parsing global options.
     pub parent: Option<&'p mut dyn ParseGlobalOptions>,
 }
@@ -166,12 +166,12 @@ impl<'a, 'p> ParseStructOptions<'a, 'p> {
 
 #[doc(hidden)]
 pub trait ParseGlobalOptions {
-    /// Parse a global command-line option. If the option is not found in _self_,
-    /// it recursively calls this function on the parent. If the option is
-    /// still not found, it returns `None`.
+    /// Parses a global command-line option. If the option is not found in
+    /// _self_, it recursively calls this function on the parent. If the option
+    /// is still not found, it returns `None`.
     ///
-    /// - `arg`: the current option argument being parsed (e.g. `--foo`).
-    /// - `remaining_args`: the remaining command line arguments. This slice
+    /// - `arg`: The current option argument being parsed (e.g. `--foo`).
+    /// - `remaining_args`: The remaining command line arguments. This slice
     ///    will be advanced forwards if the option takes a value argument.
     fn try_parse_global(
         &mut self,
@@ -212,13 +212,13 @@ impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
     }
 }
 
-// `--` or `-` options, including a mutable reference to their value.
+/// `--` or `-` options, including a mutable reference to their value.
 #[doc(hidden)]
 pub enum ParseStructOption<'a> {
-    // A flag which is set to `true` when provided.
+    /// A flag which is set to `true` when provided.
     Flag(&'a mut dyn ParseFlag),
-    // A value which is parsed from the string following the `--` argument,
-    // e.g. `--foo bar`.
+    /// A value which is parsed from the string following the `--` argument,
+    /// e.g. `--foo bar`.
     Value(&'a mut dyn ParseValueSlot),
 }
 
@@ -230,20 +230,21 @@ pub struct ParseStructPositionals<'a> {
 }
 
 impl<'a> ParseStructPositionals<'a> {
-    /// Parse the next positional argument.
+    /// Parses the next positional argument.
     ///
-    /// `arg`: the argument supplied by the user.
+    /// - `index`: The index of the argument.
+    /// - `arg`: The argument supplied by the user.
     ///
-    /// Returns true if non-positional argument parsing should stop
-    /// after this one.
+    /// Returns `true` if non-positional argument parsing should stop after this
+    /// one.
     fn parse(&mut self, index: &mut usize, arg: &OsStr) -> Result<bool, Error> {
         if *index < self.positionals.len() {
             self.positionals[*index].parse(arg)?;
 
             if self.last_is_repeating && *index == self.positionals.len() - 1 {
-                // Don't increment position if we're at the last arg
-                // *and* the last arg is repeating. If it's also remainder,
-                // halt non-option processing after this.
+                // Don't increment position if we're at the last arg *and* the
+                // last arg is repeating. If it's also remainder, halt
+                // non-option processing after this.
                 Ok(self.last_is_greedy)
             } else {
                 // If it is repeating, though, increment the index and continue
@@ -259,34 +260,34 @@ impl<'a> ParseStructPositionals<'a> {
 
 #[doc(hidden)]
 pub struct ParseStructPositional<'a> {
-    // The positional's name
+    /// The positional's name
     pub name: &'static str,
 
-    // The function to parse the positional.
+    /// The function to parse the positional.
     pub slot: &'a mut dyn ParseValueSlot,
 }
 
 impl<'a> ParseStructPositional<'a> {
-    /// Parse a positional argument.
+    /// Parses a positional argument.
     ///
-    /// `arg`: the argument supplied by the user.
+    /// - `arg`: The argument supplied by the user.
     fn parse(&mut self, arg: &OsStr) -> Result<(), Error> {
         self.slot.fill_slot(self.name, arg)
     }
 }
 
-// A type to simplify parsing struct subcommands.
-//
-// This indirection is necessary to allow abstracting over `FromArgs` instances with different
-// generic parameters.
+/// A type to simplify parsing struct subcommands.
+///
+/// This indirection is necessary to allow abstracting over [`FromArgs`]
+/// instances with different generic parameters.
 #[doc(hidden)]
 pub struct ParseStructSubCommand<'a> {
-    // The subcommand commands
+    /// The subcommand commands.
     pub subcommands: &'static [&'static CommandInfo],
 
     pub dynamic_subcommands: &'a [&'static CommandInfo],
 
-    // The function to parse the subcommand arguments.
+    /// The function to parse the subcommand arguments.
     #[allow(clippy::type_complexity)]
     pub parse_func: &'a mut dyn FnMut(
         &[&str],
@@ -342,31 +343,32 @@ impl<T: Flag> ParseFlag for T {
     }
 }
 
-// A trait for for slots that reserve space for a value and know how to parse that value
-// from a command-line `&OsStr` argument.
-//
-// This trait is only implemented for the type `ParseValueSlotTy`. This indirection is
-// necessary to allow abstracting over `ParseValueSlotTy` instances with different
-// generic parameters.
+/// A trait for for slots that reserve space for a value and know how to parse
+/// that value from a command-line `&OsStr` argument.
+///
+/// This trait is only implemented for the type [`ParseValueSlotTy`]. This
+/// indirection is necessary to allow abstracting over [`ParseValueSlotTy`]
+/// instances with different generic parameters.
 #[doc(hidden)]
 pub trait ParseValueSlot {
     fn fill_slot(&mut self, arg: &str, value: &OsStr) -> Result<(), Error>;
 }
 
-// The concrete type implementing the `ParseValueSlot` trait.
-//
-// `T` is the type to be parsed from a single string.
-// `Slot` is the type of the container that can hold a value or values of type `T`.
+/// The concrete type implementing the [`ParseValueSlot`] trait.
+///
+/// - `T` is the type to be parsed from a single string.
+/// - `Slot` is the type of the container that can hold a value or values of
+///   type `T`.
 #[doc(hidden)]
 pub struct ParseValueSlotTy<Slot, T> {
-    // The slot for a parsed value.
+    /// The slot for a parsed value.
     pub slot: Slot,
-    // The function to parse the value from a string
+    /// The function to parse the value from a string
     pub parse_func: fn(&str, &OsStr) -> Result<T, String>,
 }
 
-// `ParseValueSlotTy<Option<T>, T>` is used as the slot for all non-repeating
-// arguments, both optional and required.
+/// `ParseValueSlotTy<Option<T>, T>` is used as the slot for all non-repeating
+/// arguments, both optional and required.
 impl<T> ParseValueSlot for ParseValueSlotTy<Option<T>, T> {
     fn fill_slot(&mut self, arg: &str, value: &OsStr) -> Result<(), Error> {
         if self.slot.is_some() {
@@ -382,7 +384,7 @@ impl<T> ParseValueSlot for ParseValueSlotTy<Option<T>, T> {
     }
 }
 
-// `ParseValueSlotTy<Vec<T>, T>` is used as the slot for repeating arguments.
+/// `ParseValueSlotTy<Vec<T>, T>` is used as the slot for repeating arguments.
 impl<T> ParseValueSlot for ParseValueSlotTy<Vec<T>, T> {
     fn fill_slot(&mut self, arg: &str, value: &OsStr) -> Result<(), Error> {
         let parsed = (self.parse_func)(arg, value).map_err(|e| Error::ParseArgument {
@@ -395,7 +397,7 @@ impl<T> ParseValueSlot for ParseValueSlotTy<Vec<T>, T> {
     }
 }
 
-/// A type which can be the receiver of a `Flag`.
+/// A type which can be the receiver of a [`Flag`].
 #[doc(hidden)]
 pub trait Flag {
     /// Creates a default instance of the flag value;

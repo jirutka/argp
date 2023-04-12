@@ -38,7 +38,7 @@ pub enum Error {
 }
 
 impl Error {
-    /// A convenient method for creating [Error::Other].
+    /// A convenient method for creating [`Error::Other`].
     #[inline]
     pub fn other<S: ToString>(msg: S) -> Self {
         Self::Other(msg.to_string())
@@ -72,7 +72,7 @@ impl fmt::Display for Error {
     }
 }
 
-// An error string builder to report missing required options and subcommands.
+/// An error string builder to report missing required options and subcommands.
 #[doc(hidden)]
 #[derive(Debug, Default, PartialEq)]
 pub struct MissingRequirements {
@@ -82,26 +82,26 @@ pub struct MissingRequirements {
 }
 
 impl MissingRequirements {
-    // Add a missing required option.
+    /// Adds a missing required option.
     #[doc(hidden)]
     pub fn missing_option(&mut self, name: &'static str) {
         self.options.push(name)
     }
 
-    // Add a missing required subcommand.
+    /// Adds a missing required subcommand.
     #[doc(hidden)]
     pub fn missing_subcommands(&mut self, commands: impl Iterator<Item = &'static str>) {
         self.subcommands = Some(commands.collect());
     }
 
-    // Add a missing positional argument.
+    /// Adds a missing positional argument.
     #[doc(hidden)]
     pub fn missing_positional_arg(&mut self, name: &'static str) {
         self.positional_args.push(name)
     }
 
-    // If any missing options or subcommands were provided, returns an error string
-    // describing the missing args.
+    /// If any missing options or subcommands were provided, returns an error
+    /// string describing the missing args.
     #[doc(hidden)]
     pub fn err_on_any(self) -> Result<(), Error> {
         if self.options.is_empty() && self.subcommands.is_none() && self.positional_args.is_empty()

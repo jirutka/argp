@@ -3,8 +3,8 @@
 
 //! This module provides a lightweight, zero-dependencies implementation of a
 //! function to get the terminal width on Unix systems. It's replaced with a
-//! no-op implementation on non-unix systems or when the `term_size` feature
-//! is disabled.
+//! no-op implementation on non-unix systems or when the `term_size` feature is
+//! disabled.
 
 #[cfg(all(unix, feature = "term_size"))]
 mod unix;

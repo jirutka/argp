@@ -32,7 +32,8 @@ pub struct Help {
     global_options: Vec<&'static OptionArgInfo>,
 }
 
-/// Information about a specific (sub)command used for generating a help message.
+/// Information about a specific (sub)command used for generating a help
+/// message.
 #[derive(Debug)]
 pub struct HelpInfo {
     pub description: &'static str,
@@ -42,7 +43,7 @@ pub struct HelpInfo {
     pub footer: &'static str,
 }
 
-/// A nested struct in [HelpInfo] used for generating the Commands section in
+/// A nested struct in [`HelpInfo`] used for generating the Commands section in
 /// a help message.
 #[derive(Debug)]
 pub struct CommandsHelpInfo {
@@ -274,7 +275,7 @@ impl PartialEq for Help {
 }
 
 impl HelpInfo {
-    /// Creates a new `Help` generator instance.
+    /// Creates a new [`Help`] generator instance.
     ///
     /// - `command_name`: The identifier for the current command.
     /// - `global_options`: Information about additional global options (from
@@ -321,8 +322,8 @@ impl<'a> HelpWriter<'_> {
     }
 
     fn write_section(&mut self, title: &str, descs: impl Iterator<Item = (&'a str, &'a str)>) {
-        // NOTE: greedy positional has empty names and description, to be excluded
-        // from the Positional Arguments section.
+        // NOTE: greedy positional has empty names and description, to be
+        // excluded from the Positional Arguments section.
         let mut first = true;
         for desc in descs.filter(|desc| !desc.0.is_empty()) {
             if first {
@@ -351,8 +352,8 @@ impl<'a> HelpWriter<'_> {
         }
 
         if !pad_string(&mut line, self.description_indent) {
-            // Start the description on a new line if the flag names already
-            // add up to more than `indent`.
+            // Start the description on a new line if the flag names already add
+            // up to more than `indent`.
             self.write_line_mut(&mut line);
         }
 

@@ -121,6 +121,11 @@ pub struct HelpStyle {
     /// Default is `-40` (i.e. max 40 % of the wrap width)
     pub description_indent: i8,
 
+    /// If `false` (default), a flag (short _or_ long) for each option will be
+    /// included in the **Usage** (e.g. `Usage: myprog [--verbose] [-h]`). If
+    /// `true`, options will only be represented by string `[options]`.
+    pub short_usage: bool,
+
     /// Specifies the minimum and maximum number of characters to wrap the help
     /// output. If the terminal size is not available (see [`term_size`]), the
     /// output is wrapped to the lower bound of this range.
@@ -135,6 +140,7 @@ impl HelpStyle {
         Self {
             blank_lines_spacing: 0,
             description_indent: -40,
+            short_usage: false,
             wrap_width_range: 80..120,
         }
     }
@@ -203,13 +209,19 @@ impl Help {
             wrap_width,
         };
 
-        w.write_usage(
-            "Usage:",
-            iter::once(self.command_name.as_str())
-                .chain(options_and_args.map(|r| r.usage))
-                .chain(iter::once(info.commands.as_ref().map_or("", |r| r.usage)))
-                .filter(|s| !s.is_empty()),
-        );
+        let subcommands_usage = info.commands.iter().flat_map(|r| r.usage.split(' '));
+
+        if style.short_usage {
+            w.write_usage(
+                "Usage:",
+                iter::once("[options]")
+                    .chain(info.positionals.iter().map(|r| r.usage))
+                    .chain(subcommands_usage),
+            );
+        } else {
+            w.write_usage("Usage:", options_and_args.map(|r| r.usage).chain(subcommands_usage));
+        }
+
         w.write_paragraphs(info.description);
 
         if !info.positionals.is_empty() {
@@ -306,6 +318,10 @@ impl<'a> HelpWriter<'_> {
     #[inline]
     fn write_usage(&'a mut self, title: &str, usage: impl Iterator<Item = &'a str>) {
         let mut line = title.to_string() + " ";
+
+        let usage = iter::once(self.command_name)
+            .chain(usage)
+            .filter(|s| !s.is_empty());
 
         self.write_wrapped(&mut line, usage, title.len() + self.command_name.len() + 2);
     }

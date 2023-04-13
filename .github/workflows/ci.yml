@@ -44,8 +44,8 @@ jobs:
         if: matrix.toolchain != 'nightly'
         run: cargo test --workspace --verbose ui -- --exact
 
-      - name: Run simple_example
-        run: cargo run --package argp --example simple_example two --fooey
+      - name: Run subcommands example
+        run: cargo run --package argp --example subcommands two --fooey
 
       - name: Report size overhead
         # 1.56 doesn't support -C strip.

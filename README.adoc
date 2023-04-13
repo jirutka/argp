@@ -226,9 +226,9 @@ For more information, refer to the https://docs.rs/argp/latest/argp/[argp docume
 The `argp::FromArgs` derive macro can be debugged with the https://crates.io/crates/cargo-expand[cargo-expand] crate.
 
 
-=== Expand the derive macro in `examples/simple_example.rs`
+=== Expand the derive macro in `examples/subcommands.rs`
 
-See link:argp/examples/simple_example.rs[] for the example struct we wish to expand.
+See link:argp/examples/subcommands.rs[] for the example struct we wish to expand.
 
 First, install `cargo-expand` by running `cargo install cargo-expand`.
 Note this requires the nightly build of Rust.

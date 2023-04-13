@@ -43,11 +43,11 @@ build_and_report() (
 	size1=$(file_size "$OUT_DIR/argparse_rosetta_argp")
 	rm "$OUT_DIR/argparse_rosetta_argp"
 
-	cargo build --release --example simple_example
-	size2=$(file_size "$OUT_DIR/simple_example")
-	rm "$OUT_DIR/simple_example"
+	cargo build --release --example subcommands
+	size2=$(file_size "$OUT_DIR/subcommands")
+	rm "$OUT_DIR/subcommands"
 
-	echo "| $(diff_kb $size0 0) kiB  | +$(diff_kb $size1 $size0) kiB | +$(diff_kb $size2 $size0) kiB | $*" >> "$REPORT_OUT"
+	echo "| $(diff_kb $size0 0) kiB  | +$(diff_kb $size1 $size0) kiB | +$(diff_kb $size2 $size0) kiB     | $*" >> "$REPORT_OUT"
 )
 
 REPORT_OUT="$(mktemp)"
@@ -55,8 +55,8 @@ REPORT_OUT="$(mktemp)"
 cat > "$REPORT_OUT" <<EOF
 argp size overhead:
 
-| baseline | rosetta | simple  | build options
-|----------|---------|---------|--------------
+| baseline | rosetta | subcommands | build options
+|----------|---------|-------------|--------------
 EOF
 
 build_and_report opt-level=2

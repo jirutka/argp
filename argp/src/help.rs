@@ -252,13 +252,13 @@ impl Help {
     /// Returns static and dynamic subcommands chained together, or an empty
     /// vector if no subcommands are defined.
     fn subcommands(&self) -> Vec<&CommandInfo> {
+        #[cfg(feature = "subcommands")]
         if let Some(cmds) = &self.info.commands {
             let mut vec = cmds.subcommands.to_vec();
             vec.extend((cmds.dynamic_subcommands)());
-            vec
-        } else {
-            Vec::new()
+            return vec;
         }
+        Vec::new()
     }
 }
 

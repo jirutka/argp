@@ -11,7 +11,12 @@ repository = "https://github.com/jirutka/argp"
 readme = "README.md"
 
 [features]
-default = ["term_size"]
+default = ["subcommands", "term_size"]
+# Enable support for subcommands. You can reduce the binary size by ~4 kiB by
+# disabling it.
+subcommands = ["argp_derive/subcommands"]
+# Wrap help message dynamically based on terminal width. You can disable this
+# feature if you want to avoid 'unsafe' code. It has no effect on binary size.
 term_size = []
 
 [dependencies]

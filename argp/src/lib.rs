@@ -176,6 +176,7 @@
 //! ```rust
 //! # use argp::FromArgs;
 //!
+//! # #[cfg(feature = "subcommands")]
 //! /// Top-level command.
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! struct TopLevel {
@@ -242,6 +243,7 @@
 //! # use once_cell::sync::OnceCell;
 //! # use std::ffi::OsStr;
 //!
+//! # #[cfg(feature = "subcommands")]
 //! /// Top-level command.
 //! #[derive(FromArgs, PartialEq, Debug)]
 //! struct TopLevel {
@@ -306,6 +308,14 @@
 //!         None
 //!     }
 //! }
+//! ```
+//!
+//! If you don't use subcommands and want to reduce the binary size by ~4 kiB,
+//! you can build argp without the `subcommands` feature:
+//!
+//! ```yaml
+//! [dependencies]
+//! argp = { version = "...", default-features = false, features = ["term_size"] }
 //! ```
 //!
 //! ## Help message
@@ -435,6 +445,7 @@ pub trait FromArgs: Sized {
     /// /// Command to manage a classroom.
     /// #[derive(Debug, PartialEq, FromArgs)]
     /// struct ClassroomCmd {
+    ///     # #[cfg(feature = "subcommands")]
     ///     #[argp(subcommand)]
     ///     subcommands: Subcommands,
     /// }
@@ -471,9 +482,10 @@ pub trait FromArgs: Sized {
     /// let args = ClassroomCmd::from_args(
     ///     &["classroom"],
     ///     &["list", "--teacher-name", "Smith"],
-    /// ).unwrap();
+    /// );
+    /// # #[cfg(feature = "subcommands")]
     /// assert_eq!(
-    ///    args,
+    ///    args.unwrap(),
     ///     ClassroomCmd {
     ///         subcommands: Subcommands::List(ListCmd {
     ///             teacher_name: Some("Smith".to_string()),
@@ -486,6 +498,7 @@ pub trait FromArgs: Sized {
     ///     &["classroom"],
     ///     &["help"],
     /// ).unwrap_err();
+    /// # #[cfg(feature = "subcommands")]
     /// match early_exit {
     ///     EarlyExit::Help(help) => assert_eq!(
     ///         help.generate_default(),
@@ -509,6 +522,7 @@ pub trait FromArgs: Sized {
     ///     &["classroom"],
     ///     &["list", "help"],
     /// ).unwrap_err();
+    /// # #[cfg(feature = "subcommands")]
     /// match early_exit {
     ///     EarlyExit::Help(help) => assert_eq!(
     ///         help.generate_default(),
@@ -529,6 +543,7 @@ pub trait FromArgs: Sized {
     ///     &["classroom"],
     ///     &["lisp"],
     /// ).unwrap_err();
+    /// # #[cfg(feature = "subcommands")]
     /// assert_eq!(
     ///    err,
     ///    argp::EarlyExit::Err(argp::Error::UnknownArgument("lisp".into())),
@@ -567,6 +582,7 @@ pub trait SubCommand: FromArgs {
     const COMMAND: &'static CommandInfo;
 }
 
+#[cfg(feature = "subcommands")]
 impl<T: SubCommand> SubCommands for T {
     const COMMANDS: &'static [&'static CommandInfo] = &[T::COMMAND];
 }

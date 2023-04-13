@@ -218,6 +218,14 @@ struct SubCommandTwo {
 }
 ----
 
+If you don‘t use subcommands and want to reduce the binary size by ~4{nbsp}kiB, you can build argp without the `subcommands` feature:
+
+[source, yaml]
+----
+[dependencies]
+argp = { version = "...", default-features = false, features = ["term_size"] }
+----
+
 For more information, refer to the https://docs.rs/argp/latest/argp/[argp documentation].
 
 

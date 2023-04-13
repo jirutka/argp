@@ -12,6 +12,9 @@ readme = "README.md"
 [lib]
 proc-macro = true
 
+[features]
+subcommands = []
+
 [dependencies]
 proc-macro2 = "1.0"
 pulldown-cmark = "0.9"

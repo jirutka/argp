@@ -14,9 +14,10 @@
 use std::ffi::OsStr;
 use std::fmt::Debug;
 
-use argp::{
-    CommandInfo, DynamicSubCommand, EarlyExit, Error, FromArgs, HelpStyle, MissingRequirements,
-};
+#[cfg(feature = "subcommands")]
+use argp::{CommandInfo, DynamicSubCommand};
+
+use argp::{EarlyExit, Error, FromArgs, HelpStyle, MissingRequirements};
 
 const EMPTY_ARGS: &[&OsStr] = &[];
 
@@ -136,6 +137,7 @@ fn custom_from_os_str_example() {
 }
 
 #[test]
+#[cfg(feature = "subcommands")]
 fn subcommand_example() {
     #[derive(FromArgs, PartialEq, Debug)]
     /// Top-level command.
@@ -187,6 +189,7 @@ fn subcommand_example() {
 }
 
 #[test]
+#[cfg(feature = "subcommands")]
 fn dynamic_subcommand_example() {
     #[derive(PartialEq, Debug)]
     struct DynamicSubCommandImpl {
@@ -534,6 +537,7 @@ Options:
     }
 }
 
+#[cfg(feature = "subcommands")]
 mod global_options {
     use super::*;
 
@@ -963,6 +967,7 @@ Options:
         );
     }
 
+    #[cfg(feature = "subcommands")]
     #[derive(FromArgs, Debug, PartialEq)]
     /// Woot
     struct WithSubcommand {
@@ -990,6 +995,7 @@ Options:
     }
 
     #[test]
+    #[cfg(feature = "subcommands")]
     fn mixed_with_subcommand() {
         assert_output(
             &["first", "a", "a"],
@@ -1114,6 +1120,7 @@ Options:
 /// Tests derived from
 /// https://fuchsia.dev/fuchsia-src/development/api/cli and
 /// https://fuchsia.dev/fuchsia-src/development/api/cli_help
+#[cfg(feature = "subcommands")]
 mod fuchsia_commandline_tools_rubric {
     use super::*;
 
@@ -1765,6 +1772,7 @@ mod parser {
     }
 
     #[test]
+    #[cfg(feature = "subcommands")]
     fn subcommand() {
         #[derive(FromArgs, Debug, PartialEq)]
         /// Short description
@@ -1819,6 +1827,7 @@ mod parser {
     }
 
     #[test]
+    #[cfg(feature = "subcommands")]
     fn subcommand_with_space_in_name() {
         #[derive(FromArgs, Debug, PartialEq)]
         /// Short description
@@ -1986,6 +1995,7 @@ Options:
 }
 
 #[test]
+#[cfg(feature = "subcommands")]
 fn subcommand_does_not_panic() {
     #[derive(FromArgs, PartialEq, Debug)]
     #[argp(subcommand)]

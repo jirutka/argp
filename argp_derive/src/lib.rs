@@ -273,6 +273,11 @@ fn impl_from_args_struct(
         .iter()
         .find(|field| field.kind == FieldKind::SubCommand);
 
+    #[cfg(not(feature = "subcommands"))]
+    if let Some(subcmd) = subcommand {
+        errors.err(subcmd.field, "Enable the 'subcommands' feature to use `#[argp(subcommand)]`");
+    }
+
     let impl_span = Span::call_site();
 
     let from_args_method = impl_from_args_struct_from_args(&fields, subcommand);

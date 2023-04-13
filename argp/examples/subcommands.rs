@@ -7,6 +7,7 @@ use std::fmt::Debug;
 use argp::FromArgs;
 
 /// Top-level command.
+#[cfg(feature = "subcommands")]
 #[derive(FromArgs, PartialEq, Debug)]
 struct TopLevel {
     /// Be verbose.
@@ -42,7 +43,13 @@ struct SubCommandTwo {
     fooey: bool,
 }
 
+#[cfg(feature = "subcommands")]
 fn main() {
     let toplevel: TopLevel = argp::parse_args_or_exit(argp::DEFAULT);
     println!("{:#?}", toplevel);
+}
+
+#[cfg(not(feature = "subcommands"))]
+fn main() {
+    panic!("This example requires the 'subcommands' feature to be enabled!")
 }

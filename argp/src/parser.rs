@@ -20,6 +20,7 @@ use crate::EarlyExit;
 /// - `parse_subcommand`: Helper to parse a subcommand.
 /// - `help`: The [`Help`] instance for generating a help message.
 #[doc(hidden)]
+#[cfg_attr(not(feature = "subcommands"), allow(unused))]
 pub fn parse_struct_args(
     cmd_name: &[&str],
     args: &[&OsStr],
@@ -74,6 +75,7 @@ pub fn parse_struct_args(
             continue;
         }
 
+        #[cfg(feature = "subcommands")]
         if let Some(ref mut parse_subcommand) = parse_subcommand {
             if parse_subcommand.parse(
                 help_requested,
@@ -185,6 +187,7 @@ pub trait ParseGlobalOptions {
     fn global_options(&self) -> Vec<&'static OptionArgInfo>;
 }
 
+#[cfg(feature = "subcommands")]
 impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
     fn try_parse_global(
         &mut self,
@@ -209,6 +212,21 @@ impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
             .map_or_else(Vec::new, |p| p.global_options());
         opts.extend(self.help.options.iter().filter(|o| o.global));
         opts
+    }
+}
+
+#[cfg(not(feature = "subcommands"))]
+impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
+    fn try_parse_global(
+        &mut self,
+        _arg: &str,
+        _remaining_args: &mut &[&OsStr],
+    ) -> Option<Result<(), Error>> {
+        None
+    }
+
+    fn global_options(&self) -> Vec<&'static OptionArgInfo> {
+        Vec::new()
     }
 }
 
@@ -296,6 +314,7 @@ pub struct ParseStructSubCommand<'a> {
     ) -> Result<(), EarlyExit>,
 }
 
+#[cfg(feature = "subcommands")]
 impl<'a> ParseStructSubCommand<'a> {
     fn parse(
         &mut self,

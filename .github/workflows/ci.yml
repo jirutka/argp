@@ -26,19 +26,22 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
 
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@cargo-hack
+
       - name: Set up caching
         uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --workspace --examples --verbose
+        run: cargo build -v --workspace --examples
 
       - name: Run tests (unix)
         if: matrix.os != 'windows'
-        run: ./scripts/faketty cargo test --workspace --verbose -- --exact --skip ui
+        run: ./scripts/faketty cargo hack test -v --workspace --each-feature -- --exact --skip ui
 
       - name: Run tests (Windows)
         if: matrix.os == 'windows'
-        run: cargo test --workspace --verbose -- --exact --skip ui
+        run: cargo hack test -v --workspace --each-feature -- --exact --skip ui
 
       - name: Run compile tests
         if: matrix.toolchain != 'nightly'

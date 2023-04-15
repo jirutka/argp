@@ -155,7 +155,7 @@ pub fn require_description(
     kind: &str, // the thing being described ("type" or "field"),
 ) -> String {
     desc.as_ref()
-        .map(|d| d.content.value().trim().to_owned())
+        .map(|d| d.lines.join("").trim().to_owned())
         .unwrap_or_else(|| {
             errors.err_span(
                 err_span,
@@ -180,7 +180,7 @@ fn positional_info(field: &StructField<'_>) -> TokenStream {
         field_name = field.positional_arg_name();
 
         if let Some(desc) = &field.attrs.description {
-            description = desc.content.value().trim().to_owned()
+            description = desc.lines.join("").trim().to_owned()
         }
     }
 

@@ -57,7 +57,8 @@ pub struct FieldType {
 pub struct Description {
     /// Whether the description was an explicit annotation or whether it was a doc string.
     pub explicit: bool,
-    pub content: syn::LitStr,
+    pub lines: Vec<String>,
+    pub span: Span,
 }
 
 impl FieldAttrs {
@@ -481,17 +482,15 @@ fn parse_attr_doc(errors: &Errors, attr: &syn::Attribute, slot: &mut Option<Desc
     }
 
     if let Some(lit_str) = errors.expect_lit_str(&nv.lit) {
-        let lit_str = if let Some(previous) = slot {
-            let previous = &previous.content;
-            let previous_span = previous.span();
-            syn::LitStr::new(&(previous.value() + &*lit_str.value()), previous_span)
+        if let Some(slot) = slot {
+            slot.lines.push(lit_str.value());
         } else {
-            lit_str.clone()
+            *slot = Some(Description {
+                explicit: false,
+                lines: vec![lit_str.value()],
+                span: lit_str.span(),
+            });
         };
-        *slot = Some(Description {
-            explicit: false,
-            content: lit_str,
-        });
     }
 }
 
@@ -505,13 +504,14 @@ fn parse_attr_description(errors: &Errors, m: &syn::MetaNameValue, slot: &mut Op
     // Don't allow multiple explicit (non doc-comment) descriptions
     if let Some(description) = slot {
         if description.explicit {
-            errors.duplicate_attrs("description", &description.content, lit_str);
+            errors.duplicate_attrs("description", &description.span, lit_str);
         }
     }
 
     *slot = Some(Description {
         explicit: true,
-        content: lit_str.clone(),
+        lines: vec![lit_str.value()],
+        span: lit_str.span(),
     });
 }
 
@@ -542,7 +542,7 @@ pub fn check_enum_type_attrs(errors: &Errors, type_attrs: &TypeAttrs, type_span:
     }
     if let Some(description) = description {
         if description.explicit {
-            err_unused_enum_attr(errors, &description.content);
+            err_unused_enum_attr(errors, &description.span);
         }
     }
     if let Some(footer) = footer.first() {

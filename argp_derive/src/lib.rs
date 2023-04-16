@@ -9,6 +9,7 @@
 
 mod errors;
 mod help;
+mod markdown;
 mod parse_attrs;
 
 use std::collections::HashMap;

@@ -218,6 +218,8 @@ struct SubCommandTwo {
 }
 ----
 
+For more information, refer to the https://docs.rs/argp/latest/argp/[argp documentation].
+
 
 == How to debug the expanded derive macro for `argp`
 

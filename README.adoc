@@ -21,7 +21,7 @@ The public API of this library consists primarily of the `FromArgs` derive and t
 * Derive-based API – you define structs and enums for the parsed values, use attributes to specify how they should be parsed and a procedural derive macro will generate the parser at compile-time.
 * Context-sensitive parsing.
 * Support for subcommands.
-* Help message generator with dynamic wrapping based on terminal width.
+* Help message generator with Markdown support and dynamic wrapping based on terminal width.
 
 
 == Origins

@@ -154,19 +154,17 @@ pub fn require_description(
     desc: &Option<Description>,
     kind: &str, // the thing being described ("type" or "field"),
 ) -> String {
-    desc.as_ref()
-        .map(|d| d.lines.join("").trim().to_owned())
-        .unwrap_or_else(|| {
-            errors.err_span(
-                err_span,
-                &format!(
-                    "#[derive(FromArgs)] {} with no description.
+    desc.as_ref().map(|d| d.to_string()).unwrap_or_else(|| {
+        errors.err_span(
+            err_span,
+            &format!(
+                "#[derive(FromArgs)] {} with no description.
 Add a doc comment or an `#[argp(description = \"...\")]` attribute.",
-                    kind
-                ),
-            );
-            "".to_string()
-        })
+                kind
+            ),
+        );
+        "".to_string()
+    })
 }
 
 fn positional_info(field: &StructField<'_>) -> TokenStream {
@@ -180,7 +178,7 @@ fn positional_info(field: &StructField<'_>) -> TokenStream {
         field_name = field.positional_arg_name();
 
         if let Some(desc) = &field.attrs.description {
-            description = desc.lines.join("").trim().to_owned()
+            description = desc.to_string()
         }
     }
 

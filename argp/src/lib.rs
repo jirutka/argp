@@ -357,6 +357,37 @@
 //!     real_first_arg: String,
 //! }
 //! ```
+//!
+//! ### Markdown
+//!
+//! Any descriptions provided as a doc comment (or `doc` attribute) are
+//! interpreted as Markdown and converted to plain text (at build time) as shown
+//! in the table below. The output format may change slightly in the future.
+//!
+//! | Markdown                                        | Output                                              |
+//! |:------------------------------------------------|:----------------------------------------------------|
+//! | `# Heading`, `## Heading`, ...                  | `Heading`                                           |
+//! | `*italic*`, `_italic_`                          | `italic`                                            |
+//! | `**bold**`, `__bold__`                          | `*bold*`                                            |
+//! | `` `monospace` ``                               | `` `monospace` ``                                   |
+//! | `[link title](https://example.org)`             | `https://example.org`                               |
+//! | <pre>* unordered list<br>  - nested list </pre> | <pre>* unordered list<br>  * nested list     </pre> |
+//! | <pre>1. ordered list<br>  1. nested list </pre> | <pre>1. ordered list<br>   1. nested list    </pre> |
+//! | <pre>\```<br>code<br>block<br>\```       </pre> | <pre>code<br>block                           </pre> |
+//! | <pre>> block<br>> quote<br>><br>>> nested</pre> | <pre>  block<br>  quote<br><br>    nested    </pre> |
+//! | `<p>html</p>`                                   | `<p>html</p>`                                       |
+//! | `Line<br>break`                                 | <pre>Line<br>break                           </pre> |
+//!
+//! If you want to remove an implicit blank line between two blocks, for example
+//! a paragraph and a list, you can do this with `<br>`:
+//!
+//! ```plain
+//! List of items:<br>
+//! * one
+//! * two
+//! ```
+//!
+//! This can also be used to write several empty lines in a row, which would otherwise be stripped.
 
 #![deny(missing_docs)]
 

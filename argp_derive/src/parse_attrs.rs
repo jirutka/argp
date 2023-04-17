@@ -5,6 +5,7 @@
 use proc_macro2::Span;
 
 use crate::errors::Errors;
+use crate::markdown;
 
 /// Attributes applied to a field of a `#![derive(FromArgs)]` struct.
 #[derive(Default)]
@@ -205,6 +206,21 @@ impl FieldAttrs {
             if !lit_char.value().is_ascii() {
                 errors.err(lit_char, "Short names must be ASCII");
             }
+        }
+    }
+}
+
+impl ToString for Description {
+    fn to_string(&self) -> String {
+        if self.explicit {
+            self.lines.join("\n")
+        } else {
+            let mut buf = String::new();
+            for line in &self.lines {
+                buf.push_str(&line.replace('\n', "\\n"));
+                buf.push('\n');
+            }
+            markdown::to_plain_text(&buf)
         }
     }
 }

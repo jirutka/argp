@@ -17,7 +17,7 @@ The public API of this library consists primarily of the `FromArgs` derive and t
 == Features
 
 * Zero runtime dependencies.
-* Small size overhead – ~60 kiB, that’s *10x less* than https://github.com/clap-rs/clap[clap] or https://github.com/clap-rs/clap/tree/master/clap_derive[clap_derive]! See https://github.com/jirutka/argparse-rosetta-rs[argparse-rosetta-rs] for more details.
+* Small size overhead – ~40 kiB footnote:[Measured on a release build with `strip = true` and `panic = "abort"`. The exact size depends on several factors, including the number of options and subcommands.], that’s *10x less* than https://github.com/clap-rs/clap[clap] or https://github.com/clap-rs/clap/tree/master/clap_derive[clap_derive]! See https://github.com/jirutka/argparse-rosetta-rs[argparse-rosetta-rs] for more details.
 * Derive-based API – you define structs and enums for the parsed values, use attributes to specify how they should be parsed and a procedural derive macro will generate the parser at compile-time.
 * Context-sensitive parsing.
 * Support for subcommands.

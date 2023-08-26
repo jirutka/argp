@@ -352,10 +352,10 @@ mod test {
         This is a soft break
     "}
 
-    test_case! { hard_break, r#"
+    test_case! { hard_break, r"
         This is a hard\
         break
-    "#, "
+    ", "
         This is a hard
         break
     "}

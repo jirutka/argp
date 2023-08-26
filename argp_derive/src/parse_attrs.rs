@@ -78,57 +78,51 @@ impl FieldAttrs {
                 continue;
             };
 
-            for meta in &ml.nested {
-                let meta = if let Some(m) = errors.expect_nested_meta(meta) {
-                    m
-                } else {
-                    continue;
-                };
-
+            for meta in ml {
                 let name = meta.path();
                 if name.is_ident("arg_name") {
-                    if let Some(m) = errors.expect_meta_name_value(meta) {
+                    if let Some(m) = errors.expect_meta_name_value(&meta) {
                         parse_attr_single_string(errors, m, "arg_name", &mut this.arg_name);
                     }
                 } else if name.is_ident("default") {
-                    if let Some(m) = errors.expect_meta_name_value(meta) {
+                    if let Some(m) = errors.expect_meta_name_value(&meta) {
                         parse_attr_single_string(errors, m, "default", &mut this.default);
                     }
                 } else if name.is_ident("description") {
-                    if let Some(m) = errors.expect_meta_name_value(meta) {
+                    if let Some(m) = errors.expect_meta_name_value(&meta) {
                         parse_attr_description(errors, m, &mut this.description);
                     }
                 } else if name.is_ident("from_str_fn") {
-                    if let Some(m) = errors.expect_meta_list(meta) {
+                    if let Some(m) = errors.expect_meta_list(&meta) {
                         parse_attr_fn_path(errors, m, "from_str_fn", &mut this.from_str_fn);
                     }
                 } else if name.is_ident("from_os_str_fn") {
-                    if let Some(m) = errors.expect_meta_list(meta) {
+                    if let Some(m) = errors.expect_meta_list(&meta) {
                         parse_attr_fn_path(errors, m, "from_os_str_fn", &mut this.from_os_str_fn);
                     }
                 } else if name.is_ident("long") {
-                    if let Some(m) = errors.expect_meta_name_value(meta) {
+                    if let Some(m) = errors.expect_meta_name_value(&meta) {
                         this.parse_attr_long(errors, m);
                     }
                 } else if name.is_ident("option") {
-                    parse_attr_field_type(errors, meta, FieldKind::Option, &mut this.field_type);
+                    parse_attr_field_type(errors, &meta, FieldKind::Option, &mut this.field_type);
                 } else if name.is_ident("short") {
-                    if let Some(m) = errors.expect_meta_name_value(meta) {
+                    if let Some(m) = errors.expect_meta_name_value(&meta) {
                         this.parse_attr_short(errors, m);
                     }
                 } else if name.is_ident("subcommand") {
                     parse_attr_field_type(
                         errors,
-                        meta,
+                        &meta,
                         FieldKind::SubCommand,
                         &mut this.field_type,
                     );
                 } else if name.is_ident("switch") {
-                    parse_attr_field_type(errors, meta, FieldKind::Switch, &mut this.field_type);
+                    parse_attr_field_type(errors, &meta, FieldKind::Switch, &mut this.field_type);
                 } else if name.is_ident("positional") {
                     parse_attr_field_type(
                         errors,
-                        meta,
+                        &meta,
                         FieldKind::Positional,
                         &mut this.field_type,
                     );
@@ -201,7 +195,7 @@ impl FieldAttrs {
     fn parse_attr_short(&mut self, errors: &Errors, m: &syn::MetaNameValue) {
         if let Some(first) = &self.short {
             errors.duplicate_attrs("short", first, m);
-        } else if let Some(lit_char) = errors.expect_lit_char(&m.lit) {
+        } else if let Some(lit_char) = errors.expect_lit_char(&m.value) {
             self.short = Some(lit_char.clone());
             if !lit_char.value().is_ascii() {
                 errors.err(lit_char, "Short names must be ASCII");
@@ -246,18 +240,7 @@ fn parse_attr_fn_path(
     if let Some(first) = slot {
         errors.duplicate_attrs(attr_name, first, m);
     }
-
-    if m.nested.len() != 1 {
-        errors.err(&m.nested, "Expected a single argument containing the function name");
-        return;
-    }
-
-    // `unwrap` will not fail because of the call above
-    let nested = m.nested.first().unwrap();
-    *slot = errors
-        .expect_nested_meta(nested)
-        .and_then(|m| errors.expect_meta_word(m))
-        .cloned();
+    *slot = m.parse_args().map_err(|e| errors.push(e)).ok();
 }
 
 fn parse_attr_field_type(
@@ -280,7 +263,7 @@ fn parse_attr_field_type(
 
 // Whether the attribute is one like `#[<name> ...]`
 fn is_matching_attr(name: &str, attr: &syn::Attribute) -> bool {
-    attr.path.segments.len() == 1 && attr.path.segments[0].ident == name
+    attr.path().segments.len() == 1 && attr.path().segments[0].ident == name
 }
 
 /// Checks for `#[doc ...]`, which is generated by doc comments.
@@ -293,34 +276,21 @@ fn is_argp_attr(attr: &syn::Attribute) -> bool {
     is_matching_attr("argp", attr)
 }
 
-fn attr_to_meta_subtype<R: Clone>(
+/// Filters out non-`#[argp(...)]` attributes and converts to a sequence of
+/// `syn::Meta`.
+fn argp_attr_to_meta_list(
     errors: &Errors,
     attr: &syn::Attribute,
-    f: impl FnOnce(&syn::Meta) -> Option<&R>,
-) -> Option<R> {
-    match attr.parse_meta() {
-        Ok(meta) => f(&meta).cloned(),
-        Err(e) => {
-            errors.push(e);
-            None
-        }
-    }
-}
-
-fn attr_to_meta_list(errors: &Errors, attr: &syn::Attribute) -> Option<syn::MetaList> {
-    attr_to_meta_subtype(errors, attr, |m| errors.expect_meta_list(m))
-}
-
-fn attr_to_meta_name_value(errors: &Errors, attr: &syn::Attribute) -> Option<syn::MetaNameValue> {
-    attr_to_meta_subtype(errors, attr, |m| errors.expect_meta_name_value(m))
-}
-
-/// Filters out non-`#[argp(...)]` attributes and converts to `syn::MetaList`.
-fn argp_attr_to_meta_list(errors: &Errors, attr: &syn::Attribute) -> Option<syn::MetaList> {
+) -> Option<impl IntoIterator<Item = syn::Meta>> {
     if !is_argp_attr(attr) {
         return None;
     }
-    attr_to_meta_list(errors, attr)
+    let meta_list = errors.expect_meta_list(&attr.meta)?;
+
+    meta_list
+        .parse_args_with(syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated)
+        .map_err(|e| errors.push(e))
+        .ok()
 }
 
 /// Represents a `#[derive(FromArgs)]` type's top-level attributes.
@@ -349,28 +319,23 @@ impl TypeAttrs {
                 continue;
             };
 
-            for meta in &ml.nested {
-                let meta = if let Some(m) = errors.expect_nested_meta(meta) {
-                    m
-                } else {
-                    continue;
-                };
-
+            for meta in ml {
                 let name = meta.path();
                 if name.is_ident("description") {
-                    if let Some(m) = errors.expect_meta_name_value(meta) {
+                    if let Some(m) = errors.expect_meta_name_value(&meta) {
                         parse_attr_description(errors, m, &mut this.description);
                     }
                 } else if name.is_ident("footer") {
-                    if let Some(m) = errors.expect_meta_name_value(meta) {
+                    if let Some(m) = errors.expect_meta_name_value(&meta) {
                         parse_attr_multi_string(errors, m, &mut this.footer)
                     }
                 } else if name.is_ident("name") {
-                    if let Some(m) = errors.expect_meta_name_value(meta) {
+                    if let Some(m) = errors.expect_meta_name_value(&meta) {
                         this.parse_attr_name(errors, m);
                     }
                 } else if name.is_ident("subcommand") {
-                    if let Some(ident) = errors.expect_meta_word(meta).and_then(|p| p.get_ident()) {
+                    if let Some(ident) = errors.expect_meta_word(&meta).and_then(|p| p.get_ident())
+                    {
                         this.parse_attr_subcommand(errors, ident);
                     }
                 } else {
@@ -438,19 +403,13 @@ impl VariantAttrs {
                 continue;
             };
 
-            for meta in &ml.nested {
-                let meta = if let Some(m) = errors.expect_nested_meta(meta) {
-                    m
-                } else {
-                    continue;
-                };
-
+            for meta in ml {
                 let name = meta.path();
                 if name.is_ident("dynamic") {
                     if let Some(prev) = this.is_dynamic.as_ref() {
-                        errors.duplicate_attrs("dynamic", prev, meta);
+                        errors.duplicate_attrs("dynamic", prev, &meta);
                     } else {
-                        this.is_dynamic = errors.expect_meta_word(meta).cloned();
+                        this.is_dynamic = errors.expect_meta_word(&meta).cloned();
                     }
                 } else {
                     errors.err(
@@ -474,19 +433,19 @@ fn parse_attr_single_string(
 ) {
     if let Some(first) = slot {
         errors.duplicate_attrs(name, first, m);
-    } else if let Some(lit_str) = errors.expect_lit_str(&m.lit) {
+    } else if let Some(lit_str) = errors.expect_lit_str(&m.value) {
         *slot = Some(lit_str.clone());
     }
 }
 
 fn parse_attr_multi_string(errors: &Errors, m: &syn::MetaNameValue, list: &mut Vec<syn::LitStr>) {
-    if let Some(lit_str) = errors.expect_lit_str(&m.lit) {
+    if let Some(lit_str) = errors.expect_lit_str(&m.value) {
         list.push(lit_str.clone());
     }
 }
 
 fn parse_attr_doc(errors: &Errors, attr: &syn::Attribute, slot: &mut Option<Description>) {
-    let nv = if let Some(nv) = attr_to_meta_name_value(errors, attr) {
+    let nv = if let Some(nv) = errors.expect_meta_name_value(&attr.meta) {
         nv
     } else {
         return;
@@ -497,7 +456,7 @@ fn parse_attr_doc(errors: &Errors, attr: &syn::Attribute, slot: &mut Option<Desc
         return;
     }
 
-    if let Some(lit_str) = errors.expect_lit_str(&nv.lit) {
+    if let Some(lit_str) = errors.expect_lit_str(&nv.value) {
         if let Some(slot) = slot {
             slot.lines.push(lit_str.value());
         } else {
@@ -511,7 +470,7 @@ fn parse_attr_doc(errors: &Errors, attr: &syn::Attribute, slot: &mut Option<Desc
 }
 
 fn parse_attr_description(errors: &Errors, m: &syn::MetaNameValue, slot: &mut Option<Description>) {
-    let lit_str = if let Some(lit_str) = errors.expect_lit_str(&m.lit) {
+    let lit_str = if let Some(lit_str) = errors.expect_lit_str(&m.value) {
         lit_str
     } else {
         return;

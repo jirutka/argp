@@ -13,15 +13,15 @@ pub struct Errors {
     errors: RefCell<Vec<syn::Error>>,
 }
 
-/// Produce functions to expect particular variants of `syn::Lit`
+/// Produce functions to expect particular literals in `syn::Expr`
 macro_rules! expect_lit_fn {
     ($(($fn_name:ident, $syn_type:ident, $variant:ident, $lit_name:literal),)*) => {
         $(
-            pub fn $fn_name<'a>(&self, lit: &'a syn::Lit) -> Option<&'a syn::$syn_type> {
-                if let syn::Lit::$variant(inner) = lit {
+            pub fn $fn_name<'a>(&self, expr: &'a syn::Expr) -> Option<&'a syn::$syn_type> {
+                if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::$variant(inner), .. }) = expr {
                     Some(inner)
                 } else {
-                    self.unexpected_lit($lit_name, lit);
+                    self.unexpected_lit($lit_name, expr);
                     None
                 }
             }
@@ -64,17 +64,6 @@ impl Errors {
         self.err_span(first, &format!("First {} attribute here", attr_kind));
     }
 
-    /// Error on literals, expecting attribute syntax.
-    pub fn expect_nested_meta<'a>(&self, nm: &'a syn::NestedMeta) -> Option<&'a syn::Meta> {
-        match nm {
-            syn::NestedMeta::Lit(l) => {
-                self.err(l, "Unexpected literal");
-                None
-            }
-            syn::NestedMeta::Meta(m) => Some(m),
-        }
-    }
-
     expect_lit_fn![
         (expect_lit_str, LitStr, Str, "string"),
         (expect_lit_char, LitChar, Char, "character"),
@@ -86,7 +75,7 @@ impl Errors {
         (expect_meta_name_value, MetaNameValue, NameValue, "name-value pair"),
     ];
 
-    fn unexpected_lit(&self, expected: &str, found: &syn::Lit) {
+    fn unexpected_lit(&self, expected: &str, found: &syn::Expr) {
         fn lit_kind(lit: &syn::Lit) -> &'static str {
             use syn::Lit::{Bool, Byte, ByteStr, Char, Float, Int, Str, Verbatim};
             match lit {
@@ -98,13 +87,18 @@ impl Errors {
                 Float(_) => "float",
                 Bool(_) => "boolean",
                 Verbatim(_) => "unknown (possibly extra-large integer)",
+                _ => "unknown literal kind",
             }
         }
 
-        self.err(
-            found,
-            &format!("Expected {} literal, found {} literal", expected, lit_kind(found)),
-        )
+        if let syn::Expr::Lit(syn::ExprLit { lit, .. }) = found {
+            self.err(
+                found,
+                &format!("Expected {} literal, found {} literal", expected, lit_kind(lit)),
+            )
+        } else {
+            self.err(found, &format!("Expected {} literal, found non-literal expression", expected))
+        }
     }
 
     fn unexpected_meta(&self, expected: &str, found: &syn::Meta) {

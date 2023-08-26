@@ -230,7 +230,12 @@ impl Help {
         w.write_section("Options:", options.map(|r| r.description));
 
         if !subcommands.is_empty() {
-            w.write_section("Commands:", subcommands.iter().map(|r| (r.name, r.description)));
+            w.write_section(
+                "Commands:",
+                subcommands
+                    .iter()
+                    .map(|r| (r.name, first_line(r.description))),
+            );
         }
         if !info.footer.is_empty() {
             w.write_paragraphs(info.footer);
@@ -441,4 +446,8 @@ fn pad_string(s: &mut String, width: usize) -> bool {
     } else {
         false
     }
+}
+
+fn first_line(text: &str) -> &str {
+    text.lines().next().unwrap_or_default()
 }

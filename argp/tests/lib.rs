@@ -1282,7 +1282,9 @@ Options:
 
     #[derive(FromArgs, PartialEq, Debug)]
     #[argp(subcommand, name = "blow-up")]
-    /// explosively separate
+    /// Explosively separate
+    ///
+    /// Some additional context.
     struct BlowUp {
         /// blow up bombs safely
         #[argp(switch)]
@@ -1389,7 +1391,7 @@ Options:
   -h, --help                 Show this help message and exit.
 
 Commands:
-  blow-up                    explosively separate
+  blow-up                    Explosively separate
   grind                      make smaller by many small cuts
   plugin                     Example dynamic command
 

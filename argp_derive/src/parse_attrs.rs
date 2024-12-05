@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2023 Jakub Jirutka <jakub@jirutka.cz>
 // SPDX-FileCopyrightText: 2020 Google LLC
 
+use std::fmt;
+
 use proc_macro2::Span;
 
 use crate::errors::Errors;
@@ -204,17 +206,17 @@ impl FieldAttrs {
     }
 }
 
-impl ToString for Description {
-    fn to_string(&self) -> String {
+impl fmt::Display for Description {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.explicit {
-            self.lines.join("\n")
+            f.write_str(&self.lines.join("\n"))
         } else {
             let mut buf = String::new();
             for line in &self.lines {
                 buf.push_str(&line.replace('\n', "\\n"));
                 buf.push('\n');
             }
-            markdown::to_plain_text(&buf)
+            f.write_str(&markdown::to_plain_text(&buf))
         }
     }
 }

@@ -3,6 +3,9 @@ on:
   - push
   - pull_request
 
+env:
+  MSRV: '1.70'
+
 jobs:
   test:
     name: Run tests on Rust ${{ matrix.toolchain }} (${{ matrix.os }})
@@ -12,7 +15,7 @@ jobs:
       matrix:
         toolchain:
           - stable
-          - '1.70'
+          - '1.70'  # MSRV
           - nightly
         os:
           - ubuntu
@@ -21,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Rust stable
+      - name: Install Rust ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
@@ -57,10 +60,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Rust stable
+      - name: Install Rust ${{ env.MSRV }}
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          toolchain: ${{ env.MSRV }}
           components: rustfmt, clippy
 
       - name: Set up caching

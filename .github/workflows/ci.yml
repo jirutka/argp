@@ -12,7 +12,7 @@ jobs:
       matrix:
         toolchain:
           - stable
-          - '1.56'
+          - '1.70'
           - nightly
         os:
           - ubuntu
@@ -48,8 +48,7 @@ jobs:
         run: cargo run --package argp --example simple_example two --fooey
 
       - name: Report size overhead
-        # 1.56 doesn't support -C strip.
-        if: matrix.os != 'windows' && matrix.toolchain != '1.56'
+        if: matrix.os != 'windows'
         run: ./scripts/report-size-overhead
 
   lint:

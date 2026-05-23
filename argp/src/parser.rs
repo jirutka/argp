@@ -135,7 +135,7 @@ impl<'a> ParseStructOptions<'a, '_> {
     ///
     /// - `arg`: The current option argument being parsed (e.g. `--foo`).
     /// - `remaining_args`: The remaining command line arguments. This slice
-    ///    will be advanced forwards if the option takes a value argument.
+    ///   will be advanced forwards if the option takes a value argument.
     fn parse(&mut self, arg: &str, remaining_args: &mut &[&OsStr]) -> Result<(), Error> {
         match self.arg_to_slot.iter().find(|(name, _)| *name == arg) {
             Some((_, pos)) => Self::fill_slot(&mut self.slots[*pos], arg, remaining_args),
@@ -172,7 +172,7 @@ pub trait ParseGlobalOptions {
     ///
     /// - `arg`: The current option argument being parsed (e.g. `--foo`).
     /// - `remaining_args`: The remaining command line arguments. This slice
-    ///    will be advanced forwards if the option takes a value argument.
+    ///   will be advanced forwards if the option takes a value argument.
     fn try_parse_global(
         &mut self,
         arg: &str,

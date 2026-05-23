@@ -3,3 +3,4 @@ members = [
     "argp",
     "argp_derive",
 ]
+resolver = "2"

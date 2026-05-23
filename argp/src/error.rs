@@ -137,7 +137,7 @@ impl fmt::Display for MissingRequirements {
         }
 
         if let Some(missing_subcommands) = &self.subcommands {
-            if !self.options.is_empty() {
+            if !self.positional_args.is_empty() || !self.options.is_empty() {
                 f.write_char('\n')?;
             }
             f.write_str("One of the following subcommands must be present:")?;

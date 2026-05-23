@@ -4,7 +4,7 @@ on:
   - pull_request
 
 env:
-  MSRV: '1.70'
+  MSRV: '1.85'
 
 jobs:
   test:
@@ -15,7 +15,7 @@ jobs:
       matrix:
         toolchain:
           - stable
-          - '1.70'  # MSRV
+          - '1.85'  # MSRV
           - nightly
         os:
           - ubuntu

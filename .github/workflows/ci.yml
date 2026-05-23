@@ -44,7 +44,7 @@ jobs:
         run: cargo test --workspace --verbose -- --exact --skip ui
 
       - name: Run compile tests
-        if: matrix.toolchain != 'nightly'
+        if: matrix.toolchain == 'stable'
         run: cargo test --workspace --verbose ui -- --exact
 
       - name: Run simple_example

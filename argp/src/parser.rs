@@ -127,7 +127,7 @@ pub struct ParseStructOptions<'a, 'p> {
     pub parent: Option<&'p mut dyn ParseGlobalOptions>,
 }
 
-impl<'a, 'p> ParseStructOptions<'a, 'p> {
+impl<'a> ParseStructOptions<'a, '_> {
     /// Parses a command-line option. If the option is not found in this
     /// instance, it tries to parse it as a global option in the parent
     /// instance, recursively. If it's not found even there, returns
@@ -185,7 +185,7 @@ pub trait ParseGlobalOptions {
     fn global_options(&self) -> Vec<&'static OptionArgInfo>;
 }
 
-impl<'a, 'p> ParseGlobalOptions for ParseStructOptions<'a, 'p> {
+impl ParseGlobalOptions for ParseStructOptions<'_, '_> {
     fn try_parse_global(
         &mut self,
         arg: &str,
@@ -229,7 +229,7 @@ pub struct ParseStructPositionals<'a> {
     pub last_is_greedy: bool,
 }
 
-impl<'a> ParseStructPositionals<'a> {
+impl ParseStructPositionals<'_> {
     /// Parses the next positional argument.
     ///
     /// - `index`: The index of the argument.
@@ -267,7 +267,7 @@ pub struct ParseStructPositional<'a> {
     pub slot: &'a mut dyn ParseValueSlot,
 }
 
-impl<'a> ParseStructPositional<'a> {
+impl ParseStructPositional<'_> {
     /// Parses a positional argument.
     ///
     /// - `arg`: The argument supplied by the user.
@@ -296,7 +296,7 @@ pub struct ParseStructSubCommand<'a> {
     ) -> Result<(), EarlyExit>,
 }
 
-impl<'a> ParseStructSubCommand<'a> {
+impl ParseStructSubCommand<'_> {
     fn parse(
         &mut self,
         help: bool,

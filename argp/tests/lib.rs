@@ -2007,6 +2007,7 @@ fn subcommand_does_not_panic() {
     #[derive(FromArgs, PartialEq, Debug)]
     /// Second subcommand.
     #[argp(subcommand, name = "two")]
+    #[allow(dead_code)]
     struct SubCommandTwo {
         #[argp(switch)]
         /// whether to fooey
